@@ -9,6 +9,8 @@ type JobSummary struct {
 	Stale         bool       `json:"stale"`
 	FollowUpDue   bool       `json:"followUpDue"`
 	NextInterview *Interview `json:"nextInterview,omitempty"`
+	// OfferYear1Total is filled in by the app when the job has an offer package.
+	OfferYear1Total *int64 `json:"offerYear1Total,omitempty"`
 }
 
 type NextUp struct {

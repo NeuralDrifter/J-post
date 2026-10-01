@@ -18,6 +18,10 @@ export function DeleteAttachment(arg1) {
   return window['go']['main']['App']['DeleteAttachment'](arg1);
 }
 
+export function DeleteCompPackage(arg1) {
+  return window['go']['main']['App']['DeleteCompPackage'](arg1);
+}
+
 export function DeleteContact(arg1) {
   return window['go']['main']['App']['DeleteContact'](arg1);
 }
@@ -30,8 +34,24 @@ export function DeleteJob(arg1) {
   return window['go']['main']['App']['DeleteJob'](arg1);
 }
 
+export function DescribeArea(arg1) {
+  return window['go']['main']['App']['DescribeArea'](arg1);
+}
+
+export function DescribeOccupation(arg1) {
+  return window['go']['main']['App']['DescribeOccupation'](arg1);
+}
+
 export function Discover(arg1) {
   return window['go']['main']['App']['Discover'](arg1);
+}
+
+export function DraftCounter(arg1) {
+  return window['go']['main']['App']['DraftCounter'](arg1);
+}
+
+export function GetCurrentComp() {
+  return window['go']['main']['App']['GetCurrentComp']();
 }
 
 export function GetJob(arg1) {
@@ -54,6 +74,14 @@ export function ListAttachments(arg1) {
   return window['go']['main']['App']['ListAttachments'](arg1);
 }
 
+export function ListCompForJob(arg1) {
+  return window['go']['main']['App']['ListCompForJob'](arg1);
+}
+
+export function ListComparisons() {
+  return window['go']['main']['App']['ListComparisons']();
+}
+
 export function ListContacts(arg1) {
   return window['go']['main']['App']['ListContacts'](arg1);
 }
@@ -70,6 +98,14 @@ export function ListStageEvents(arg1) {
   return window['go']['main']['App']['ListStageEvents'](arg1);
 }
 
+export function MarketSources() {
+  return window['go']['main']['App']['MarketSources']();
+}
+
+export function NewEstimate(arg1) {
+  return window['go']['main']['App']['NewEstimate'](arg1);
+}
+
 export function OpenAttachment(arg1) {
   return window['go']['main']['App']['OpenAttachment'](arg1);
 }
@@ -82,6 +118,14 @@ export function PickAndAttachFile(arg1) {
   return window['go']['main']['App']['PickAndAttachFile'](arg1);
 }
 
+export function PreviewComp(arg1) {
+  return window['go']['main']['App']['PreviewComp'](arg1);
+}
+
+export function SaveCompPackage(arg1) {
+  return window['go']['main']['App']['SaveCompPackage'](arg1);
+}
+
 export function SaveContact(arg1) {
   return window['go']['main']['App']['SaveContact'](arg1);
 }
@@ -92,6 +136,14 @@ export function SaveInterview(arg1) {
 
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
+export function SearchAreas(arg1) {
+  return window['go']['main']['App']['SearchAreas'](arg1);
+}
+
+export function SearchOccupations(arg1) {
+  return window['go']['main']['App']['SearchOccupations'](arg1);
 }
 
 export function TestPython(arg1) {

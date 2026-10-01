@@ -82,7 +82,29 @@ func (a *App) ListJobSummaries() ([]JobSummary, error) {
 	if err := a.ready(); err != nil {
 		return nil, err
 	}
-	return a.repo.ListJobSummaries(a.followUpDays())
+	summaries, err := a.repo.ListJobSummaries(a.followUpDays())
+	if err != nil {
+		return nil, err
+	}
+	packages, err := a.repo.ListCompPackages()
+	if err != nil {
+		return nil, err
+	}
+	offers := map[string]CompPackage{}
+	for _, p := range packages {
+		if p.Kind == "offer" {
+			offers[p.JobID] = p // latest offer per job wins
+		}
+	}
+	for i := range summaries {
+		if p, ok := offers[summaries[i].Job.ID]; ok {
+			if res, err := a.evaluate(p, nil); err == nil {
+				total := res.Year1Total
+				summaries[i].OfferYear1Total = &total
+			}
+		}
+	}
+	return summaries, nil
 }
 
 func (a *App) GetMetrics() (Metrics, error) {
@@ -304,3 +326,202 @@ func (a *App) TestPython(path string) (string, error) {
 func (a *App) DataDir() string { return a.dataDir }
 
 func (a *App) OpenDataDir() error { return openWithOS(a.dataDir) }
+
+// ---- Compensation ----
+
+// ComparisonItem is one package with its computed result, for the Offers page.
+type ComparisonItem struct {
+	Package   CompPackage   `json:"package"`
+	Result    PackageResult `json:"result"`
+	Company   string        `json:"company"`
+	Position  string        `json:"position"`
+	JobStatus string        `json:"jobStatus"`
+}
+
+// DataSources describes the external datasets behind marked (✦) figures.
+type DataSources struct {
+	BLS   SourceInfo `json:"bls"`
+	BEA   SourceInfo `json:"bea"`
+	Tax   SourceInfo `json:"tax"`
+	Built string     `json:"built"`
+}
+
+func (a *App) market() *MarketData {
+	md, err := loadMarketData()
+	if err != nil {
+		return nil
+	}
+	return md
+}
+
+func (a *App) evaluate(p CompPackage, current *CompPackage) (PackageResult, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return PackageResult{}, err
+	}
+	return Evaluate(p, s, a.market(), current)
+}
+
+func (a *App) comparisonItems(list []CompPackage) ([]ComparisonItem, error) {
+	current, err := a.repo.CurrentCompPackage()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ComparisonItem, 0, len(list))
+	for _, p := range list {
+		res, err := a.evaluate(p, current)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", p.Label, err)
+		}
+		item := ComparisonItem{Package: p, Result: res, Company: "Current job"}
+		if p.JobID != "" {
+			if j, err := a.repo.GetJob(p.JobID); err == nil {
+				item.Company, item.Position, item.JobStatus = j.Company, j.Position, j.Status
+			}
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
+func (a *App) ListComparisons() ([]ComparisonItem, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	list, err := a.repo.ListCompPackages()
+	if err != nil {
+		return nil, err
+	}
+	return a.comparisonItems(list)
+}
+
+func (a *App) ListCompForJob(jobID string) ([]ComparisonItem, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	list, err := a.repo.ListCompPackagesForJob(jobID)
+	if err != nil {
+		return nil, err
+	}
+	return a.comparisonItems(list)
+}
+
+func (a *App) GetCurrentComp() (*CompPackage, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.CurrentCompPackage()
+}
+
+func (a *App) SaveCompPackage(p CompPackage) (CompPackage, error) {
+	if err := a.ready(); err != nil {
+		return CompPackage{}, err
+	}
+	return a.repo.SaveCompPackage(p)
+}
+
+func (a *App) DeleteCompPackage(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DeleteCompPackage(id)
+}
+
+func (a *App) DraftCounter(offerID string) (CompPackage, error) {
+	if err := a.ready(); err != nil {
+		return CompPackage{}, err
+	}
+	return a.repo.DraftCounter(offerID)
+}
+
+// NewEstimate returns an unsaved estimate prefilled from the job's posted range and location.
+func (a *App) NewEstimate(jobID string) (CompPackage, error) {
+	if err := a.ready(); err != nil {
+		return CompPackage{}, err
+	}
+	j, err := a.repo.GetJob(jobID)
+	if err != nil {
+		return CompPackage{}, err
+	}
+	s, err := a.settings.Load()
+	if err != nil {
+		return CompPackage{}, err
+	}
+	area, state := "", ""
+	if md := a.market(); md != nil {
+		area = md.GuessArea(j.Location)
+		if area == "" {
+			area = s.HomeAreaCode
+		}
+		state = md.Areas[area].State
+		if area == "US" {
+			state = md.Areas[s.HomeAreaCode].State
+		}
+		if state == "US" {
+			state = ""
+		}
+	}
+	return NewEstimateForJob(j, s.DefaultOccupation, area, state), nil
+}
+
+// PreviewComp evaluates an unsaved package for the editor's live preview.
+func (a *App) PreviewComp(p CompPackage) (PackageResult, error) {
+	if err := a.ready(); err != nil {
+		return PackageResult{}, err
+	}
+	current, err := a.repo.CurrentCompPackage()
+	if err != nil {
+		return PackageResult{}, err
+	}
+	return a.evaluate(p, current)
+}
+
+func (a *App) SearchOccupations(q string) []Option {
+	if md := a.market(); md != nil {
+		return md.SearchOccupations(q)
+	}
+	return []Option{}
+}
+
+func (a *App) SearchAreas(q string) []Option {
+	if md := a.market(); md != nil {
+		return md.SearchAreas(q)
+	}
+	return []Option{}
+}
+
+// DescribeArea and DescribeOccupation give pickers the title for a saved code.
+func (a *App) DescribeArea(code string) Option {
+	if md := a.market(); md != nil {
+		if ar, ok := md.Areas[code]; ok {
+			title := ar.Title
+			if ar.Type == "national" {
+				title = "Remote / United States"
+			}
+			return Option{Code: code, Title: title, State: ar.State, Type: ar.Type}
+		}
+	}
+	return Option{Code: code, Title: code}
+}
+
+func (a *App) DescribeOccupation(code string) Option {
+	if md := a.market(); md != nil {
+		if t, ok := md.Occupations[code]; ok {
+			return Option{Code: code, Title: t}
+		}
+	}
+	return Option{Code: code, Title: code}
+}
+
+func (a *App) MarketSources() DataSources {
+	ds := DataSources{Tax: SourceInfo{
+		Name:    "Income tax tables, tax year 2026",
+		Release: "2026",
+		URL:     "https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/",
+		Note:    "Federal: IRS Rev. Proc. 2025-32 and SSA. States: Tax Foundation 2026 table. Estimates only; credits and special rules are not modeled.",
+	}}
+	if md := a.market(); md != nil {
+		ds.BLS, ds.BEA, ds.Built = md.Sources["bls"], md.Sources["bea"], md.Built
+	}
+	return ds
+}

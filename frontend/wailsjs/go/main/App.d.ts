@@ -10,13 +10,23 @@ export function DataDir():Promise<string>;
 
 export function DeleteAttachment(arg1:string):Promise<void>;
 
+export function DeleteCompPackage(arg1:string):Promise<void>;
+
 export function DeleteContact(arg1:string):Promise<void>;
 
 export function DeleteInterview(arg1:string):Promise<void>;
 
 export function DeleteJob(arg1:string):Promise<void>;
 
+export function DescribeArea(arg1:string):Promise<main.Option>;
+
+export function DescribeOccupation(arg1:string):Promise<main.Option>;
+
 export function Discover(arg1:main.DiscoverQuery):Promise<main.DiscoverResponse>;
+
+export function DraftCounter(arg1:string):Promise<main.CompPackage>;
+
+export function GetCurrentComp():Promise<main.CompPackage>;
 
 export function GetJob(arg1:string):Promise<main.Job>;
 
@@ -28,6 +38,10 @@ export function GetStartupError():Promise<string>;
 
 export function ListAttachments(arg1:string):Promise<Array<main.Attachment>>;
 
+export function ListCompForJob(arg1:string):Promise<Array<main.ComparisonItem>>;
+
+export function ListComparisons():Promise<Array<main.ComparisonItem>>;
+
 export function ListContacts(arg1:string):Promise<Array<main.Contact>>;
 
 export function ListInterviews(arg1:string):Promise<Array<main.Interview>>;
@@ -36,17 +50,29 @@ export function ListJobSummaries():Promise<Array<main.JobSummary>>;
 
 export function ListStageEvents(arg1:string):Promise<Array<main.StageEvent>>;
 
+export function MarketSources():Promise<main.DataSources>;
+
+export function NewEstimate(arg1:string):Promise<main.CompPackage>;
+
 export function OpenAttachment(arg1:string):Promise<void>;
 
 export function OpenDataDir():Promise<void>;
 
 export function PickAndAttachFile(arg1:string):Promise<main.Attachment>;
 
+export function PreviewComp(arg1:main.CompPackage):Promise<main.PackageResult>;
+
+export function SaveCompPackage(arg1:main.CompPackage):Promise<main.CompPackage>;
+
 export function SaveContact(arg1:main.Contact):Promise<main.Contact>;
 
 export function SaveInterview(arg1:main.Interview):Promise<main.Interview>;
 
 export function SaveSettings(arg1:main.Settings):Promise<void>;
+
+export function SearchAreas(arg1:string):Promise<Array<main.Option>>;
+
+export function SearchOccupations(arg1:string):Promise<Array<main.Option>>;
 
 export function TestPython(arg1:string):Promise<string>;
 
