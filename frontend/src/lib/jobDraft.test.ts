@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { main } from './backend'
-import { draftFromJob, emptyDraft, jobFromDraft, jobFromResult } from './jobDraft'
+import { draftFromJob, emptyDraft, jobFromDraft } from './jobDraft'
 
 const baseJob = {
   id: 'j1',
@@ -46,32 +46,5 @@ describe('jobFromDraft', () => {
     expect(job.description).toBe('Build things')
     expect(job.source).toBe('linkedin')
     expect(job.id).toBe('j1')
-  })
-})
-
-describe('jobFromResult', () => {
-  it('maps a discover result to a wishlist job', () => {
-    const job = jobFromResult({
-      key: 'k',
-      title: 'Go Dev',
-      company: '',
-      location: 'Remote',
-      workMode: 'remote',
-      salaryMin: 93600,
-      salaryText: '$45/hr',
-      annualized: true,
-      description: 'desc',
-      datePosted: '2026-09-30',
-      url: 'https://x.test',
-      sources: ['indeed', 'linkedin'],
-      trackedJobId: '',
-      trackedStatus: '',
-    } as main.DiscoverResult)
-    expect(job.company).toBe('Unknown company')
-    expect(job.position).toBe('Go Dev')
-    expect(job.status).toBe('wishlist')
-    expect(job.source).toBe('indeed')
-    expect(job.salaryMin).toBe(93600)
-    expect(job.description).toBe('desc')
   })
 })

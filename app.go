@@ -282,21 +282,15 @@ func exeDir() string {
 	return filepath.Dir(p)
 }
 
-func (a *App) Discover(q DiscoverQuery) (DiscoverResponse, error) {
+// RunSearch scrapes (or reuses recent results for) a search and files what it
+// finds into the Discover inbox.
+func (a *App) RunSearch(q SearchQuery, force bool) (SearchRun, error) {
 	if err := a.ready(); err != nil {
-		return DiscoverResponse{}, err
-	}
-	q.Term, q.Location = strings.TrimSpace(q.Term), strings.TrimSpace(q.Location)
-	if q.Term == "" {
-		return DiscoverResponse{}, errors.New("enter a job title or keywords to search")
+		return SearchRun{}, err
 	}
 	settings, err := a.settings.Load()
 	if err != nil {
-		return DiscoverResponse{}, err
-	}
-	tracked, err := a.repo.ListJobs()
-	if err != nil {
-		return DiscoverResponse{}, err
+		return SearchRun{}, err
 	}
 	cwd, _ := os.Getwd()
 	fetch := func(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
@@ -309,7 +303,70 @@ func (a *App) Discover(q DiscoverQuery) (DiscoverResponse, error) {
 		}
 		return runJobSpy(ctx, python, source, q, opts)
 	}
-	return runDiscover(context.Background(), q, fetch, tracked, func(string) fetchOptions { return fetchOptions{Results: defaultPerSource} }), nil
+	return RunSearch(context.Background(), a.repo, q, force, settings, fetch)
+}
+
+func (a *App) ListPostings(f PostingFilter) ([]Posting, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListPostings(f)
+}
+
+func (a *App) InboxCounts() (InboxCounts, error) {
+	if err := a.ready(); err != nil {
+		return InboxCounts{}, err
+	}
+	return a.repo.InboxCounts()
+}
+
+func (a *App) MarkPostingSeen(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.MarkPostingSeen(id)
+}
+
+func (a *App) DismissPosting(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DismissPosting(id)
+}
+
+func (a *App) RestorePosting(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.RestorePosting(id)
+}
+
+func (a *App) SavePosting(id string) (Job, error) {
+	if err := a.ready(); err != nil {
+		return Job{}, err
+	}
+	return a.repo.SavePosting(id)
+}
+
+func (a *App) ClearDismissed(olderThanDays int) (int, error) {
+	if err := a.ready(); err != nil {
+		return 0, err
+	}
+	return a.repo.ClearDismissed(olderThanDays)
+}
+
+func (a *App) ListRecentSearches() ([]SavedSearch, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListRecentSearches(8)
+}
+
+func (a *App) DeleteSearch(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DeleteSearch(id)
 }
 
 // ---- Settings ----

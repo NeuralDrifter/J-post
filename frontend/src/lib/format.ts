@@ -142,3 +142,16 @@ export function todayLocal(): string {
   const d = new Date()
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
+
+/** "just now", "45 min ago", "2h ago", "3 days ago". */
+export function timeAgo(iso: string, now: Date = new Date()): string {
+  const d = iso ? new Date(iso) : undefined
+  if (!d || Number.isNaN(d.getTime())) return ''
+  const minutes = Math.floor((now.getTime() - d.getTime()) / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return days === 1 ? '1 day ago' : `${days} days ago`
+}

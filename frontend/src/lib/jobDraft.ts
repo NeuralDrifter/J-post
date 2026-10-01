@@ -69,28 +69,3 @@ export function jobFromDraft(d: JobDraft, base?: main.Job): main.Job {
     updatedAt: base?.updatedAt ?? '',
   }
 }
-
-/** A Discover result saved to the Wishlist with everything the source gave us. */
-export function jobFromResult(r: main.DiscoverResult): main.Job {
-  return {
-    id: '',
-    company: r.company.trim() || 'Unknown company',
-    position: r.title,
-    status: 'wishlist',
-    closeReason: '',
-    location: r.location,
-    workMode: r.workMode,
-    salaryMin: r.salaryMin,
-    salaryMax: r.salaryMax,
-    salaryText: r.salaryText,
-    url: r.url,
-    source: r.sources[0] ?? 'manual',
-    description: r.description,
-    datePosted: r.datePosted,
-    dateApplied: '',
-    followUpOn: '',
-    notes: '',
-    createdAt: '',
-    updatedAt: '',
-  }
-}

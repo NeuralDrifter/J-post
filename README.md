@@ -12,8 +12,10 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
   - job description and autosaving markdown notes
   - contacts, scheduled interviews, and attached files (copies of the exact resume or cover letter you sent)
 - **Discover**:
-  - searches Indeed, LinkedIn and ZipRecruiter (via [JobSpy](https://github.com/speedyapply/JobSpy)) plus Adzuna in parallel
-  - de-duplicates results, flags jobs you already track, and saves to your Wishlist with the description, salary and link
+  - Searches Indeed, LinkedIn and ZipRecruiter (via [JobSpy](https://github.com/speedyapply/JobSpy), which runs locally and scrapes from your own IP) plus the official Adzuna API, in parallel.
+  - Every posting found lands in a persistent **inbox**: new ones are badged; you save each to your Wishlist or mark it **Not interested**, which hides it for good. A Not interested tab lets you move postings back.
+  - Searches are saved. Re-running one within the cache window (default 12 hours, set in Settings) reuses stored results, and later runs only ask the boards for postings newer than the last run.
+  - Results per board are configurable (Adzuna max 50).
 - **Offers**:
   - Compare real offers, estimates, counter-offer drafts and your current job side by side.
   - Each one shows 4-year total comp with vesting schedules and raises, after-tax take-home, equity scenarios (0×/1×/3×/10×), where the base sits in the local market for your occupation, and what it's worth in your home city's dollars.

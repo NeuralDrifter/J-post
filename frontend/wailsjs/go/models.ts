@@ -391,97 +391,24 @@ export namespace main {
 		}
 	}
 	
-	export class DiscoverQuery {
-	    term: string;
-	    location: string;
-	    remoteOnly: boolean;
-	    sources: string[];
+	export class InboxCounts {
+	    new: number;
+	    inbox: number;
+	    saved: number;
+	    dismissed: number;
 	
 	    static createFrom(source: any = {}) {
-	        return new DiscoverQuery(source);
+	        return new InboxCounts(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.term = source["term"];
-	        this.location = source["location"];
-	        this.remoteOnly = source["remoteOnly"];
-	        this.sources = source["sources"];
+	        this.new = source["new"];
+	        this.inbox = source["inbox"];
+	        this.saved = source["saved"];
+	        this.dismissed = source["dismissed"];
 	    }
 	}
-	export class DiscoverResult {
-	    key: string;
-	    title: string;
-	    company: string;
-	    location: string;
-	    workMode: string;
-	    salaryMin?: number;
-	    salaryMax?: number;
-	    salaryText: string;
-	    annualized: boolean;
-	    description: string;
-	    datePosted: string;
-	    url: string;
-	    sources: string[];
-	    trackedJobId: string;
-	    trackedStatus: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DiscoverResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.key = source["key"];
-	        this.title = source["title"];
-	        this.company = source["company"];
-	        this.location = source["location"];
-	        this.workMode = source["workMode"];
-	        this.salaryMin = source["salaryMin"];
-	        this.salaryMax = source["salaryMax"];
-	        this.salaryText = source["salaryText"];
-	        this.annualized = source["annualized"];
-	        this.description = source["description"];
-	        this.datePosted = source["datePosted"];
-	        this.url = source["url"];
-	        this.sources = source["sources"];
-	        this.trackedJobId = source["trackedJobId"];
-	        this.trackedStatus = source["trackedStatus"];
-	    }
-	}
-	export class DiscoverResponse {
-	    results: DiscoverResult[];
-	    errors: Record<string, string>;
-	
-	    static createFrom(source: any = {}) {
-	        return new DiscoverResponse(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.results = this.convertValues(source["results"], DiscoverResult);
-	        this.errors = source["errors"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	
 	export class Interview {
 	    id: string;
 	    jobId: string;
@@ -695,7 +622,145 @@ export namespace main {
 	    }
 	}
 	
+	export class Posting {
+	    id: string;
+	    dedupeKey: string;
+	    url: string;
+	    title: string;
+	    company: string;
+	    location: string;
+	    workMode: string;
+	    salaryMin?: number;
+	    salaryMax?: number;
+	    salaryText: string;
+	    annualized: boolean;
+	    description: string;
+	    datePosted: string;
+	    sources: string[];
+	    state: string;
+	    jobId: string;
+	    jobStatus: string;
+	    searchId: string;
+	    firstSeen: string;
+	    lastSeen: string;
+	    dismissedAt: string;
 	
+	    static createFrom(source: any = {}) {
+	        return new Posting(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.dedupeKey = source["dedupeKey"];
+	        this.url = source["url"];
+	        this.title = source["title"];
+	        this.company = source["company"];
+	        this.location = source["location"];
+	        this.workMode = source["workMode"];
+	        this.salaryMin = source["salaryMin"];
+	        this.salaryMax = source["salaryMax"];
+	        this.salaryText = source["salaryText"];
+	        this.annualized = source["annualized"];
+	        this.description = source["description"];
+	        this.datePosted = source["datePosted"];
+	        this.sources = source["sources"];
+	        this.state = source["state"];
+	        this.jobId = source["jobId"];
+	        this.jobStatus = source["jobStatus"];
+	        this.searchId = source["searchId"];
+	        this.firstSeen = source["firstSeen"];
+	        this.lastSeen = source["lastSeen"];
+	        this.dismissedAt = source["dismissedAt"];
+	    }
+	}
+	export class PostingFilter {
+	    tab: string;
+	    query: string;
+	    source: string;
+	    onlyNew: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PostingFilter(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tab = source["tab"];
+	        this.query = source["query"];
+	        this.source = source["source"];
+	        this.onlyNew = source["onlyNew"];
+	    }
+	}
+	export class SavedSearch {
+	    id: string;
+	    term: string;
+	    location: string;
+	    remoteOnly: boolean;
+	    sources: string[];
+	    perSource: Record<string, number>;
+	    lastRunAt: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SavedSearch(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.term = source["term"];
+	        this.location = source["location"];
+	        this.remoteOnly = source["remoteOnly"];
+	        this.sources = source["sources"];
+	        this.perSource = source["perSource"];
+	        this.lastRunAt = source["lastRunAt"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+	
+	export class SearchQuery {
+	    term: string;
+	    location: string;
+	    remoteOnly: boolean;
+	    sources: string[];
+	    perSource: Record<string, number>;
+	
+	    static createFrom(source: any = {}) {
+	        return new SearchQuery(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.term = source["term"];
+	        this.location = source["location"];
+	        this.remoteOnly = source["remoteOnly"];
+	        this.sources = source["sources"];
+	        this.perSource = source["perSource"];
+	    }
+	}
+	export class SearchRun {
+	    searchId: string;
+	    cached: boolean;
+	    fetched: number;
+	    newCount: number;
+	    errors: Record<string, string>;
+	    lastRunAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SearchRun(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.searchId = source["searchId"];
+	        this.cached = source["cached"];
+	        this.fetched = source["fetched"];
+	        this.newCount = source["newCount"];
+	        this.errors = source["errors"];
+	        this.lastRunAt = source["lastRunAt"];
+	    }
+	}
 	export class Settings {
 	    adzunaAppId: string;
 	    adzunaAppKey: string;
@@ -704,6 +769,7 @@ export namespace main {
 	    filingStatus: string;
 	    homeAreaCode: string;
 	    defaultOccupation: string;
+	    discoverCacheHours: number;
 	    windowWidth: number;
 	    windowHeight: number;
 	    windowMaximised: boolean;
@@ -721,6 +787,7 @@ export namespace main {
 	        this.filingStatus = source["filingStatus"];
 	        this.homeAreaCode = source["homeAreaCode"];
 	        this.defaultOccupation = source["defaultOccupation"];
+	        this.discoverCacheHours = source["discoverCacheHours"];
 	        this.windowWidth = source["windowWidth"];
 	        this.windowHeight = source["windowHeight"];
 	        this.windowMaximised = source["windowMaximised"];

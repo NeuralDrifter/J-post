@@ -77,3 +77,15 @@ describe('percent', () => {
     expect(percent(1 / 3)).toBe('33%')
   })
 })
+
+describe('timeAgo', () => {
+  it('describes how long ago a timestamp was', async () => {
+    const { timeAgo } = await import('./format')
+    const now = new Date('2026-10-01T12:00:00.000Z')
+    expect(timeAgo('2026-10-01T11:59:40.000Z', now)).toBe('just now')
+    expect(timeAgo('2026-10-01T11:15:00.000Z', now)).toBe('45 min ago')
+    expect(timeAgo('2026-10-01T10:00:00.000Z', now)).toBe('2h ago')
+    expect(timeAgo('2026-09-28T12:00:00.000Z', now)).toBe('3 days ago')
+    expect(timeAgo('', now)).toBe('')
+  })
+})

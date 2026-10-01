@@ -55,7 +55,9 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
   const save = async (e: FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    const ok = await apiOk(SaveSettings({ ...s, followUpDays: Math.round(Number(s.followUpDays)) || 7 }))
+    const ok = await apiOk(
+      SaveSettings({ ...s, followUpDays: Math.round(Number(s.followUpDays)) || 7, discoverCacheHours: Math.round(Number(s.discoverCacheHours)) || 12 }),
+    )
     setSaving(false)
     if (!ok) return
     toast.success('Settings saved')
@@ -84,6 +86,18 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
         <button type="button" className="mt-3 flex items-center gap-1 text-xs text-indigo-300 hover:underline" onClick={() => BrowserOpenURL('https://developer.adzuna.com/')}>
           <ExternalLink size={12} /> Get Adzuna keys
         </button>
+        <div className="mt-4 flex items-center gap-2 text-sm">
+          <span className="text-ink-2">Re-use search results for</span>
+          <input
+            className="field w-20"
+            type="number"
+            min={1}
+            max={168}
+            value={s.discoverCacheHours}
+            onChange={(e) => setS({ ...s, discoverCacheHours: Number(e.target.value) })}
+          />
+          <span className="text-ink-2">hours before scraping again</span>
+        </div>
       </Section>
 
       <Section title="Python for JobSpy" hint="Leave blank to auto-detect the venv folder next to the app or the project.">

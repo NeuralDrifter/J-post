@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function ChangeStatus(arg1:string,arg2:string,arg3:string,arg4:string):Promise<main.Job>;
 
+export function ClearDismissed(arg1:number):Promise<number>;
+
 export function CreateJob(arg1:main.Job):Promise<main.Job>;
 
 export function DataDir():Promise<string>;
@@ -18,11 +20,13 @@ export function DeleteInterview(arg1:string):Promise<void>;
 
 export function DeleteJob(arg1:string):Promise<void>;
 
+export function DeleteSearch(arg1:string):Promise<void>;
+
 export function DescribeArea(arg1:string):Promise<main.Option>;
 
 export function DescribeOccupation(arg1:string):Promise<main.Option>;
 
-export function Discover(arg1:main.DiscoverQuery):Promise<main.DiscoverResponse>;
+export function DismissPosting(arg1:string):Promise<void>;
 
 export function DraftCounter(arg1:string):Promise<main.CompPackage>;
 
@@ -36,6 +40,8 @@ export function GetSettings():Promise<main.Settings>;
 
 export function GetStartupError():Promise<string>;
 
+export function InboxCounts():Promise<main.InboxCounts>;
+
 export function ListAttachments(arg1:string):Promise<Array<main.Attachment>>;
 
 export function ListCompForJob(arg1:string):Promise<Array<main.ComparisonItem>>;
@@ -48,7 +54,13 @@ export function ListInterviews(arg1:string):Promise<Array<main.Interview>>;
 
 export function ListJobSummaries():Promise<Array<main.JobSummary>>;
 
+export function ListPostings(arg1:main.PostingFilter):Promise<Array<main.Posting>>;
+
+export function ListRecentSearches():Promise<Array<main.SavedSearch>>;
+
 export function ListStageEvents(arg1:string):Promise<Array<main.StageEvent>>;
+
+export function MarkPostingSeen(arg1:string):Promise<void>;
 
 export function MarketSources():Promise<main.DataSources>;
 
@@ -64,11 +76,17 @@ export function PreviewComp(arg1:main.CompPackage):Promise<main.PackageResult>;
 
 export function RenameAttachment(arg1:string,arg2:string):Promise<void>;
 
+export function RestorePosting(arg1:string):Promise<void>;
+
+export function RunSearch(arg1:main.SearchQuery,arg2:boolean):Promise<main.SearchRun>;
+
 export function SaveCompPackage(arg1:main.CompPackage):Promise<main.CompPackage>;
 
 export function SaveContact(arg1:main.Contact):Promise<main.Contact>;
 
 export function SaveInterview(arg1:main.Interview):Promise<main.Interview>;
+
+export function SavePosting(arg1:string):Promise<main.Job>;
 
 export function SaveSettings(arg1:main.Settings):Promise<void>;
 
