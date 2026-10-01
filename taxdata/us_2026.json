@@ -1,7 +1,7 @@
 {
  "year": 2026,
  "federal": {
-  "source": "IRS Rev. Proc. 2025-32 (tax year 2026); SSA 2026 wage base",
+  "source": "IRS Rev. Proc. 2025-32 (tax year 2026); SSA 2026 wage base; IRS 2026 401(k) deferral limit",
   "year": 2026,
   "brackets": {
    "single": [
@@ -104,6 +104,7 @@
    "rate": 0.062,
    "wageBase": 184500
   },
+  "k401Limit": 24500,
   "medicare": {
    "rate": 0.0145,
    "additionalRate": 0.009,

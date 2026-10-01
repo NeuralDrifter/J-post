@@ -48,6 +48,7 @@ type TaxData struct {
 		Source            string               `json:"source"`
 		Brackets          map[string][]Bracket `json:"brackets"`
 		StandardDeduction map[string]int64     `json:"standardDeduction"`
+		K401Limit         int64                `json:"k401Limit"`
 		SocialSecurity    struct {
 			Rate     float64 `json:"rate"`
 			WageBase int64   `json:"wageBase"`
@@ -128,8 +129,11 @@ func ComputeTax(in TaxInput) (TaxResult, error) {
 		return TaxResult{}, fmt.Errorf("unknown filing status %q", in.Filing)
 	}
 	st, ok := td.States[in.State]
-	if !ok {
+	if !ok && in.State != "" {
 		return TaxResult{}, fmt.Errorf("unknown state %q", in.State)
+	}
+	if in.State == "" {
+		st = StateTax{Type: "none"}
 	}
 	res := TaxResult{StateName: st.Name, StateSource: st.Source, Year: st.Year}
 	if in.Wages <= 0 {

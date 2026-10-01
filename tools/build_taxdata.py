@@ -20,7 +20,7 @@ YEAR = 2026
 STATE_SOURCE = "Tax Foundation, State Individual Income Tax Rates and Brackets, 2026"
 
 FEDERAL = {
-    "source": "IRS Rev. Proc. 2025-32 (tax year 2026); SSA 2026 wage base",
+    "source": "IRS Rev. Proc. 2025-32 (tax year 2026); SSA 2026 wage base; IRS 2026 401(k) deferral limit",
     "year": YEAR,
     # [threshold where the rate starts, rate]
     "brackets": {
@@ -30,6 +30,7 @@ FEDERAL = {
     },
     "standardDeduction": {"single": 16100, "married": 32200, "head": 24150},
     "socialSecurity": {"rate": 0.062, "wageBase": 184500},
+    "k401Limit": 24500,  # employee elective deferral limit, under age 50
     "medicare": {"rate": 0.0145, "additionalRate": 0.009, "threshold": {"single": 200000, "married": 250000, "head": 200000}},
 }
 

@@ -11,13 +11,17 @@ import (
 const defaultFollowUpDays = 7
 
 type Settings struct {
-	AdzunaAppID     string `json:"adzunaAppId"`
-	AdzunaAppKey    string `json:"adzunaAppKey"`
-	PythonPath      string `json:"pythonPath"`
-	FollowUpDays    int    `json:"followUpDays"`
-	WindowWidth     int    `json:"windowWidth"`
-	WindowHeight    int    `json:"windowHeight"`
-	WindowMaximised bool   `json:"windowMaximised"`
+	AdzunaAppID  string `json:"adzunaAppId"`
+	AdzunaAppKey string `json:"adzunaAppKey"`
+	PythonPath   string `json:"pythonPath"`
+	FollowUpDays int    `json:"followUpDays"`
+	// Compensation comparison: federal filing status, home area for cost of living, usual occupation.
+	FilingStatus      string `json:"filingStatus"`
+	HomeAreaCode      string `json:"homeAreaCode"`
+	DefaultOccupation string `json:"defaultOccupation"`
+	WindowWidth       int    `json:"windowWidth"`
+	WindowHeight      int    `json:"windowHeight"`
+	WindowMaximised   bool   `json:"windowMaximised"`
 }
 
 type SettingsStore struct {
@@ -38,6 +42,18 @@ func defaultDataDir() string {
 	return filepath.Join(home, ".jobtrack")
 }
 
+func applySettingsDefaults(s *Settings) {
+	if s.FollowUpDays <= 0 {
+		s.FollowUpDays = defaultFollowUpDays
+	}
+	if s.FilingStatus == "" {
+		s.FilingStatus = "single"
+	}
+	if s.HomeAreaCode == "" {
+		s.HomeAreaCode = "US"
+	}
+}
+
 func NewSettingsStore(dir string) *SettingsStore {
 	return &SettingsStore{filePath: filepath.Join(dir, "settings.json")}
 }
@@ -56,17 +72,16 @@ func (s *SettingsStore) Load() (Settings, error) {
 			return settings, err
 		}
 	}
-	if settings.FollowUpDays <= 0 {
-		settings.FollowUpDays = defaultFollowUpDays
-	}
+	applySettingsDefaults(&settings)
 	return settings, nil
 }
 
 // Save writes atomically (temp file + rename) so a crash can't leave a
 // half-written settings file. 0600 because it holds API keys.
 func (s *SettingsStore) Save(settings Settings) error {
-	if settings.FollowUpDays <= 0 {
-		settings.FollowUpDays = defaultFollowUpDays
+	applySettingsDefaults(&settings)
+	if settings.FilingStatus != "single" && settings.FilingStatus != "married" && settings.FilingStatus != "head" {
+		return errors.New("filing status must be single, married or head of household")
 	}
 	if settings.FollowUpDays > 365 {
 		return errors.New("follow-up threshold must be between 1 and 365 days")
