@@ -31,7 +31,7 @@ describe('jobFromDraft', () => {
     expect(job.position).toBe('Dev')
     expect(job.salaryMin).toBe(120000)
     expect(job.salaryMax).toBe(150000)
-    expect(job.status).toBe('wishlist')
+    expect(job.status).toBe('interested')
     expect(job.source).toBe('manual')
   })
 

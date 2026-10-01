@@ -95,7 +95,7 @@ func TestMarkTracked(t *testing.T) {
 	}
 	jobs := []Job{
 		{ID: "j1", Company: "ACME", Position: "dev", Status: StatusApplied},
-		{ID: "j2", Company: "Brex", Position: "PM", URL: "https://brex.test/9", Status: StatusWishlist},
+		{ID: "j2", Company: "Brex", Position: "PM", URL: "https://brex.test/9", Status: StatusInterested},
 		{ID: "j3", Company: "Cora", Position: "Other"},
 	}
 	markTracked(results, jobs)

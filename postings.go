@@ -261,7 +261,7 @@ func (r *Repo) SavePosting(id string) (Job, error) {
 		source = p.Sources[0]
 	}
 	j, err := r.CreateJob(Job{
-		Company: company, Position: p.Title, Status: StatusWishlist, Location: p.Location, WorkMode: p.WorkMode,
+		Company: company, Position: p.Title, Status: StatusInterested, Location: p.Location, WorkMode: p.WorkMode,
 		SalaryMin: p.SalaryMin, SalaryMax: p.SalaryMax, SalaryText: p.SalaryText, URL: p.URL, Source: source,
 		Description: p.Description, DatePosted: p.DatePosted,
 	})

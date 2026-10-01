@@ -4,7 +4,7 @@ import { filterSummaries, sortSummaries } from './filter'
 
 function summary(job: Partial<main.Job>, daysInStage = 0): main.JobSummary {
   return {
-    job: { company: '', position: '', location: '', workMode: '', source: 'manual', status: 'wishlist', dateApplied: '', ...job },
+    job: { company: '', position: '', location: '', workMode: '', source: 'manual', status: 'interested', dateApplied: '', ...job },
     daysInStage,
   } as unknown as main.JobSummary
 }
@@ -12,7 +12,7 @@ function summary(job: Partial<main.Job>, daysInStage = 0): main.JobSummary {
 const list = [
   summary({ id: 'a', company: 'Acme', position: 'Backend Dev', location: 'Denver', workMode: 'remote', source: 'linkedin', status: 'applied', salaryMax: 150000, dateApplied: '2026-09-01' }, 5),
   summary({ id: 'b', company: 'Brex', position: 'Product Manager', workMode: 'hybrid', status: 'offer', salaryMin: 200000, dateApplied: '2026-09-10' }, 1),
-  summary({ id: 'c', company: 'Cora', position: 'Designer', status: 'wishlist' }, 9),
+  summary({ id: 'c', company: 'Cora', position: 'Designer', status: 'interested' }, 9),
 ]
 const ids = (l: main.JobSummary[]) => l.map((s) => s.job.id).join(',')
 

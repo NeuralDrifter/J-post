@@ -44,7 +44,7 @@ func TestImportLegacyBasic(t *testing.T) {
 	if got["Acme"].Status != StatusApplied || got["Acme"].Notes != "n1" || got["Acme"].DateApplied != "2026-09-01" {
 		t.Errorf("Acme = %+v", got["Acme"])
 	}
-	if got["Brex"].Status != StatusWishlist || got["Cora"].Status != StatusOffer {
+	if got["Brex"].Status != StatusInterested || got["Cora"].Status != StatusOffer {
 		t.Errorf("statuses: %+v", got)
 	}
 	if _, err := os.Stat(p); !errors.Is(err, os.ErrNotExist) {
@@ -63,17 +63,21 @@ func TestImportLegacyMessyRecords(t *testing.T) {
 	r := newTestRepo(t)
 	p := writeLegacy(t, `[
 		{"company":"Acme","position":"Dev","status":"Phone screen","dateApplied":"last tuesday"},
+		{"company":"Dune","position":"Dev","status":"Interested"},
 		{"company":"","position":"","status":""}
 	]`)
 	n, err := r.ImportLegacy(p)
-	if err != nil || n != 2 {
+	if err != nil || n != 3 {
 		t.Fatalf("n=%d err=%v", n, err)
 	}
 	got := jobsByCompany(t, r)
-	if j := got["Acme"]; j.Status != StatusWishlist || j.DateApplied != "" {
+	if got["Dune"].Status != StatusInterested {
+		t.Errorf("Dune = %+v", got["Dune"])
+	}
+	if j := got["Acme"]; j.Status != StatusInterested || j.DateApplied != "" {
 		t.Errorf("Acme = %+v", j)
 	}
-	if j := got["(unknown company)"]; j.Position != "(unknown position)" || j.Status != StatusWishlist {
+	if j := got["(unknown company)"]; j.Position != "(unknown position)" || j.Status != StatusInterested {
 		t.Errorf("blank record = %+v", j)
 	}
 }

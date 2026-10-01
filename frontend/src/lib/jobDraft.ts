@@ -19,7 +19,7 @@ export function emptyDraft(): JobDraft {
   return {
     company: '',
     position: '',
-    status: 'wishlist',
+    status: 'interested',
     workMode: '',
     location: '',
     url: '',

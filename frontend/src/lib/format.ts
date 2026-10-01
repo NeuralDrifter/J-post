@@ -1,10 +1,10 @@
 // Labels and pure formatting helpers shared by every page.
 
-export const STATUSES = ['wishlist', 'applied', 'interviewing', 'offer', 'closed'] as const
+export const STATUSES = ['interested', 'applied', 'interviewing', 'offer', 'closed'] as const
 export type Status = (typeof STATUSES)[number]
 
 export const STATUS_LABEL: Record<string, string> = {
-  wishlist: 'Interested',
+  interested: 'Interested',
   applied: 'Applied',
   interviewing: 'Interviewing',
   offer: 'Offer',
@@ -12,7 +12,7 @@ export const STATUS_LABEL: Record<string, string> = {
 }
 
 export const STATUS_DOT: Record<string, string> = {
-  wishlist: 'bg-ink-3',
+  interested: 'bg-ink-3',
   applied: 'bg-sky-400',
   interviewing: 'bg-info',
   offer: 'bg-success',

@@ -22,8 +22,8 @@ type legacyApplication struct {
 
 func mapLegacyStatus(s string) (status, reason string) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
-	case StatusWishlist:
-		return StatusWishlist, ""
+	case StatusInterested, "wishlist":
+		return StatusInterested, ""
 	case StatusApplied:
 		return StatusApplied, ""
 	case StatusInterviewing:
@@ -33,7 +33,7 @@ func mapLegacyStatus(s string) (status, reason string) {
 	case "rejected":
 		return StatusClosed, "rejected"
 	default:
-		return StatusWishlist, ""
+		return StatusInterested, ""
 	}
 }
 

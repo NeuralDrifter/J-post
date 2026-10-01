@@ -13,7 +13,7 @@ export function QuickAddModal({ onClose, initialStatus }: { onClose: () => void;
   const [draft, setDraft] = useState(() => ({
     ...emptyDraft(),
     // Closed needs a reason, so a new job can't start there.
-    status: initialStatus && initialStatus !== 'closed' ? initialStatus : 'wishlist',
+    status: initialStatus && initialStatus !== 'closed' ? initialStatus : 'interested',
   }))
   const [saving, setSaving] = useState(false)
 

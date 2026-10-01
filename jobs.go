@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	StatusWishlist     = "wishlist"
+	StatusInterested   = "interested"
 	StatusApplied      = "applied"
 	StatusInterviewing = "interviewing"
 	StatusOffer        = "offer"
@@ -19,7 +19,7 @@ const (
 )
 
 var validStatuses = map[string]bool{
-	StatusWishlist: true, StatusApplied: true, StatusInterviewing: true, StatusOffer: true, StatusClosed: true,
+	StatusInterested: true, StatusApplied: true, StatusInterviewing: true, StatusOffer: true, StatusClosed: true,
 }
 
 var validCloseReasons = map[string]bool{"rejected": true, "withdrawn": true, "ghosted": true, "declined": true}
@@ -141,7 +141,7 @@ func insertStageEvent(ex execer, jobID, from, to, reason, at, note string) error
 
 func (r *Repo) CreateJob(j Job) (Job, error) {
 	if j.Status == "" {
-		j.Status = StatusWishlist
+		j.Status = StatusInterested
 	}
 	if err := validateJobFields(&j); err != nil {
 		return Job{}, err

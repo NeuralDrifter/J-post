@@ -45,7 +45,7 @@ func TestFollowUpDueRules(t *testing.T) {
 		{"applied and stale", Job{Status: StatusApplied}, 8, true},
 		{"applied exactly at threshold", Job{Status: StatusApplied}, 7, false},
 		{"interviewing and old", Job{Status: StatusInterviewing}, 30, false},
-		{"follow-up date reached", Job{Status: StatusWishlist, FollowUpOn: "2026-10-01"}, 0, true},
+		{"follow-up date reached", Job{Status: StatusInterested, FollowUpOn: "2026-10-01"}, 0, true},
 		{"follow-up date in future", Job{Status: StatusOffer, FollowUpOn: "2026-10-02"}, 0, false},
 		{"closed never due", Job{Status: StatusClosed, FollowUpOn: "2026-09-01"}, 40, false},
 	}
@@ -68,7 +68,7 @@ func TestGetMetricsEmpty(t *testing.T) {
 }
 
 // seedPipeline builds: A applied→interviewing, B applied→closed(ghosted),
-// C wishlist, D applied and untouched for 30 days, and an interview for A tomorrow.
+// C interested, D applied and untouched for 30 days, and an interview for A tomorrow.
 func seedPipeline(t *testing.T, r *Repo) (a, b, c, d Job) {
 	setNow(r, 2026, time.September, 1, 12)
 	a = mustCreate(t, r, Job{Company: "Acme", Position: "Dev", Status: StatusApplied})
@@ -129,6 +129,6 @@ func TestListJobSummaries(t *testing.T) {
 		t.Errorf("A = %+v", s)
 	}
 	if s := byID[c.ID]; s.Stale || s.FollowUpDue {
-		t.Errorf("wishlist job C should not be stale or due: %+v", s)
+		t.Errorf("interested job C should not be stale or due: %+v", s)
 	}
 }

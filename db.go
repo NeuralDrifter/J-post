@@ -216,6 +216,10 @@ var migrations = []string{
 	);
 	CREATE INDEX idx_postings_url ON postings(url);
 	CREATE INDEX idx_postings_state ON postings(state, first_seen);`,
+	// 4: the first pipeline stage is called "interested" (was "wishlist").
+	`UPDATE jobs SET status = 'interested' WHERE status = 'wishlist';
+	UPDATE stage_events SET to_status = 'interested' WHERE to_status = 'wishlist';
+	UPDATE stage_events SET from_status = 'interested' WHERE from_status = 'wishlist';`,
 }
 
 func openDB(path string) (*sql.DB, error) {

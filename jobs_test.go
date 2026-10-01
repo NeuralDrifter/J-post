@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 )
 
@@ -17,14 +18,14 @@ func mustCreate(t *testing.T, r *Repo, j Job) Job {
 func TestCreateJobDefaultsAndCreationEvent(t *testing.T) {
 	r := newTestRepo(t)
 	j := mustCreate(t, r, Job{Company: "  Acme ", Position: "Dev"})
-	if j.ID == "" || j.Status != StatusWishlist || j.Source != "manual" || j.Company != "Acme" {
+	if j.ID == "" || j.Status != StatusInterested || j.Source != "manual" || j.Company != "Acme" {
 		t.Fatalf("unexpected job: %+v", j)
 	}
 	if j.DateApplied != "" {
-		t.Fatalf("wishlist job should have no date applied, got %q", j.DateApplied)
+		t.Fatalf("interested job should have no date applied, got %q", j.DateApplied)
 	}
 	events, err := r.ListStageEvents(j.ID)
-	if err != nil || len(events) != 1 || events[0].FromStatus != "" || events[0].ToStatus != StatusWishlist {
+	if err != nil || len(events) != 1 || events[0].FromStatus != "" || events[0].ToStatus != StatusInterested {
 		t.Fatalf("events = %+v, %v", events, err)
 	}
 }
@@ -75,7 +76,7 @@ func TestUpdateJobKeepsStatusAndNotes(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ := r.GetJob(j.ID)
-	if got.Position != "Senior Dev" || got.Status != StatusWishlist || got.Notes != "original" || updated.Status != StatusWishlist {
+	if got.Position != "Senior Dev" || got.Status != StatusInterested || got.Notes != "original" || updated.Status != StatusInterested {
 		t.Fatalf("got %+v", got)
 	}
 }
@@ -164,5 +165,35 @@ func TestListJobsReturnsEmptySlice(t *testing.T) {
 	jobs, err := r.ListJobs()
 	if err != nil || jobs == nil || len(jobs) != 0 {
 		t.Fatalf("jobs = %#v, %v", jobs, err)
+	}
+}
+
+func TestMigration4RenamesWishlistToInterested(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "old.db")
+	db, err := openDBWith(path, migrations[:3])
+	if err != nil {
+		t.Fatal(err)
+	}
+	stamp := "2026-09-01T12:00:00.000Z"
+	if _, err := db.Exec(`INSERT INTO jobs (id, company, position, status, created_at, updated_at) VALUES ('j1', 'Acme', 'Dev', 'wishlist', ?, ?)`, stamp, stamp); err != nil {
+		t.Fatal(err)
+	}
+	db.Exec(`INSERT INTO stage_events (id, job_id, from_status, to_status, at) VALUES ('e1', 'j1', NULL, 'wishlist', ?)`, stamp)
+	db.Exec(`INSERT INTO stage_events (id, job_id, from_status, to_status, at) VALUES ('e2', 'j1', 'wishlist', 'applied', ?)`, stamp)
+	db.Close()
+
+	db, err = openDB(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	r := NewRepo(db, t.TempDir())
+	j, err := r.GetJob("j1")
+	if err != nil || j.Status != StatusInterested {
+		t.Fatalf("job = %+v, %v", j, err)
+	}
+	events, _ := r.ListStageEvents("j1")
+	if len(events) != 2 || events[0].ToStatus != StatusInterested || events[1].FromStatus != StatusInterested {
+		t.Fatalf("events = %+v", events)
 	}
 }

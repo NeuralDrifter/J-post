@@ -30,7 +30,7 @@ import { ALL_SOURCES, SearchForm } from './SearchForm'
 type Tab = 'inbox' | 'saved' | 'dismissed'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'inbox', label: 'Inbox' },
-  { id: 'saved', label: 'Saved' },
+  { id: 'saved', label: 'Interested' },
   { id: 'dismissed', label: 'Not interested' },
 ]
 

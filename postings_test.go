@@ -88,7 +88,7 @@ func TestSavePostingTwice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if j.Company != "Acme" || j.Position != "Go Dev" || j.Status != StatusWishlist || j.URL != "https://acme.test/1" || j.Source != "indeed" || *j.SalaryMin != 120000 {
+	if j.Company != "Acme" || j.Position != "Go Dev" || j.Status != StatusInterested || j.URL != "https://acme.test/1" || j.Source != "indeed" || *j.SalaryMin != 120000 {
 		t.Fatalf("job = %+v", j)
 	}
 	again, err := r.SavePosting(p.ID)
@@ -96,7 +96,7 @@ func TestSavePostingTwice(t *testing.T) {
 		t.Fatalf("second save made a new job: %+v %v", again, err)
 	}
 	saved := mustList(t, r, PostingFilter{Tab: "saved"})
-	if len(saved) != 1 || saved[0].JobID != j.ID || saved[0].JobStatus != StatusWishlist {
+	if len(saved) != 1 || saved[0].JobID != j.ID || saved[0].JobStatus != StatusInterested {
 		t.Fatalf("saved = %+v", saved)
 	}
 }
