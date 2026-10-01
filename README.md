@@ -4,7 +4,7 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
 
 ## Features
 
-- **Pipeline board**: Wishlist → Applied → Interviewing → Offer → Closed, with drag-and-drop. Closing a job asks why (not selected, I withdrew, no response, I declined) so your history stays honest without being a wall of rejections.
+- **Pipeline board**: Interested → Applied → Interviewing → Offer → Closed, with drag-and-drop. Closing a job asks why (not selected, I withdrew, no response, I declined) so your history stays honest without being a wall of rejections.
 - **Live metrics**: active applications, response rate, interviews this week, and follow-ups due. These are computed from real data; nothing is faked.
 - **Table view and filters**: sortable table, plus work mode, source and quick search filters.
 - **Job detail page**:
@@ -13,7 +13,7 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
   - contacts, scheduled interviews, and attached files (copies of the exact resume or cover letter you sent)
 - **Discover**:
   - Searches Indeed, LinkedIn and ZipRecruiter (via [JobSpy](https://github.com/speedyapply/JobSpy), which runs locally and scrapes from your own IP) plus the official Adzuna API, in parallel.
-  - Every posting found lands in a persistent **inbox**: new ones are badged; you save each to your Wishlist or mark it **Not interested**, which hides it for good. A Not interested tab lets you move postings back.
+  - Every posting found lands in a persistent **inbox**: new ones are badged; you add each to Interested or mark it **Not interested**, which hides it for good. A Not interested tab lets you move postings back.
   - Searches are saved. Re-running one within the cache window (default 12 hours, set in Settings) reuses stored results, and later runs only ask the boards for postings newer than the last run.
   - Results per board are configurable (Adzuna max 50).
 - **Offers**:

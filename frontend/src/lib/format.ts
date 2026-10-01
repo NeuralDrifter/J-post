@@ -4,7 +4,7 @@ export const STATUSES = ['wishlist', 'applied', 'interviewing', 'offer', 'closed
 export type Status = (typeof STATUSES)[number]
 
 export const STATUS_LABEL: Record<string, string> = {
-  wishlist: 'Wishlist',
+  wishlist: 'Interested',
   applied: 'Applied',
   interviewing: 'Interviewing',
   offer: 'Offer',

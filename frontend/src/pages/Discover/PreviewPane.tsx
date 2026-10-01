@@ -54,7 +54,7 @@ export function PreviewPane({ posting: p, busy, actions, onClose }: Props) {
             </button>
           ) : (
             <button className="btn btn-primary" disabled={busy} onClick={() => actions.save(p)}>
-              <Bookmark size={15} /> Save to Wishlist
+              <Bookmark size={15} /> Add to Interested
             </button>
           )}
           {(p.state === 'new' || p.state === 'seen') && (

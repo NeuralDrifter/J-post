@@ -115,7 +115,7 @@ export default function DiscoverPage() {
       if (!job) return
       if (p.state !== 'saved') advance(p)
       notifyDataChanged()
-      toast.success(`Saved ${job.position} at ${job.company} to your Wishlist`)
+      toast.success(`Saved ${job.position} at ${job.company} to Interested`)
     },
     dismiss: async (p) => {
       if (!(await apiOk(DismissPosting(p.id)))) return
@@ -260,7 +260,7 @@ function EmptyState({ tab, filtered }: { tab: Tab; filtered: boolean }) {
     : tab === 'inbox'
       ? 'Your inbox is empty. Run a search to pull in postings.'
       : tab === 'saved'
-        ? 'Postings you save to your Wishlist show up here.'
+        ? 'Postings you add to Interested show up here.'
         : 'Postings you mark Not interested are kept here, so they never come back.'
   const Icon = tab === 'inbox' ? Inbox : Telescope
   return (

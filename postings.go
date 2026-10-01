@@ -241,7 +241,7 @@ func (r *Repo) RestorePosting(id string) error {
 	return expectOneRow(res, err, "dismissed posting", id)
 }
 
-// SavePosting adds the posting to the Wishlist (or returns the job it already created).
+// SavePosting adds the posting to the Interested column (or returns the job it already created).
 func (r *Repo) SavePosting(id string) (Job, error) {
 	p, err := r.GetPosting(id)
 	if err != nil {

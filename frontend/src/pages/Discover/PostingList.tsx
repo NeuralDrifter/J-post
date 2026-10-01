@@ -33,13 +33,13 @@ export function PostingList({ postings, selectedId, onSelect, actions }: Props) 
     if (p.state === 'dismissed') {
       return [
         { label: 'Move back to inbox', icon: Undo2, onSelect: () => actions.restore(p) },
-        { label: 'Save to Wishlist', icon: Bookmark, onSelect: () => actions.save(p) },
+        { label: 'Add to Interested', icon: Bookmark, onSelect: () => actions.save(p) },
         'separator',
         ...link,
       ]
     }
     return [
-      { label: 'Save to Wishlist', icon: Bookmark, onSelect: () => actions.save(p) },
+      { label: 'Add to Interested', icon: Bookmark, onSelect: () => actions.save(p) },
       { label: 'Not interested', icon: EyeOff, onSelect: () => actions.dismiss(p) },
       'separator',
       ...link,
