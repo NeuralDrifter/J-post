@@ -26,7 +26,11 @@ type SettingsStore struct {
 }
 
 // defaultDataDir is where the app keeps its database, settings and files.
+// JOBTRACK_DATA_DIR overrides it (handy for testing against a scratch folder).
 func defaultDataDir() string {
+	if dir := os.Getenv("JOBTRACK_DATA_DIR"); dir != "" {
+		return dir
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		home = "."

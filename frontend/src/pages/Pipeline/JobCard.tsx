@@ -14,7 +14,11 @@ import {
 export function JobCard({ summary, overlay = false }: { summary: main.JobSummary; overlay?: boolean }) {
   const { job } = summary
   const salary = formatSalary(job.salaryMin, job.salaryMax)
-  const place = [job.location, WORK_MODE_LABEL[job.workMode]].filter(Boolean).join(' · ')
+  const mode = WORK_MODE_LABEL[job.workMode]
+  // Skip the work mode when the location already says it (e.g. "Remote · Remote").
+  const place = [job.location, mode && mode.toLowerCase() !== job.location.trim().toLowerCase() ? mode : '']
+    .filter(Boolean)
+    .join(' · ')
   const closed = job.status === 'closed'
 
   return (
