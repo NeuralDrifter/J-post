@@ -7,8 +7,11 @@ import { DeleteJob, GetJob, ListStageEvents } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import { ContactsPanel } from './ContactsPanel'
 import { DescriptionCard } from './DescriptionCard'
 import { EditJobModal } from './EditJobModal'
+import { FilesPanel } from './FilesPanel'
+import { InterviewsPanel } from './InterviewsPanel'
 import { JobHeader } from './JobHeader'
 import { NotesPad } from './NotesPad'
 import { StageTimeline } from './StageTimeline'
@@ -48,7 +51,11 @@ export default function JobDetailPage({ id }: { id: string }) {
           <DescriptionCard text={job.description} />
           <NotesPad jobId={job.id} initial={job.notes} />
         </div>
-        <aside className="col-start-2 space-y-4 min-[1200px]:col-start-3 min-[1200px]:row-start-1" />
+        <aside className="col-start-2 space-y-4 min-[1200px]:col-start-3 min-[1200px]:row-start-1">
+          <InterviewsPanel jobId={job.id} />
+          <ContactsPanel jobId={job.id} />
+          <FilesPanel jobId={job.id} />
+        </aside>
       </div>
       {editing && <EditJobModal job={job} onClose={() => setEditing(false)} />}
       {picker}
