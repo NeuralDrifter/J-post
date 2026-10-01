@@ -1,9 +1,25 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { ExternalLink, FolderOpen, LoaderCircle } from 'lucide-react'
+import { CodePicker } from '../../components/comp/CodePicker'
+import { PackageEditor } from '../../components/comp/PackageEditor'
 import { Field } from '../../components/JobForm'
 import { PageTitle } from '../../components/PageTitle'
 import { api, apiOk } from '../../lib/api'
-import { BrowserOpenURL, DataDir, GetSettings, OpenDataDir, SaveSettings, TestPython, type main } from '../../lib/backend'
+import {
+  BrowserOpenURL,
+  DataDir,
+  DescribeArea,
+  DescribeOccupation,
+  GetCurrentComp,
+  GetSettings,
+  OpenDataDir,
+  SaveSettings,
+  SearchAreas,
+  SearchOccupations,
+  TestPython,
+  type main,
+} from '../../lib/backend'
+import { blankPackage, FILING_LABEL, formatMoneyFull } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
@@ -33,6 +49,8 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
   const [s, setS] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [editingCurrent, setEditingCurrent] = useState<main.CompPackage | null>(null)
+  const { data: current } = useLoad(() => api(GetCurrentComp()), [])
 
   const save = async (e: FormEvent) => {
     e.preventDefault()
@@ -52,6 +70,7 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
   }
 
   return (
+    <>
     <form onSubmit={save} className="space-y-4">
       <Section title="Job sources" hint="Indeed, LinkedIn and ZipRecruiter need no keys. Adzuna needs a free API key.">
         <div className="grid grid-cols-2 gap-4">
@@ -95,6 +114,49 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
         </div>
       </Section>
 
+      <Section title="Compensation" hint="Used on the Offers page: taxes, cost of living, and market pay for your role.">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Federal filing status">
+            <select className="field" value={s.filingStatus} onChange={(e) => setS({ ...s, filingStatus: e.target.value })}>
+              {Object.entries(FILING_LABEL).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Home location (for cost of living)">
+            <CodePicker
+              value={s.homeAreaCode}
+              onChange={(code) => setS({ ...s, homeAreaCode: code || 'US' })}
+              search={SearchAreas}
+              describe={DescribeArea}
+              placeholder="Where you live now"
+            />
+          </Field>
+          <Field label="Your usual occupation" wide>
+            <CodePicker
+              value={s.defaultOccupation}
+              onChange={(code) => setS({ ...s, defaultOccupation: code })}
+              search={SearchOccupations}
+              describe={DescribeOccupation}
+              placeholder="e.g. Software Developers"
+            />
+          </Field>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-line bg-white/[0.03] px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold">Current job baseline</p>
+            <p className="font-mono text-xs text-ink-3">
+              {current ? `${formatMoneyFull(current.baseSalary)} base · every offer shows the difference` : 'Not set: offers can’t show “vs current” yet'}
+            </p>
+          </div>
+          <button type="button" className="btn btn-ghost" onClick={() => setEditingCurrent(current ?? blankPackage('current'))}>
+            {current ? 'Edit' : 'Set up'}
+          </button>
+        </div>
+      </Section>
+
       <Section title="Data" hint="Your database, settings and attached files live here. Back this folder up to keep your history.">
         <div className="flex items-center gap-2">
           <code className="field flex-1 truncate font-mono text-xs text-ink-2">{dataDir}</code>
@@ -110,5 +172,8 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
         </button>
       </div>
     </form>
+    {/* Outside the settings form: the editor is a form of its own. */}
+    {editingCurrent && <PackageEditor initial={editingCurrent} onClose={() => setEditingCurrent(null)} />}
+    </>
   )
 }

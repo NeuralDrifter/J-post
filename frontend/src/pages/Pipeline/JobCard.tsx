@@ -5,6 +5,7 @@ import {
   CLOSE_REASON_LABEL,
   daysLabel,
   formatDateTime,
+  formatMoney,
   formatSalary,
   initials,
   INTERVIEW_KIND_LABEL,
@@ -13,7 +14,8 @@ import {
 
 export function JobCard({ summary, overlay = false }: { summary: main.JobSummary; overlay?: boolean }) {
   const { job } = summary
-  const salary = formatSalary(job.salaryMin, job.salaryMax)
+  // A modeled offer beats the posted range.
+  const salary = summary.offerYear1Total ? `${formatMoney(summary.offerYear1Total)} yr-1 total` : formatSalary(job.salaryMin, job.salaryMax)
   const mode = WORK_MODE_LABEL[job.workMode]
   // Skip the work mode when the location already says it (e.g. "Remote · Remote").
   const place = [job.location, mode && mode.toLowerCase() !== job.location.trim().toLowerCase() ? mode : '']

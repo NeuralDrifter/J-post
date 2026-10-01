@@ -7,6 +7,7 @@ import { DeleteJob, GetJob, ListStageEvents } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import { CompPanel } from './CompPanel'
 import { ContactsPanel } from './ContactsPanel'
 import { DescriptionCard } from './DescriptionCard'
 import { EditJobModal } from './EditJobModal'
@@ -53,6 +54,7 @@ export default function JobDetailPage({ id }: { id: string }) {
         </div>
         <aside className="col-start-2 space-y-4 min-[1200px]:col-start-3 min-[1200px]:row-start-1">
           <InterviewsPanel jobId={job.id} />
+          <CompPanel jobId={job.id} />
           <ContactsPanel jobId={job.id} />
           <FilesPanel jobId={job.id} />
         </aside>
