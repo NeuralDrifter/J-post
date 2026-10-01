@@ -1,5 +1,57 @@
-import { PageTitle } from '../../components/PageTitle'
+import { useState } from 'react'
+import { useNavigate } from 'react-router'
+import { confirmDialog } from '../../components/ConfirmDialog'
+import { useStatusChange } from '../../components/useStatusChange'
+import { api, apiOk } from '../../lib/api'
+import { DeleteJob, GetJob, ListStageEvents } from '../../lib/backend'
+import { notifyDataChanged } from '../../lib/events'
+import { toast } from '../../lib/toast'
+import { useLoad } from '../../lib/useLoad'
+import { DescriptionCard } from './DescriptionCard'
+import { EditJobModal } from './EditJobModal'
+import { JobHeader } from './JobHeader'
+import { NotesPad } from './NotesPad'
+import { StageTimeline } from './StageTimeline'
 
 export default function JobDetailPage({ id }: { id: string }) {
-  return <PageTitle title="Job" subtitle={id} />
+  const navigate = useNavigate()
+  const { data: job, loading } = useLoad(() => api(GetJob(id)), [id])
+  const { data: events } = useLoad(() => api(ListStageEvents(id)), [id])
+  const { request, picker } = useStatusChange()
+  const [editing, setEditing] = useState(false)
+
+  if (!job) {
+    return <p className="text-sm text-ink-2">{loading ? 'Loading…' : 'This job could not be loaded.'}</p>
+  }
+
+  const remove = async () => {
+    const ok = await confirmDialog({
+      title: 'Delete this job?',
+      message: `${job.position} at ${job.company} will be permanently deleted, along with its history, contacts, interviews and attached files.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    })
+    if (!ok || !(await apiOk(DeleteJob(job.id)))) return
+    navigate('/')
+    notifyDataChanged()
+    toast.success('Job deleted')
+  }
+
+  return (
+    <div className="space-y-4">
+      <JobHeader job={job} onStatus={(s) => request(job, s)} onEdit={() => setEditing(true)} onDelete={remove} />
+      <div className="grid grid-cols-[240px_minmax(0,1fr)] items-start gap-4 min-[1200px]:grid-cols-[260px_minmax(0,1fr)_340px]">
+        <div className="row-span-2 min-[1200px]:row-span-1">
+          <StageTimeline events={events ?? []} />
+        </div>
+        <div className="col-start-2 space-y-4">
+          <DescriptionCard text={job.description} />
+          <NotesPad jobId={job.id} initial={job.notes} />
+        </div>
+        <aside className="col-start-2 space-y-4 min-[1200px]:col-start-3 min-[1200px]:row-start-1" />
+      </div>
+      {editing && <EditJobModal job={job} onClose={() => setEditing(false)} />}
+      {picker}
+    </div>
+  )
 }
