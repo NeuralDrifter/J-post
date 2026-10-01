@@ -1,0 +1,6 @@
+build/bin
+node_modules
+frontend/dist
+venv/
+__pycache__/
+example_only_non_functioning_demo content/
