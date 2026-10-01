@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export function Modal({
@@ -20,7 +21,9 @@ export function Modal({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  return (
+  // Rendered into <body>: a parent with backdrop-filter (every .glass panel) would
+  // otherwise become the containing block for this fixed overlay and trap it inside.
+  return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onMouseDown={onClose}>
       <div
         role="dialog"
@@ -37,6 +40,7 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

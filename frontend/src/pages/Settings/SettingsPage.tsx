@@ -146,9 +146,9 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
         </div>
         <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-line bg-white/[0.03] px-4 py-3">
           <div>
-            <p className="text-sm font-semibold">Current job baseline</p>
+            <p className="text-sm font-semibold">Current job baseline <span className="font-normal text-ink-3">(optional)</span></p>
             <p className="font-mono text-xs text-ink-3">
-              {current ? `${formatMoneyFull(current.baseSalary)} base · every offer shows the difference` : 'Not set: offers can’t show “vs current” yet'}
+              {current ? `${formatMoneyFull(current.baseSalary)} base · every offer shows the difference` : 'Skip this if you’re between jobs. Offers are still compared with each other.'}
             </p>
           </div>
           <button type="button" className="btn btn-ghost" onClick={() => setEditingCurrent(current ?? blankPackage('current'))}>

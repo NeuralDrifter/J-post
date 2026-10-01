@@ -67,7 +67,7 @@ export default function OffersPage() {
       <PageTitle title="Offers" subtitle="Total comp, take-home, market position and cost of living, side by side.">
         {items && !hasCurrent && (
           <button className="btn btn-ghost" onClick={() => setEditing(blankPackage('current'))}>
-            Add your current job
+            Add current job (optional)
           </button>
         )}
       </PageTitle>
@@ -78,7 +78,7 @@ export default function OffersPage() {
         <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-line p-8 text-center">
           <div>
             <Scale size={28} className="mx-auto mb-3 text-ink-3" />
-            <p className="text-sm text-ink-2">Add an offer or estimate from a job's page, or add your current job as a baseline.</p>
+            <p className="text-sm text-ink-2">Add an estimate or offer from a job's page (Compensation panel) to start comparing.</p>
             <button className="btn btn-ghost mt-4" onClick={() => navigate('/')}>
               Go to pipeline
             </button>
