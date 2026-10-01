@@ -5,3 +5,5 @@ venv/
 __pycache__/
 example_only_non_functioning_demo content/
 .superpowers/
+datasets/
+*.xlsx
