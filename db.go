@@ -144,6 +144,42 @@ var migrations = []string{
 		added_at TEXT NOT NULL
 	);
 	CREATE INDEX idx_attachments_job ON attachments(job_id);`,
+	// 2: compensation packages (offers, estimates, counters, current job).
+	`CREATE TABLE comp_packages (
+		id TEXT PRIMARY KEY,
+		job_id TEXT REFERENCES jobs(id) ON DELETE CASCADE,
+		kind TEXT NOT NULL,
+		label TEXT NOT NULL DEFAULT '',
+		parent_id TEXT REFERENCES comp_packages(id) ON DELETE SET NULL,
+		base_salary INTEGER NOT NULL DEFAULT 0,
+		signing_bonus INTEGER NOT NULL DEFAULT 0,
+		signing_clawback_months INTEGER NOT NULL DEFAULT 0,
+		target_bonus_pct REAL NOT NULL DEFAULT 0,
+		annual_raise_pct REAL NOT NULL DEFAULT 0,
+		equity_type TEXT NOT NULL DEFAULT 'none',
+		rsu_grant_value INTEGER NOT NULL DEFAULT 0,
+		option_shares INTEGER NOT NULL DEFAULT 0,
+		option_strike REAL NOT NULL DEFAULT 0,
+		share_value REAL NOT NULL DEFAULT 0,
+		vesting TEXT NOT NULL DEFAULT 'standard',
+		vesting_custom TEXT NOT NULL DEFAULT '',
+		k401_match_pct REAL NOT NULL DEFAULT 0,
+		k401_match_cap_pct REAL NOT NULL DEFAULT 0,
+		k401_contrib_pct REAL NOT NULL DEFAULT 0,
+		health_premium_annual INTEGER NOT NULL DEFAULT 0,
+		stipends_annual INTEGER NOT NULL DEFAULT 0,
+		other_annual INTEGER NOT NULL DEFAULT 0,
+		pto_days INTEGER NOT NULL DEFAULT 0,
+		occupation_code TEXT NOT NULL DEFAULT '',
+		area_code TEXT NOT NULL DEFAULT '',
+		tax_state TEXT NOT NULL DEFAULT '',
+		local_tax_pct REAL NOT NULL DEFAULT 0,
+		notes TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL,
+		updated_at TEXT NOT NULL
+	);
+	CREATE INDEX idx_comp_job ON comp_packages(job_id);
+	CREATE UNIQUE INDEX idx_comp_one_current ON comp_packages(kind) WHERE kind = 'current';`,
 }
 
 func openDB(path string) (*sql.DB, error) {
