@@ -98,7 +98,7 @@ DB file: `~/.jobtrack/jobtrack.db`. All IDs are random hex strings (same as toda
 | id | TEXT PK | |
 | company | TEXT NOT NULL | |
 | position | TEXT NOT NULL | |
-| status | TEXT NOT NULL | `wishlist` / `applied` / `interviewing` / `offer` / `closed` |
+| status | TEXT NOT NULL | `interested` / `applied` / `interviewing` / `offer` / `closed` (the first stage was `wishlist` until migration 4 renamed it) |
 | close_reason | TEXT | `rejected` / `withdrawn` / `ghosted` / `declined`; set only when status = closed |
 | location | TEXT | |
 | work_mode | TEXT | `remote` / `hybrid` / `onsite` / empty |
@@ -134,7 +134,7 @@ A single row holding the current migration number.
 
 ### Legacy import
 On startup, if `data.json` exists and the `jobs` table is empty:
-1. Import each record. `Rejected` becomes `closed` + `rejected`, the other known statuses are lowercased, and unknown statuses become `wishlist`. `notes` and `dateApplied` are kept (an invalid date is dropped). Each record gets one `stage_event` (`null → status`) dated from its `updatedAt`. The exception is a Rejected record with a `dateApplied`: it gets `null → applied` (dated `dateApplied`) then `applied → closed`, so it counts correctly in the response rate.
+1. Import each record. `Rejected` becomes `closed` + `rejected`, the other known statuses are lowercased (an old file's `Wishlist` becomes `interested`), and unknown statuses become `interested`. `notes` and `dateApplied` are kept (an invalid date is dropped). Each record gets one `stage_event` (`null → status`) dated from its `updatedAt`. The exception is a Rejected record with a `dateApplied`: it gets `null → applied` (dated `dateApplied`) then `applied → closed`, so it counts correctly in the response rate.
 2. Rename `data.json` to `data.json.bak`.
 
 The import runs in a single transaction. On failure nothing is renamed and the error is shown in the UI.
@@ -186,7 +186,7 @@ The theme follows `obsidian_lumina/DESIGN.md`: dark glass surfaces, an indigo pr
 - **SearchForm:** title, location, a remote-only toggle, and source checkboxes (Indeed, LinkedIn, ZipRecruiter, Adzuna). Adzuna is disabled with a hint if its keys aren't set.
 - **ResultsList:** title, company, location, salary, posted date and source badges.
   - Results matching an already-tracked job (case-insensitive company + position, or the same URL) show "Tracking · <status>" instead of a save button.
-- **PreviewPane:** the selected result's full description, salary details, link to the original posting, and a **Save to Wishlist** button. Saving creates a job with every available field populated.
+- **PreviewPane:** the selected result's full description, salary details, link to the original posting, and an **Add to Interested** button. Saving creates a job with every available field populated.
 - **Per-source failures** show as a dismissible warning above the results ("LinkedIn failed: <message>"). Other sources still display.
 
 ### Settings page

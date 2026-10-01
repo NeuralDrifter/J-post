@@ -8,7 +8,7 @@ Every posting any search finds is kept in a persistent inbox, so the same listin
 
 - **Searches** are saved, cached, and re-scraped incrementally.
 - **Results per board** are configurable.
-- **"Not interested"** hides a posting permanently. It can be restored to the inbox or saved to the Wishlist from a "Not interested" tab.
+- **"Not interested"** hides a posting permanently. It can be restored to the inbox or added to Interested from a "Not interested" tab.
 
 ## 2. Data (migration 3)
 
@@ -53,7 +53,7 @@ Every posting any search finds is kept in a persistent inbox, so the same listin
 - **`DismissPosting(id)`:** → `dismissed`, and stamps `dismissed_at`.
 - **`RestorePosting(id)`:** `dismissed` → `seen`, and clears `dismissed_at`.
 - **`SavePosting(id)`:**
-  - Creates a Wishlist job with all the posting's fields (the same as today's `jobFromResult`).
+  - Creates an Interested job with all the posting's fields (the same as today's `jobFromResult`).
   - Sets state to `saved` and stores the `job_id`.
   - Returns the job.
   - If the posting is already saved and its job still exists, it returns that job instead.
@@ -61,7 +61,7 @@ Every posting any search finds is kept in a persistent inbox, so the same listin
 - **`ListPostings(filter)`:**
   - `filter = {tab: inbox|saved|dismissed, query, source, onlyNew}`.
   - `inbox` means `new` + `seen`, ordered newest-first (`first_seen DESC`).
-  - The Saved tab includes the linked job's current status.
+  - The Interested tab includes the linked job's current status.
 - **`InboxCounts()`:** `{new, inbox, saved, dismissed}` for the tab badges.
 - **`ListRecentSearches(limit)`** and **`DeleteSearch(id)`**.
 
@@ -75,17 +75,17 @@ Every posting any search finds is kept in a persistent inbox, so the same listin
     - *"Fetched 48 postings, 12 new."*
     - Per-source errors appear in the existing warning banner.
 - **Recent searches:** chips under the form (click to load and run; right-click: Run / Refresh now / Remove).
-- **Tabs:** Inbox (count, plus a "N new" pill) · Saved · Not interested.
+- **Tabs:** Inbox (count, plus a "N new" pill) · Interested · Not interested.
 - **Inbox list:**
   - "New" badge on new postings.
   - Filters: text, source, only new.
-  - Right-click: Save to Wishlist · Not interested · Open posting · Copy link.
-- **Preview pane:** opening a posting marks it seen. Buttons: Save to Wishlist / Not interested / Original posting.
+  - Right-click: Add to Interested · Not interested · Open posting · Copy link.
+- **Preview pane:** opening a posting marks it seen. Buttons: Add to Interested / Not interested / Original posting.
 - **Not interested tab:**
   - Each posting shows its dismissed date.
-  - Right-click and buttons: **Move back to inbox** · **Save to Wishlist** · Open posting.
+  - Right-click and buttons: **Move back to inbox** · **Add to Interested** · Open posting.
   - The footer has "Clear older than 90 days", with a confirmation.
-- **Saved tab:** shows the pipeline status. Right-click: Open job · Open posting.
+- **Interested tab:** shows the pipeline status. Right-click: Open job · Open posting.
 - **Settings:** "Re-use search results for N hours".
 
 ## 6. Testing (Go)

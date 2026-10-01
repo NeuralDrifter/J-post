@@ -29,7 +29,7 @@
 - **Time formats:**
   - Timestamps are stored as UTC strings with layout `2006-01-02T15:04:05.000Z` (`tsLayout`). This matches JavaScript `Date.prototype.toISOString()` exactly.
   - Calendar dates (`date_applied`, `follow_up_on`) are local `YYYY-MM-DD` (`dateLayout`).
-- **Status values:** `wishlist`, `applied`, `interviewing`, `offer`, `closed`.
+- **Status values:** `interested`, `applied`, `interviewing`, `offer`, `closed`.
 - **Close reasons:** `rejected`, `withdrawn`, `ghosted`, `declined`.
 - **Work modes:** `remote`, `hybrid`, `onsite`, or empty.
 - **Sources:** `linkedin`, `indeed`, `zip_recruiter`, `adzuna`, `manual`.
@@ -63,7 +63,7 @@ These are the five input conditions most likely to bite in real use. Each is pin
 1. **Non-ASCII job text from JobSpy** (em dashes, accented company names, emoji) passing through a Windows pipe. Expected: it arrives intact; the script emits ASCII-escaped JSON on its last stdout line, after any log noise. Test: `TestParseScraperOutputUnicodeAndNoise` (Task 7).
 2. **Partial or odd salary data**: only a min, only a max, zeros, an hourly rate, an unknown interval. Expected: sensible annual numbers or none, never a crash or `$0`. Tests: `TestNormalizeSalary` (Task 7), `formatSalary` cases (Task 8).
 3. **Dropping a card back into its own column**, or re-choosing the same status. Expected: nothing changes and no duplicate timeline entry. Tests: `TestChangeStatusSameIsNoop` (Task 2) and the same-column guard in `Board.onDragEnd` (Task 10).
-4. **Messy legacy `data.json`**: unknown status strings, empty company, a bad date. Expected: everything imports; unknown statuses go to Wishlist; nothing is lost. Test: `TestImportLegacyMessyRecords` (Task 5).
+4. **Messy legacy `data.json`**: unknown status strings, empty company, a bad date. Expected: everything imports; unknown statuses go to Interested; nothing is lost. Test: `TestImportLegacyMessyRecords` (Task 5).
 5. **Attaching files with spaces, unicode or duplicate names.** Expected: both copies are kept separately and open correctly. Test: `TestAttachmentDuplicateNamesWithSpaces` (Task 3).
 
 ## File Map
@@ -529,7 +529,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes (Task 1): `Repo`, `newID`, `ts`, `tsLayout`, `dateLayout`, `ErrNotFound`, `rowScanner`, `execer`, `querier`, `nullInt`, `expectOneRow`, `newTestRepo`, `setNow`.
 - Produces:
-  - Status constants `StatusWishlist`, `StatusApplied`, `StatusInterviewing`, `StatusOffer`, `StatusClosed`.
+  - Status constants `StatusInterested`, `StatusApplied`, `StatusInterviewing`, `StatusOffer`, `StatusClosed`.
   - `type Job struct` with JSON fields `id company position status closeReason location workMode salaryMin salaryMax salaryText url source description datePosted dateApplied followUpOn notes createdAt updatedAt`. Salaries are `*int64`; everything else is a string.
   - `type StageEvent struct{ ID, JobID, FromStatus, ToStatus, CloseReason, At, Note string }`. JSON: `id jobId fromStatus toStatus closeReason at note`. `FromStatus` is `""` for the creation event.
   - `(r *Repo) CreateJob(j Job) (Job, error)`
@@ -567,14 +567,14 @@ func mustCreate(t *testing.T, r *Repo, j Job) Job {
 func TestCreateJobDefaultsAndCreationEvent(t *testing.T) {
 	r := newTestRepo(t)
 	j := mustCreate(t, r, Job{Company: "  Acme ", Position: "Dev"})
-	if j.ID == "" || j.Status != StatusWishlist || j.Source != "manual" || j.Company != "Acme" {
+	if j.ID == "" || j.Status != StatusInterested || j.Source != "manual" || j.Company != "Acme" {
 		t.Fatalf("unexpected job: %+v", j)
 	}
 	if j.DateApplied != "" {
-		t.Fatalf("wishlist job should have no date applied, got %q", j.DateApplied)
+		t.Fatalf("interested job should have no date applied, got %q", j.DateApplied)
 	}
 	events, err := r.ListStageEvents(j.ID)
-	if err != nil || len(events) != 1 || events[0].FromStatus != "" || events[0].ToStatus != StatusWishlist {
+	if err != nil || len(events) != 1 || events[0].FromStatus != "" || events[0].ToStatus != StatusInterested {
 		t.Fatalf("events = %+v, %v", events, err)
 	}
 }
@@ -625,7 +625,7 @@ func TestUpdateJobKeepsStatusAndNotes(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ := r.GetJob(j.ID)
-	if got.Position != "Senior Dev" || got.Status != StatusWishlist || got.Notes != "original" || updated.Status != StatusWishlist {
+	if got.Position != "Senior Dev" || got.Status != StatusInterested || got.Notes != "original" || updated.Status != StatusInterested {
 		t.Fatalf("got %+v", got)
 	}
 }
@@ -739,7 +739,7 @@ import (
 )
 
 const (
-	StatusWishlist     = "wishlist"
+	StatusInterested     = "interested"
 	StatusApplied      = "applied"
 	StatusInterviewing = "interviewing"
 	StatusOffer        = "offer"
@@ -747,7 +747,7 @@ const (
 )
 
 var validStatuses = map[string]bool{
-	StatusWishlist: true, StatusApplied: true, StatusInterviewing: true, StatusOffer: true, StatusClosed: true,
+	StatusInterested: true, StatusApplied: true, StatusInterviewing: true, StatusOffer: true, StatusClosed: true,
 }
 
 var validCloseReasons = map[string]bool{"rejected": true, "withdrawn": true, "ghosted": true, "declined": true}
@@ -869,7 +869,7 @@ func insertStageEvent(ex execer, jobID, from, to, reason, at, note string) error
 
 func (r *Repo) CreateJob(j Job) (Job, error) {
 	if j.Status == "" {
-		j.Status = StatusWishlist
+		j.Status = StatusInterested
 	}
 	if err := validateJobFields(&j); err != nil {
 		return Job{}, err
@@ -1602,7 +1602,7 @@ func TestFollowUpDueRules(t *testing.T) {
 		{"applied and stale", Job{Status: StatusApplied}, 8, true},
 		{"applied exactly at threshold", Job{Status: StatusApplied}, 7, false},
 		{"interviewing and old", Job{Status: StatusInterviewing}, 30, false},
-		{"follow-up date reached", Job{Status: StatusWishlist, FollowUpOn: "2026-10-01"}, 0, true},
+		{"follow-up date reached", Job{Status: StatusInterested, FollowUpOn: "2026-10-01"}, 0, true},
 		{"follow-up date in future", Job{Status: StatusOffer, FollowUpOn: "2026-10-02"}, 0, false},
 		{"closed never due", Job{Status: StatusClosed, FollowUpOn: "2026-09-01"}, 40, false},
 	}
@@ -1625,7 +1625,7 @@ func TestGetMetricsEmpty(t *testing.T) {
 }
 
 // seedPipeline builds: A applied→interviewing, B applied→closed(ghosted),
-// C wishlist, D applied and untouched for 30 days, and an interview for A tomorrow.
+// C interested, D applied and untouched for 30 days, and an interview for A tomorrow.
 func seedPipeline(t *testing.T, r *Repo) (a, b, c, d Job) {
 	setNow(r, 2026, time.September, 1, 12)
 	a = mustCreate(t, r, Job{Company: "Acme", Position: "Dev", Status: StatusApplied})
@@ -1686,7 +1686,7 @@ func TestListJobSummaries(t *testing.T) {
 		t.Errorf("A = %+v", s)
 	}
 	if s := byID[c.ID]; s.Stale || s.FollowUpDue {
-		t.Errorf("wishlist job C should not be stale or due: %+v", s)
+		t.Errorf("interested job C should not be stale or due: %+v", s)
 	}
 }
 ```
@@ -1903,8 +1903,9 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - **Single transaction:** each record is inserted directly, not via `CreateJob`, so the original timestamps are kept.
 - **Status mapping:**
   - `Rejected` → `closed` + `rejected`.
-  - `Wishlist`, `Applied`, `Interviewing` and `Offer` → lowercased.
-  - Anything else → `wishlist`.
+  - `Wishlist` (the old name) and `Interested` → `interested`.
+  - `Applied`, `Interviewing` and `Offer` → lowercased.
+  - Anything else → `interested`.
 - **Field cleanup:** an empty company becomes `(unknown company)` and an empty position `(unknown position)`. An invalid `dateApplied` is dropped. `source` = `manual`.
 - **Stage events:**
   - Normally one event, `null → status`, at `updatedAt` (or now if that is zero), with the note `imported`.
@@ -2118,7 +2119,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - **`jobDraft.ts`:**
   - `JobDraft` holds string form fields; `emptyDraft`, `draftFromJob`.
   - `jobFromDraft(draft, base?)`: base keeps status, close reason, notes, description, source and timestamps.
-  - `jobFromResult(result)`: wishlist status; source = the first source; empty company becomes `Unknown company`.
+  - `jobFromResult(result)`: interested status; source = the first source; empty company becomes `Unknown company`.
 - **`filter.ts`:**
   - `filterSummaries(list, {query, workMode, source})` searches company, position and location.
   - `sortSummaries(list, key, dir)` sorts by company, position, status (pipeline order), salary (max, else min), date applied or days in stage.
@@ -2218,7 +2219,7 @@ Every mutation calls `notifyDataChanged`, so the metrics and NextUp banner refre
   - Already-tracked jobs show "Tracking · Status".
 - **Preview pane:**
   - Shows the full markdown description, the salary with "≈ annualized" plus the raw text, and the posting link.
-  - Save to Wishlist uses `CreateJob(jobFromResult)`, then marks the result as tracked and notifies. A tracked result shows "Open tracked job" instead.
+  - Add to Interested uses `CreateJob(jobFromResult)`, then marks the result as tracked and notifies. A tracked result shows "Open tracked job" instead.
 - **Responsive:**
   - Below 1100px the preview becomes a fixed slide-over with a close button.
   - Below 1100px the first result is not auto-selected.
