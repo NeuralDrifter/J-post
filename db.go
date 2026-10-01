@@ -180,6 +180,42 @@ var migrations = []string{
 	);
 	CREATE INDEX idx_comp_job ON comp_packages(job_id);
 	CREATE UNIQUE INDEX idx_comp_one_current ON comp_packages(kind) WHERE kind = 'current';`,
+	// 3: Discover inbox — saved searches and every posting they found.
+	`CREATE TABLE searches (
+		id TEXT PRIMARY KEY,
+		query_key TEXT NOT NULL UNIQUE,
+		term TEXT NOT NULL,
+		location TEXT NOT NULL DEFAULT '',
+		remote_only INTEGER NOT NULL DEFAULT 0,
+		sources TEXT NOT NULL DEFAULT '',
+		per_source TEXT NOT NULL DEFAULT '{}',
+		last_run_at TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL
+	);
+	CREATE TABLE postings (
+		id TEXT PRIMARY KEY,
+		dedupe_key TEXT NOT NULL UNIQUE,
+		url TEXT NOT NULL DEFAULT '',
+		title TEXT NOT NULL,
+		company TEXT NOT NULL DEFAULT '',
+		location TEXT NOT NULL DEFAULT '',
+		work_mode TEXT NOT NULL DEFAULT '',
+		salary_min INTEGER,
+		salary_max INTEGER,
+		salary_text TEXT NOT NULL DEFAULT '',
+		annualized INTEGER NOT NULL DEFAULT 0,
+		description TEXT NOT NULL DEFAULT '',
+		date_posted TEXT NOT NULL DEFAULT '',
+		sources TEXT NOT NULL DEFAULT '',
+		state TEXT NOT NULL DEFAULT 'new',
+		job_id TEXT REFERENCES jobs(id) ON DELETE SET NULL,
+		search_id TEXT REFERENCES searches(id) ON DELETE SET NULL,
+		first_seen TEXT NOT NULL,
+		last_seen TEXT NOT NULL,
+		dismissed_at TEXT NOT NULL DEFAULT ''
+	);
+	CREATE INDEX idx_postings_url ON postings(url);
+	CREATE INDEX idx_postings_state ON postings(state, first_seen);`,
 }
 
 func openDB(path string) (*sql.DB, error) {
