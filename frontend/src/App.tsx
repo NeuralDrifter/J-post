@@ -7,6 +7,7 @@ import { Toaster } from './components/Toaster'
 import { GetStartupError } from './lib/backend'
 import DiscoverPage from './pages/Discover/DiscoverPage'
 import JobDetailPage from './pages/JobDetail/JobDetailPage'
+import OffersPage from './pages/Offers/OffersPage'
 import PipelinePage from './pages/Pipeline/PipelinePage'
 import SettingsPage from './pages/Settings/SettingsPage'
 
@@ -31,6 +32,7 @@ export default function App() {
           <Route index element={<PipelinePage />} />
           <Route path="jobs/:id" element={<JobDetailRoute />} />
           <Route path="discover" element={<DiscoverPage />} />
+          <Route path="offers" element={<OffersPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

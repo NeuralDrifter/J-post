@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router'
-import { Search, Settings, SquareKanban } from 'lucide-react'
+import { BadgeDollarSign, Search, Settings, SquareKanban } from 'lucide-react'
 
 const ITEMS = [
   { to: '/', label: 'Pipeline', icon: SquareKanban, end: true },
   { to: '/discover', label: 'Discover', icon: Search, end: false },
+  { to: '/offers', label: 'Offers', icon: BadgeDollarSign, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
 ]
 
