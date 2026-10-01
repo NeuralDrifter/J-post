@@ -116,7 +116,7 @@ DB file: `~/.jobtrack/jobtrack.db`. All IDs are random hex strings (same as toda
 ### `stage_events`
 id, job_id (FK, cascade delete), from_status (null on creation), to_status, close_reason, at, note.
 
-A row is written on job creation and on every status change. Status changes go only through `ChangeStatus(jobID, newStatus, closeReason, note)`, so history cannot be skipped. Moving a job into `applied` with an empty `date_applied` sets it to today.
+A row is written on job creation and on every status change. Status changes go only through `ChangeStatus(jobID, newStatus, closeReason, note)`, so history cannot be skipped. Moving a job into `applied`, `interviewing` or `offer` with an empty `date_applied` sets it to today. Changing to the same status and reason is a no-op (no event written). `UpdateJob` never changes status, close reason or notes; notes are saved only through `UpdateJobNotes`, so an edit can't overwrite autosaved notes.
 
 ### `contacts`
 id, job_id (FK cascade), name, role, email, phone, linkedin_url, notes.
@@ -134,7 +134,7 @@ A single row holding the current migration number.
 
 ### Legacy import
 On startup, if `data.json` exists and the `jobs` table is empty:
-1. Import each record. `Rejected` becomes `closed` + `rejected`, and the other statuses are lowercased. `notes` and `dateApplied` are kept. Each record gets one `stage_event` (`null → status`) dated from its `updatedAt`.
+1. Import each record. `Rejected` becomes `closed` + `rejected`, the other known statuses are lowercased, and unknown statuses become `wishlist`. `notes` and `dateApplied` are kept (an invalid date is dropped). Each record gets one `stage_event` (`null → status`) dated from its `updatedAt`. The exception is a Rejected record with a `dateApplied`: it gets `null → applied` (dated `dateApplied`) then `applied → closed`, so it counts correctly in the response rate.
 2. Rename `data.json` to `data.json.bak`.
 
 The import runs in a single transaction. On failure nothing is renamed and the error is shown in the UI.
@@ -208,8 +208,8 @@ If none is found, the error names all the paths that were checked.
 ### Scraper
 - `scraper.py` is embedded with `go:embed` and written to `os.TempDir()` before each run.
 - **Arguments:** search term, location, remote flag, and a comma-separated list of sites.
-- **Concurrency:** it runs each requested site separately, so one site failing doesn't kill the others.
-- **Output:** JSON `{ "jobs": [...], "errors": { "linkedin": "..." } }`.
+- **Concurrency:** Go starts one scraper process per requested JobSpy site, all in parallel, each with its own timeout, so one site failing doesn't kill the others. The script also has a `--self-test` mode (just imports jobspy), used by the Settings **Test** button.
+- **Output:** a single JSON line, `{ "jobs": [...] }` or `{ "error": "..." }`, ASCII-escaped so the Windows console code page can't corrupt it. Per-site errors are collected in Go into `DiscoverResponse.errors`.
 - **Fields per job:** title, company, location, is_remote, min_amount, max_amount, interval, currency, description, date_posted, job_url, site.
 
 ### Adzuna
