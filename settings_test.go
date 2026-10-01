@@ -8,7 +8,7 @@ import (
 
 func TestSettingsDefaults(t *testing.T) {
 	s, err := NewSettingsStore(t.TempDir()).Load()
-	if err != nil || s.FollowUpDays != defaultFollowUpDays || s.PythonPath != "" || s.FilingStatus != "single" || s.HomeAreaCode != "US" {
+	if err != nil || s.FollowUpDays != defaultFollowUpDays || s.PythonPath != "" || s.FilingStatus != "single" || s.HomeAreaCode != "US" || s.DiscoverCacheHours != 12 {
 		t.Fatalf("s = %+v, %v", s, err)
 	}
 }
@@ -16,7 +16,7 @@ func TestSettingsDefaults(t *testing.T) {
 func TestSettingsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := NewSettingsStore(dir)
-	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", WindowWidth: 1400, WindowHeight: 900, WindowMaximised: true}
+	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, WindowWidth: 1400, WindowHeight: 900, WindowMaximised: true}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
 	}

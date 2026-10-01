@@ -40,6 +40,7 @@ def main():
     parser.add_argument("--location", default="")
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--results", type=int, default=20)
+    parser.add_argument("--hours-old", type=int, default=0, help="only postings newer than this (0 = no limit)")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
 
@@ -53,6 +54,12 @@ def main():
         emit({"jobs": []})
         return
 
+    hours_old = args.hours_old or None
+    if args.site == "indeed" and args.remote:
+        # JobSpy can't combine Indeed's remote filter with hours_old; the remote
+        # filter changes what's shown, hours_old only saves time, so keep remote.
+        hours_old = None
+
     try:
         df = scrape_jobs(
             site_name=[args.site],
@@ -62,6 +69,7 @@ def main():
             results_wanted=args.results,
             country_indeed="USA",
             linkedin_fetch_description=True,
+            hours_old=hours_old,
         )
     except Exception as e:
         emit({"error": str(e) or e.__class__.__name__})

@@ -8,7 +8,10 @@ import (
 	"sync"
 )
 
-const defaultFollowUpDays = 7
+const (
+	defaultFollowUpDays       = 7
+	defaultDiscoverCacheHours = 12
+)
 
 type Settings struct {
 	AdzunaAppID  string `json:"adzunaAppId"`
@@ -19,9 +22,11 @@ type Settings struct {
 	FilingStatus      string `json:"filingStatus"`
 	HomeAreaCode      string `json:"homeAreaCode"`
 	DefaultOccupation string `json:"defaultOccupation"`
-	WindowWidth       int    `json:"windowWidth"`
-	WindowHeight      int    `json:"windowHeight"`
-	WindowMaximised   bool   `json:"windowMaximised"`
+	// DiscoverCacheHours: re-running a search within this window reuses stored results.
+	DiscoverCacheHours int  `json:"discoverCacheHours"`
+	WindowWidth        int  `json:"windowWidth"`
+	WindowHeight       int  `json:"windowHeight"`
+	WindowMaximised    bool `json:"windowMaximised"`
 }
 
 type SettingsStore struct {
@@ -51,6 +56,9 @@ func applySettingsDefaults(s *Settings) {
 	}
 	if s.HomeAreaCode == "" {
 		s.HomeAreaCode = "US"
+	}
+	if s.DiscoverCacheHours <= 0 {
+		s.DiscoverCacheHours = defaultDiscoverCacheHours
 	}
 }
 
@@ -82,6 +90,9 @@ func (s *SettingsStore) Save(settings Settings) error {
 	applySettingsDefaults(&settings)
 	if settings.FilingStatus != "single" && settings.FilingStatus != "married" && settings.FilingStatus != "head" {
 		return errors.New("filing status must be single, married or head of household")
+	}
+	if settings.DiscoverCacheHours > 168 {
+		return errors.New("search results can be reused for at most 168 hours (a week)")
 	}
 	if settings.FollowUpDays > 365 {
 		return errors.New("follow-up threshold must be between 1 and 365 days")

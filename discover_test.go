@@ -105,7 +105,7 @@ func TestMarkTracked(t *testing.T) {
 }
 
 func TestRunDiscoverPartialFailure(t *testing.T) {
-	fetch := func(ctx context.Context, source string, q DiscoverQuery) ([]rawJob, error) {
+	fetch := func(ctx context.Context, source string, q DiscoverQuery, _ fetchOptions) ([]rawJob, error) {
 		switch source {
 		case "linkedin":
 			return nil, errors.New("blocked")
@@ -115,7 +115,7 @@ func TestRunDiscoverPartialFailure(t *testing.T) {
 		return nil, nil
 	}
 	q := DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin", "indeed", "myspace"}}
-	resp := runDiscover(context.Background(), q, fetch, []Job{{ID: "j1", Company: "Acme", Position: "Dev", Status: StatusOffer}})
+	resp := runDiscover(context.Background(), q, fetch, []Job{{ID: "j1", Company: "Acme", Position: "Dev", Status: StatusOffer}}, func(string) fetchOptions { return fetchOptions{} })
 	if len(resp.Results) != 1 || resp.Results[0].TrackedStatus != StatusOffer {
 		t.Fatalf("results = %+v", resp.Results)
 	}
@@ -168,7 +168,7 @@ func TestAdzunaSearchMapsFields(t *testing.T) {
 	}))
 	defer srv.Close()
 	withAdzunaURL(t, srv.URL)
-	jobs, err := adzunaSearch(context.Background(), "id", "key", DiscoverQuery{Term: "go developer", Location: "Denver", RemoteOnly: true})
+	jobs, err := adzunaSearch(context.Background(), "id", "key", DiscoverQuery{Term: "go developer", Location: "Denver", RemoteOnly: true}, fetchOptions{Results: 20})
 	if err != nil || len(jobs) != 1 {
 		t.Fatalf("jobs=%+v err=%v", jobs, err)
 	}
@@ -179,7 +179,7 @@ func TestAdzunaSearchMapsFields(t *testing.T) {
 }
 
 func TestAdzunaErrorDoesNotLeakKey(t *testing.T) {
-	if _, err := adzunaSearch(context.Background(), "", "", DiscoverQuery{Term: "x"}); err == nil {
+	if _, err := adzunaSearch(context.Background(), "", "", DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil {
 		t.Fatal("missing keys should error")
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -187,12 +187,12 @@ func TestAdzunaErrorDoesNotLeakKey(t *testing.T) {
 	}))
 	defer srv.Close()
 	withAdzunaURL(t, srv.URL)
-	_, err := adzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"})
+	_, err := adzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"}, fetchOptions{})
 	if err == nil || strings.Contains(err.Error(), "s3cretkey") || !strings.Contains(err.Error(), "401") {
 		t.Fatalf("err = %v", err)
 	}
 	withAdzunaURL(t, "http://127.0.0.1:1/unreachable")
-	_, err = adzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"})
+	_, err = adzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"}, fetchOptions{})
 	if err == nil || strings.Contains(err.Error(), "s3cretkey") {
 		t.Fatalf("err = %v", err)
 	}

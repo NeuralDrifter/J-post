@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -79,7 +78,7 @@ type rawJob struct {
 }
 
 // sourceFunc fetches raw postings from one source; injected so tests can fake it.
-type sourceFunc func(ctx context.Context, source string, q DiscoverQuery) ([]rawJob, error)
+type sourceFunc func(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error)
 
 // ---- Python / JobSpy ----
 
@@ -170,10 +169,16 @@ func runScraperScript(ctx context.Context, python string, timeout time.Duration,
 	return jobs, err
 }
 
-func runJobSpy(ctx context.Context, python, site string, q DiscoverQuery) ([]rawJob, error) {
+func runJobSpy(ctx context.Context, python, site string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
 	args := []string{"--site", site, "--term", q.Term, "--location", q.Location}
 	if q.RemoteOnly {
 		args = append(args, "--remote")
+	}
+	if opts.Results > 0 {
+		args = append(args, "--results", strconv.Itoa(opts.Results))
+	}
+	if opts.HoursOld > 0 {
+		args = append(args, "--hours-old", strconv.Itoa(opts.HoursOld))
 	}
 	return runScraperScript(ctx, python, jobspyTimeout, args...)
 }
@@ -203,7 +208,7 @@ type adzunaResponse struct {
 	} `json:"results"`
 }
 
-func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery) ([]rawJob, error) {
+func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
 	if appID == "" || appKey == "" {
 		return nil, errors.New("Adzuna keys are not set (add them in Settings)")
 	}
@@ -211,9 +216,16 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery) ([
 	if q.RemoteOnly {
 		what += " remote"
 	}
-	params := url.Values{"app_id": {appID}, "app_key": {appKey}, "results_per_page": {"20"}, "what": {what}}
+	results := opts.Results
+	if results <= 0 {
+		results = defaultPerSource
+	}
+	params := url.Values{"app_id": {appID}, "app_key": {appKey}, "results_per_page": {strconv.Itoa(min(results, maxAdzunaResults))}, "what": {what}}
 	if q.Location != "" {
 		params.Set("where", q.Location)
+	}
+	if opts.HoursOld > 0 {
+		params.Set("max_days_old", strconv.Itoa((opts.HoursOld+23)/24))
 	}
 	ctx, cancel := context.WithTimeout(ctx, adzunaTimeout)
 	defer cancel()
@@ -339,7 +351,7 @@ func fromRaw(r rawJob, source string) DiscoverResult {
 
 func mergeInto(a, b DiscoverResult) DiscoverResult {
 	for _, s := range b.Sources {
-		if !slices.Contains(a.Sources, s) {
+		if !contains(a.Sources, s) {
 			a.Sources = append(a.Sources, s)
 		}
 	}
@@ -401,10 +413,10 @@ func markTracked(results []DiscoverResult, jobs []Job) {
 
 // runDiscover queries every requested source concurrently; one failing source
 // only adds an entry to Errors.
-func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked []Job) DiscoverResponse {
+func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked []Job, optsFor func(source string) fetchOptions) DiscoverResponse {
 	var sources []string
 	for _, s := range q.Sources {
-		if knownSources[s] && !slices.Contains(sources, s) {
+		if knownSources[s] && !contains(sources, s) {
 			sources = append(sources, s)
 		}
 	}
@@ -416,7 +428,7 @@ func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked
 	ch := make(chan outcome, len(sources))
 	for _, s := range sources {
 		go func(s string) {
-			jobs, err := fetch(ctx, s, q)
+			jobs, err := fetch(ctx, s, q, optsFor(s))
 			ch <- outcome{s, jobs, err}
 		}(s)
 	}

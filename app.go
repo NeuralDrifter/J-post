@@ -299,17 +299,17 @@ func (a *App) Discover(q DiscoverQuery) (DiscoverResponse, error) {
 		return DiscoverResponse{}, err
 	}
 	cwd, _ := os.Getwd()
-	fetch := func(ctx context.Context, source string, q DiscoverQuery) ([]rawJob, error) {
+	fetch := func(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
 		if source == "adzuna" {
-			return adzunaSearch(ctx, settings.AdzunaAppID, settings.AdzunaAppKey, q)
+			return adzunaSearch(ctx, settings.AdzunaAppID, settings.AdzunaAppKey, q, opts)
 		}
 		python, err := resolvePython(settings.PythonPath, exeDir(), cwd)
 		if err != nil {
 			return nil, err
 		}
-		return runJobSpy(ctx, python, source, q)
+		return runJobSpy(ctx, python, source, q, opts)
 	}
-	return runDiscover(context.Background(), q, fetch, tracked), nil
+	return runDiscover(context.Background(), q, fetch, tracked, func(string) fetchOptions { return fetchOptions{Results: defaultPerSource} }), nil
 }
 
 // ---- Settings ----
