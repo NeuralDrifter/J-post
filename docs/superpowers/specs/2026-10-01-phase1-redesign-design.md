@@ -43,7 +43,8 @@ Job_Track is primarily a tool for the owner's own active job search, and seconda
 ### Go file layout
 | File | Responsibility |
 |---|---|
-| `main.go` | Wails bootstrap (window size raised to 1440×900, min 1100×700) |
+| `main.go` | Wails bootstrap (window sizing per §2.1) |
+| `window.go` | Startup window sizing + saving/restoring window size |
 | `app.go` | Thin methods bound to the frontend; delegates to the repos |
 | `db.go` | Open DB, versioned migrations, pre-migration backup |
 | `legacy_import.go` | One-time `data.json` import |
@@ -55,6 +56,24 @@ Job_Track is primarily a tool for the owner's own active job search, and seconda
 | `scraper.py` | Embedded into the binary via `go:embed`, written to a temp file at runtime |
 
 `store.go` is deleted once its replacement is in place.
+
+### 2.1 Window sizing (screen-aware)
+The window must never open larger than, or partly off, the user's screen. That covers small laptops, low resolutions and high DPI scaling (e.g. 1080p at 150% = 1280×720 logical).
+
+1. **Hidden start.** The app starts hidden (`StartHidden: true`) at a conservative default of 1024×640.
+2. **Sizing once the page is ready.** In `OnDomReady`, read the current monitor via `runtime.ScreenGetAll` (pick `IsCurrent`, else `IsPrimary`) and use its logical size.
+   - **If a saved window size exists and fits within the screen,** restore it, along with the maximised state.
+   - **Otherwise, size the window to 85% of the screen** in each dimension, capped at 1600×1000, then centre it.
+   - **If the screen is 1280×720 logical or smaller,** start maximised instead.
+3. **Show** the window after sizing, so the user never sees it jump.
+4. **Minimum size:** 900×600, which is lowered to the screen size if the screen is smaller.
+5. **Saving.** On shutdown (`OnBeforeClose`), save the window size and maximised state to settings (`windowWidth`, `windowHeight`, `windowMaximised`).
+
+**Responsive layout requirement:** every page must be usable down to 900×600.
+- The board scrolls horizontally, and its columns keep a fixed width.
+- Below 1200px wide, the job detail page's three columns collapse to two, with the right column's panels moving under the center column.
+- The nav rail collapses to icons only below 1100px.
+- The Discover preview pane becomes a slide-over panel below 1100px.
 
 ### Frontend layout
 ```
@@ -232,11 +251,13 @@ JobSpy subprocess 90s, Adzuna 20s. On timeout the subprocess is killed and the t
   - Salary normalization
   - De-dupe and tracked-job matching
   - Python path resolution order
+  - Window sizing math: restore vs. 85% sizing vs. maximised, the minimum size lowered on tiny screens, a saved size larger than the current screen being ignored
 - **Frontend (Vitest):** salary/date formatting and days-in-stage helpers.
 - **Manual verification before calling Phase 1 done:**
   1. `wails build`.
   2. Copy `Job_Track.exe` to a different folder (with the venv override set in Settings), launch it and run a Discover search.
   3. Save a result, drag it through the stages to Closed, and confirm the timeline and metrics update.
+  4. Set the display to 1366×768, or 1920×1080 at 150% scaling, and confirm the window opens fully on-screen and every page is usable.
 
 ## 10. Phase 2+ hooks (no work now, just don't block)
 - Offer details will live in a new `offers` table keyed by job_id, so `jobs` stays unchanged.
