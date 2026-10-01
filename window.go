@@ -1,5 +1,11 @@
 package main
 
+import (
+	"context"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+)
+
 const (
 	minWindowWidth    = 900
 	minWindowHeight   = 600
@@ -67,4 +73,52 @@ func pickScreen(screens []screenSize) (screenSize, bool) {
 		return *first, true
 	}
 	return screenSize{}, false
+}
+
+// domReady sizes the hidden window to fit the current monitor, then shows it.
+// It runs once; dev-mode reloads fire OnDomReady again.
+func (a *App) domReady(ctx context.Context) {
+	if a.windowShown {
+		return
+	}
+	a.windowShown = true
+	defer runtime.WindowShow(ctx)
+
+	screens, err := runtime.ScreenGetAll(ctx)
+	if err != nil {
+		return
+	}
+	sizes := make([]screenSize, 0, len(screens))
+	for _, s := range screens {
+		sizes = append(sizes, screenSize{W: s.Size.Width, H: s.Size.Height, current: s.IsCurrent, primary: s.IsPrimary})
+	}
+	scr, ok := pickScreen(sizes)
+	if !ok {
+		return
+	}
+	settings, _ := a.settings.Load()
+	p := planWindow(scr.W, scr.H, settings)
+	runtime.WindowSetMinSize(ctx, p.MinWidth, p.MinHeight)
+	runtime.WindowSetSize(ctx, p.Width, p.Height)
+	runtime.WindowCenter(ctx)
+	if p.Maximise {
+		runtime.WindowMaximise(ctx)
+	}
+}
+
+// beforeClose remembers the window size for next launch. It never blocks closing.
+func (a *App) beforeClose(ctx context.Context) bool {
+	if runtime.WindowIsMinimised(ctx) {
+		return false
+	}
+	s, err := a.settings.Load()
+	if err != nil {
+		return false
+	}
+	s.WindowMaximised = runtime.WindowIsMaximised(ctx)
+	if !s.WindowMaximised {
+		s.WindowWidth, s.WindowHeight = runtime.WindowGetSize(ctx)
+	}
+	_ = a.settings.Save(s)
+	return false
 }

@@ -1,201 +1,306 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"os/exec"
+	"os"
 	"path/filepath"
-	"time"
+	"strings"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-type ScrapedJob struct {
-	Company  string `json:"company"`
-	Position string `json:"position"`
-	URL      string `json:"url"`
-	Site     string `json:"site"`
-	Location string `json:"location"`
-}
-
-// App struct
+// App is the thin layer bound to the frontend. Every exported method is
+// callable from JavaScript; the real work lives in Repo and discover.go.
 type App struct {
-	ctx           context.Context
-	store         *Store
-	settingsStore *SettingsStore
+	ctx         context.Context
+	dataDir     string
+	repo        *Repo
+	settings    *SettingsStore
+	initErr     error
+	windowShown bool
 }
 
-// NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{
-		store:         NewStore(),
-		settingsStore: NewSettingsStore(defaultDataDir()),
+// NewApp opens (and if needed creates or migrates) the data folder. A failure
+// is kept in initErr and shown full-screen by the frontend instead of crashing.
+func NewApp(dataDir string) *App {
+	a := &App{dataDir: dataDir, settings: NewSettingsStore(dataDir)}
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		a.initErr = err
+		return a
 	}
-}
-
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-}
-
-func (a *App) GetApplications() ([]JobApplication, error) {
-	return a.store.load()
-}
-
-func (a *App) AddApplication(app JobApplication) (JobApplication, error) {
-	apps, err := a.store.load()
+	db, err := openDB(filepath.Join(dataDir, "jobtrack.db"))
 	if err != nil {
-		return app, err
+		a.initErr = err
+		return a
 	}
-
-	app.ID = generateID()
-	app.UpdatedAt = time.Now()
-	if app.DateApplied == "" {
-		app.DateApplied = time.Now().Format("2006-01-02")
+	a.repo = NewRepo(db, filepath.Join(dataDir, "files"))
+	if _, err := a.repo.ImportLegacy(filepath.Join(dataDir, "data.json")); err != nil {
+		a.initErr = fmt.Errorf("importing your old data.json failed (it was left untouched): %w", err)
 	}
-
-	apps = append(apps, app)
-	err = a.store.save(apps)
-	return app, err
+	return a
 }
 
-func (a *App) UpdateApplication(app JobApplication) (JobApplication, error) {
-	apps, err := a.store.load()
+func (a *App) startup(ctx context.Context) { a.ctx = ctx }
+
+func (a *App) shutdown(ctx context.Context) {
+	if a.repo != nil {
+		a.repo.db.Close()
+	}
+}
+
+func (a *App) ready() error {
+	if a.initErr != nil {
+		return a.initErr
+	}
+	if a.repo == nil {
+		return errors.New("database is not available")
+	}
+	return nil
+}
+
+func (a *App) followUpDays() int {
+	s, err := a.settings.Load()
 	if err != nil {
-		return app, err
+		return defaultFollowUpDays
 	}
-
-	for i, existingApp := range apps {
-		if existingApp.ID == app.ID {
-			app.UpdatedAt = time.Now()
-			apps[i] = app
-			err = a.store.save(apps)
-			return app, err
-		}
-	}
-
-	return app, errors.New("application not found")
+	return s.FollowUpDays
 }
 
-func (a *App) DeleteApplication(id string) error {
-	apps, err := a.store.load()
+// GetStartupError returns "" when the app started normally.
+func (a *App) GetStartupError() string {
+	if a.initErr != nil {
+		return a.initErr.Error()
+	}
+	return ""
+}
+
+// ---- Jobs ----
+
+func (a *App) ListJobSummaries() ([]JobSummary, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListJobSummaries(a.followUpDays())
+}
+
+func (a *App) GetMetrics() (Metrics, error) {
+	if err := a.ready(); err != nil {
+		return Metrics{}, err
+	}
+	return a.repo.GetMetrics(a.followUpDays())
+}
+
+func (a *App) GetJob(id string) (Job, error) {
+	if err := a.ready(); err != nil {
+		return Job{}, err
+	}
+	return a.repo.GetJob(id)
+}
+
+func (a *App) CreateJob(j Job) (Job, error) {
+	if err := a.ready(); err != nil {
+		return Job{}, err
+	}
+	return a.repo.CreateJob(j)
+}
+
+func (a *App) UpdateJob(j Job) (Job, error) {
+	if err := a.ready(); err != nil {
+		return Job{}, err
+	}
+	return a.repo.UpdateJob(j)
+}
+
+func (a *App) UpdateJobNotes(id, notes string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.UpdateJobNotes(id, notes)
+}
+
+func (a *App) ChangeStatus(id, status, reason, note string) (Job, error) {
+	if err := a.ready(); err != nil {
+		return Job{}, err
+	}
+	return a.repo.ChangeStatus(id, status, reason, note)
+}
+
+func (a *App) DeleteJob(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DeleteJob(id)
+}
+
+func (a *App) ListStageEvents(jobID string) ([]StageEvent, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListStageEvents(jobID)
+}
+
+// ---- Contacts & interviews ----
+
+func (a *App) ListContacts(jobID string) ([]Contact, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListContacts(jobID)
+}
+
+func (a *App) SaveContact(c Contact) (Contact, error) {
+	if err := a.ready(); err != nil {
+		return Contact{}, err
+	}
+	return a.repo.SaveContact(c)
+}
+
+func (a *App) DeleteContact(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DeleteContact(id)
+}
+
+func (a *App) ListInterviews(jobID string) ([]Interview, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListInterviews(jobID)
+}
+
+func (a *App) SaveInterview(iv Interview) (Interview, error) {
+	if err := a.ready(); err != nil {
+		return Interview{}, err
+	}
+	return a.repo.SaveInterview(iv)
+}
+
+func (a *App) DeleteInterview(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DeleteInterview(id)
+}
+
+// ---- Attachments ----
+
+func (a *App) ListAttachments(jobID string) ([]Attachment, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListAttachments(jobID)
+}
+
+// PickAndAttachFile shows the native file dialog; it returns nil if cancelled.
+func (a *App) PickAndAttachFile(jobID string) (*Attachment, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{Title: "Attach a file"})
+	if err != nil || path == "" {
+		return nil, err
+	}
+	att, err := a.repo.AddAttachment(jobID, path, "")
+	if err != nil {
+		return nil, err
+	}
+	return &att, nil
+}
+
+func (a *App) OpenAttachment(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	att, err := a.repo.GetAttachment(id)
 	if err != nil {
 		return err
 	}
-
-	newApps := make([]JobApplication, 0)
-	found := false
-	for _, app := range apps {
-		if app.ID == id {
-			found = true
-			continue
-		}
-		newApps = append(newApps, app)
+	if _, err := os.Stat(att.StoredPath); err != nil {
+		return fmt.Errorf("the stored copy of %s is missing", att.FileName)
 	}
-
-	if !found {
-		return errors.New("application not found")
-	}
-
-	return a.store.save(newApps)
+	return openWithOS(att.StoredPath)
 }
+
+func (a *App) DeleteAttachment(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DeleteAttachment(id)
+}
+
+// ---- Discover ----
+
+func exeDir() string {
+	p, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	return filepath.Dir(p)
+}
+
+func (a *App) Discover(q DiscoverQuery) (DiscoverResponse, error) {
+	if err := a.ready(); err != nil {
+		return DiscoverResponse{}, err
+	}
+	q.Term, q.Location = strings.TrimSpace(q.Term), strings.TrimSpace(q.Location)
+	if q.Term == "" {
+		return DiscoverResponse{}, errors.New("enter a job title or keywords to search")
+	}
+	settings, err := a.settings.Load()
+	if err != nil {
+		return DiscoverResponse{}, err
+	}
+	tracked, err := a.repo.ListJobs()
+	if err != nil {
+		return DiscoverResponse{}, err
+	}
+	cwd, _ := os.Getwd()
+	fetch := func(ctx context.Context, source string, q DiscoverQuery) ([]rawJob, error) {
+		if source == "adzuna" {
+			return adzunaSearch(ctx, settings.AdzunaAppID, settings.AdzunaAppKey, q)
+		}
+		python, err := resolvePython(settings.PythonPath, exeDir(), cwd)
+		if err != nil {
+			return nil, err
+		}
+		return runJobSpy(ctx, python, source, q)
+	}
+	return runDiscover(context.Background(), q, fetch, tracked), nil
+}
+
+// ---- Settings ----
 
 func (a *App) GetSettings() (Settings, error) {
-	return a.settingsStore.Load()
+	return a.settings.Load()
 }
 
-func (a *App) SaveSettings(settings Settings) error {
-	return a.settingsStore.Save(settings)
-}
-
-func (a *App) ScrapeJobs(searchTerm string, location string) ([]ScrapedJob, error) {
-	cmd := exec.Command(filepath.Join("venv", "Scripts", "python.exe"), "scraper.py", searchTerm, location)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	
-	err := cmd.Run()
+// SaveSettings keeps the window geometry already on disk; only the app writes those.
+func (a *App) SaveSettings(s Settings) error {
+	current, err := a.settings.Load()
 	if err != nil {
-		return nil, errors.New(stderr.String())
+		return err
 	}
-
-	var result []ScrapedJob
-	err = json.Unmarshal(out.Bytes(), &result)
-	if err != nil {
-		// Try to parse an error returned by python script
-		var pyErr map[string]string
-		if json.Unmarshal(out.Bytes(), &pyErr) == nil {
-			if msg, ok := pyErr["error"]; ok {
-				return nil, errors.New(msg)
-			}
-		}
-		return nil, err
-	}
-
-	return result, nil
+	s.WindowWidth, s.WindowHeight, s.WindowMaximised = current.WindowWidth, current.WindowHeight, current.WindowMaximised
+	s.PythonPath = strings.TrimSpace(s.PythonPath)
+	return a.settings.Save(s)
 }
 
-type AdzunaResponse struct {
-	Results []struct {
-		Title    string `json:"title"`
-		Company  struct {
-			DisplayName string `json:"display_name"`
-		} `json:"company"`
-		Location struct {
-			DisplayName string `json:"display_name"`
-		} `json:"location"`
-		RedirectURL string `json:"redirect_url"`
-	} `json:"results"`
+// TestPython reports which Python will be used and whether it can import JobSpy.
+func (a *App) TestPython(path string) (string, error) {
+	cwd, _ := os.Getwd()
+	python, err := resolvePython(strings.TrimSpace(path), exeDir(), cwd)
+	if err != nil {
+		return "", err
+	}
+	if err := checkScraper(context.Background(), python); err != nil {
+		return "", fmt.Errorf("%s: %w", python, err)
+	}
+	return python, nil
 }
 
-func (a *App) AdzunaSearch(searchTerm string, location string) ([]ScrapedJob, error) {
-	settings, err := a.settingsStore.Load()
-	if err != nil {
-		return nil, err
-	}
-	if settings.AdzunaAppID == "" || settings.AdzunaAppKey == "" {
-		return nil, errors.New("Adzuna API credentials not configured")
-	}
+func (a *App) DataDir() string { return a.dataDir }
 
-	reqURL := fmt.Sprintf("https://api.adzuna.com/v1/api/jobs/us/search/1?app_id=%s&app_key=%s&results_per_page=10&what=%s&where=%s",
-		url.QueryEscape(settings.AdzunaAppID),
-		url.QueryEscape(settings.AdzunaAppKey),
-		url.QueryEscape(searchTerm),
-		url.QueryEscape(location),
-	)
-
-	resp, err := http.Get(reqURL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Adzuna API error (%d): %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	var adzunaResp AdzunaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&adzunaResp); err != nil {
-		return nil, err
-	}
-
-	var jobs []ScrapedJob
-	for _, item := range adzunaResp.Results {
-		jobs = append(jobs, ScrapedJob{
-			Company:  item.Company.DisplayName,
-			Position: item.Title,
-			URL:      item.RedirectURL,
-			Site:     "Adzuna",
-			Location: item.Location.DisplayName,
-		})
-	}
-
-	return jobs, nil
-}
+func (a *App) OpenDataDir() error { return openWithOS(a.dataDir) }
