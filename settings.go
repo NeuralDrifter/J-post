@@ -2,14 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 )
 
+const defaultFollowUpDays = 7
+
 type Settings struct {
-	AdzunaAppID  string `json:"adzunaAppId"`
-	AdzunaAppKey string `json:"adzunaAppKey"`
+	AdzunaAppID     string `json:"adzunaAppId"`
+	AdzunaAppKey    string `json:"adzunaAppKey"`
+	PythonPath      string `json:"pythonPath"`
+	FollowUpDays    int    `json:"followUpDays"`
+	WindowWidth     int    `json:"windowWidth"`
+	WindowHeight    int    `json:"windowHeight"`
+	WindowMaximised bool   `json:"windowMaximised"`
 }
 
 type SettingsStore struct {
@@ -17,13 +25,17 @@ type SettingsStore struct {
 	filePath string
 }
 
-func NewSettingsStore() *SettingsStore {
-	homeDir, _ := os.UserHomeDir()
-	appDir := filepath.Join(homeDir, ".jobtrack")
-	os.MkdirAll(appDir, os.ModePerm)
-	return &SettingsStore{
-		filePath: filepath.Join(appDir, "settings.json"),
+// defaultDataDir is where the app keeps its database, settings and files.
+func defaultDataDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
 	}
+	return filepath.Join(home, ".jobtrack")
+}
+
+func NewSettingsStore(dir string) *SettingsStore {
+	return &SettingsStore{filePath: filepath.Join(dir, "settings.json")}
 }
 
 func (s *SettingsStore) Load() (Settings, error) {
@@ -32,28 +44,46 @@ func (s *SettingsStore) Load() (Settings, error) {
 
 	var settings Settings
 	data, err := os.ReadFile(s.filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return settings, nil
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return settings, err
+	}
+	if err == nil {
+		if err := json.Unmarshal(data, &settings); err != nil {
+			return settings, err
 		}
-		return settings, err
 	}
-
-	if err := json.Unmarshal(data, &settings); err != nil {
-		return settings, err
+	if settings.FollowUpDays <= 0 {
+		settings.FollowUpDays = defaultFollowUpDays
 	}
-
 	return settings, nil
 }
 
+// Save writes atomically (temp file + rename) so a crash can't leave a
+// half-written settings file. 0600 because it holds API keys.
 func (s *SettingsStore) Save(settings Settings) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+	if settings.FollowUpDays <= 0 {
+		settings.FollowUpDays = defaultFollowUpDays
+	}
+	if settings.FollowUpDays > 365 {
+		return errors.New("follow-up threshold must be between 1 and 365 days")
+	}
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(s.filePath, data, 0644)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := os.MkdirAll(filepath.Dir(s.filePath), 0o755); err != nil {
+		return err
+	}
+	tmp := s.filePath + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, s.filePath); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return nil
 }

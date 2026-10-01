@@ -33,7 +33,7 @@ type App struct {
 func NewApp() *App {
 	return &App{
 		store:         NewStore(),
-		settingsStore: NewSettingsStore(),
+		settingsStore: NewSettingsStore(defaultDataDir()),
 	}
 }
 
