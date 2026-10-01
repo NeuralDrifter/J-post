@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Copy, Link2, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
+import { openMenu } from '../../lib/menu'
 import { confirmDialog } from '../../components/ConfirmDialog'
 import { IconButton } from '../../components/IconButton'
 import { Field } from '../../components/JobForm'
@@ -52,7 +53,19 @@ export function ContactsPanel({ jobId }: { jobId: string }) {
       {contacts?.length ? (
         <ul className="space-y-2.5">
           {contacts.map((c) => (
-            <li key={c.id} className="group rounded-xl border border-line bg-white/[0.03] p-3">
+            <li
+              key={c.id}
+              className="group rounded-xl border border-line bg-white/[0.03] p-3"
+              onContextMenu={(e) =>
+                openMenu(e, [
+                  { label: 'Edit', icon: Pencil, onSelect: () => setEditing(c) },
+                  { label: 'Copy email', icon: Copy, disabled: !c.email, onSelect: () => copyEmail(c.email) },
+                  { label: 'Open LinkedIn', icon: Link2, disabled: !c.linkedinUrl, onSelect: () => BrowserOpenURL(c.linkedinUrl) },
+                  'separator',
+                  { label: 'Remove', icon: Trash2, danger: true, onSelect: () => remove(c) },
+                ])
+              }
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">{c.name}</p>

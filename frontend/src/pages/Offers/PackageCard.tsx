@@ -1,4 +1,5 @@
-import { Copy, Pencil, Trash2, TriangleAlert } from 'lucide-react'
+import { Copy, Eye, EyeOff, Pencil, Trash2, TriangleAlert } from 'lucide-react'
+import { openMenu } from '../../lib/menu'
 import { Chip } from '../../components/Chip'
 import { IconButton } from '../../components/IconButton'
 import { SourceMark } from '../../components/SourceMark'
@@ -22,6 +23,15 @@ export function PackageCard({ item, sources, selected, onToggle, onEdit, onCount
 
   return (
     <article
+      onContextMenu={(e) =>
+        openMenu(e, [
+          { label: 'Edit', icon: Pencil, onSelect: onEdit },
+          ...(p.kind === 'offer' || p.kind === 'estimate' ? [{ label: 'Draft counter-offer', icon: Copy, onSelect: onCounter }] : []),
+          { label: selected ? 'Exclude from comparison' : 'Include in comparison', icon: selected ? EyeOff : Eye, onSelect: onToggle },
+          'separator',
+          { label: 'Delete', icon: Trash2, danger: true, onSelect: onDelete },
+        ])
+      }
       className={`glass flex w-72 shrink-0 flex-col rounded-2xl p-4 transition ${selected ? 'border-accent/50 shadow-lg shadow-accent/10' : 'opacity-70'}`}
     >
       <header className="flex items-start gap-2">

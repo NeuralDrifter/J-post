@@ -8,9 +8,13 @@ import { toast } from '../lib/toast'
 import { JobForm } from './JobForm'
 import { Modal } from './Modal'
 
-export function QuickAddModal({ onClose }: { onClose: () => void }) {
+export function QuickAddModal({ onClose, initialStatus }: { onClose: () => void; initialStatus?: string }) {
   const navigate = useNavigate()
-  const [draft, setDraft] = useState(emptyDraft)
+  const [draft, setDraft] = useState(() => ({
+    ...emptyDraft(),
+    // Closed needs a reason, so a new job can't start there.
+    status: initialStatus && initialStatus !== 'closed' ? initialStatus : 'wishlist',
+  }))
   const [saving, setSaving] = useState(false)
 
   const submit = async (e: FormEvent) => {

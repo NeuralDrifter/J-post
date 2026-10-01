@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { confirmDialog } from '../../components/ConfirmDialog'
 import { useStatusChange } from '../../components/useStatusChange'
 import { api, apiOk } from '../../lib/api'
@@ -22,7 +22,8 @@ export default function JobDetailPage({ id }: { id: string }) {
   const { data: job, loading } = useLoad(() => api(GetJob(id)), [id])
   const { data: events } = useLoad(() => api(ListStageEvents(id)), [id])
   const { request, picker } = useStatusChange()
-  const [editing, setEditing] = useState(false)
+  const [params] = useSearchParams()
+  const [editing, setEditing] = useState(params.get('edit') === '1')
 
   if (!job) {
     return <p className="text-sm text-ink-2">{loading ? 'Loading…' : 'This job could not be loaded.'}</p>

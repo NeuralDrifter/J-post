@@ -4,6 +4,7 @@ package main
 
 import (
 	"os/exec"
+	"path/filepath"
 	"runtime"
 )
 
@@ -16,3 +17,5 @@ func openWithOS(path string) error {
 	}
 	return exec.Command(opener, path).Start()
 }
+
+func revealInFolder(path string) error { return openWithOS(filepath.Dir(path)) }

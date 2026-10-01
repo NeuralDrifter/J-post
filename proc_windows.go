@@ -20,3 +20,8 @@ func openWithOS(path string) error {
 	hideConsole(cmd)
 	return cmd.Start()
 }
+
+// revealInFolder opens Explorer with the file selected.
+func revealInFolder(path string) error {
+	return exec.Command("explorer", "/select,", path).Start()
+}

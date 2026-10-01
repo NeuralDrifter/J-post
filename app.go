@@ -246,6 +246,25 @@ func (a *App) OpenAttachment(id string) error {
 	return openWithOS(att.StoredPath)
 }
 
+func (a *App) RenameAttachment(id, label string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.RenameAttachment(id, label)
+}
+
+// ShowAttachmentInFolder opens the file manager with the stored copy selected.
+func (a *App) ShowAttachmentInFolder(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	att, err := a.repo.GetAttachment(id)
+	if err != nil {
+		return err
+	}
+	return revealInFolder(att.StoredPath)
+}
+
 func (a *App) DeleteAttachment(id string) error {
 	if err := a.ready(); err != nil {
 		return err

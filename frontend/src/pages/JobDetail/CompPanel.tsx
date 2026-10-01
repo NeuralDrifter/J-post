@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Copy, Pencil, Trash2 } from 'lucide-react'
+import { confirmDialog } from '../../components/ConfirmDialog'
+import { openMenu } from '../../lib/menu'
+import { notifyDataChanged } from '../../lib/events'
 import { Chip } from '../../components/Chip'
 import { PackageEditor } from '../../components/comp/PackageEditor'
 import { Panel } from '../../components/Panel'
 import { SourceMark } from '../../components/SourceMark'
-import { api } from '../../lib/api'
-import { ListCompForJob, NewEstimate, type main } from '../../lib/backend'
+import { api, apiOk } from '../../lib/api'
+import { DeleteCompPackage, DraftCounter, ListCompForJob, NewEstimate, type main } from '../../lib/backend'
 import { formatMoneyFull, KIND_LABEL, KIND_TONE } from '../../lib/comp'
 import { taxDetail } from '../../lib/sources'
 import { useLoad } from '../../lib/useLoad'
@@ -20,6 +23,18 @@ export function CompPanel({ jobId }: { jobId: string }) {
   const start = async (kind: 'offer' | 'estimate') => {
     const draft = await api(NewEstimate(jobId))
     if (draft) setEditing({ ...draft, kind, label: kind === 'offer' ? 'Offer' : 'Estimate' })
+  }
+
+  const counter = async (id: string) => {
+    const c = await api(DraftCounter(id))
+    if (!c) return
+    notifyDataChanged()
+    setEditing(c)
+  }
+
+  const remove = async (it: main.ComparisonItem) => {
+    const ok = await confirmDialog({ title: 'Delete this package?', message: `Delete "${it.package.label}"?`, confirmLabel: 'Delete', danger: true })
+    if (ok && (await apiOk(DeleteCompPackage(it.package.id)))) notifyDataChanged()
   }
 
   return (
@@ -36,7 +51,19 @@ export function CompPanel({ jobId }: { jobId: string }) {
       {items?.length ? (
         <ul className="mb-3 space-y-2">
           {items.map((it) => (
-            <li key={it.package.id}>
+            <li
+              key={it.package.id}
+              onContextMenu={(e) =>
+                openMenu(e, [
+                  { label: 'Edit', icon: Pencil, onSelect: () => setEditing(it.package) },
+                  ...(it.package.kind === 'offer' || it.package.kind === 'estimate'
+                    ? [{ label: 'Draft counter-offer', icon: Copy, onSelect: () => counter(it.package.id) }]
+                    : []),
+                  'separator',
+                  { label: 'Delete', icon: Trash2, danger: true, onSelect: () => remove(it) },
+                ])
+              }
+            >
               <button
                 className="w-full rounded-xl border border-line bg-white/[0.03] p-3 text-left transition hover:border-line-strong"
                 onClick={() => setEditing(it.package)}

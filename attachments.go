@@ -116,3 +116,12 @@ func (r *Repo) DeleteAttachment(id string) error {
 	}
 	return nil
 }
+
+func (r *Repo) RenameAttachment(id, label string) error {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return errors.New("a file label can't be empty")
+	}
+	res, err := r.db.Exec(`UPDATE attachments SET label = ? WHERE id = ?`, label, id)
+	return expectOneRow(res, err, "attachment", id)
+}

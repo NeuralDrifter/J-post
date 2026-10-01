@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PageTitle } from '../../components/PageTitle'
+import { useJobMenu } from '../../components/useJobMenu'
 import { useStatusChange } from '../../components/useStatusChange'
 import { api } from '../../lib/api'
 import { GetMetrics, ListJobSummaries, main } from '../../lib/backend'
 import { filterSummaries } from '../../lib/filter'
+import { openMenu } from '../../lib/menu'
 import type { Status } from '../../lib/format'
 import { readPref, writePref } from '../../lib/prefs'
 import { useLoad } from '../../lib/useLoad'
@@ -33,7 +35,6 @@ export default function PipelinePage() {
     [summaries, query, filters],
   )
 
-  const open = (id: string) => navigate(`/jobs/${id}`)
 
   const move = (jobId: string, status: Status) => {
     const current = summaries?.find((s) => s.job.id === jobId)
@@ -47,6 +48,13 @@ export default function PipelinePage() {
       )
     }
     request(current.job, status)
+  }
+
+  const open = (id: string) => navigate(`/jobs/${id}`)
+  const jobMenu = useJobMenu(move)
+  const cardMenu = (e: React.MouseEvent, jobId: string) => {
+    const s = summaries?.find((x) => x.job.id === jobId)
+    if (s) openMenu(e, jobMenu.menuFor(s.job))
   }
 
   return (
@@ -67,12 +75,13 @@ export default function PipelinePage() {
       />
       <div className="min-h-0 flex-1">
         {view === 'board' ? (
-          <Board summaries={visible} onMove={move} onOpen={open} />
+          <Board summaries={visible} onMove={move} onOpen={open} onCardMenu={cardMenu} />
         ) : (
-          <TableView summaries={visible} onOpen={open} />
+          <TableView summaries={visible} onOpen={open} onRowMenu={cardMenu} />
         )}
       </div>
       {picker}
+      {jobMenu.element}
     </div>
   )
 }

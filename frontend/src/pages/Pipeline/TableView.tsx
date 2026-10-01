@@ -14,7 +14,13 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'daysInStage', label: 'In stage' },
 ]
 
-export function TableView({ summaries, onOpen }: { summaries: main.JobSummary[]; onOpen: (jobId: string) => void }) {
+type Props = {
+  summaries: main.JobSummary[]
+  onOpen: (jobId: string) => void
+  onRowMenu: (e: React.MouseEvent, jobId: string) => void
+}
+
+export function TableView({ summaries, onOpen, onRowMenu }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'daysInStage', dir: 'desc' })
   const rows = useMemo(() => sortSummaries(summaries, sort.key, sort.dir), [summaries, sort])
 
@@ -41,6 +47,7 @@ export function TableView({ summaries, onOpen }: { summaries: main.JobSummary[];
             <tr
               key={job.id}
               onClick={() => onOpen(job.id)}
+              onContextMenu={(e) => onRowMenu(e, job.id)}
               className={`cursor-pointer border-t border-line transition hover:bg-white/5 ${job.status === 'closed' ? 'opacity-55' : ''}`}
             >
               <td className="px-4 py-2.5 font-semibold">{job.company}</td>

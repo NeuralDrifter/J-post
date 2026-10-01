@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Plus, Search } from 'lucide-react'
 import { api } from '../lib/api'
@@ -10,7 +10,14 @@ export function TopBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState<{ status?: string } | null>(null)
+
+  // Right-click "New application" / "Add job here" anywhere in the app lands here.
+  useEffect(() => {
+    const onRequest = (e: Event) => setAdding({ status: (e as CustomEvent<{ status?: string }>).detail?.status })
+    window.addEventListener('jobtrack:new-application', onRequest)
+    return () => window.removeEventListener('jobtrack:new-application', onRequest)
+  }, [])
   const { data: metrics } = useLoad(() => api(GetMetrics()), [])
   const onPipeline = location.pathname === '/'
   const query = onPipeline ? (params.get('q') ?? '') : ''
@@ -36,11 +43,11 @@ export function TopBar() {
           onChange={(e) => setQuery(e.target.value)}
         />
       </label>
-      <button className="btn btn-primary shrink-0" onClick={() => setAdding(true)} title="New application">
+      <button className="btn btn-primary shrink-0" onClick={() => setAdding({})} title="New application">
         <Plus size={16} />
         <span className="hidden min-[1000px]:inline">New Application</span>
       </button>
-      {adding && <QuickAddModal onClose={() => setAdding(false)} />}
+      {adding && <QuickAddModal initialStatus={adding.status} onClose={() => setAdding(null)} />}
     </header>
   )
 }

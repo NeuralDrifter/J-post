@@ -9,7 +9,9 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsLeftRight, Plus } from 'lucide-react'
+import { requestNewApplication } from '../../components/ContextMenu'
+import { openMenu } from '../../lib/menu'
 import type { main } from '../../lib/backend'
 import { STATUSES, STATUS_DOT, STATUS_LABEL, type Status } from '../../lib/format'
 import { readPref, writePref } from '../../lib/prefs'
@@ -19,9 +21,10 @@ type Props = {
   summaries: main.JobSummary[]
   onMove: (jobId: string, status: Status) => void
   onOpen: (jobId: string) => void
+  onCardMenu: (e: React.MouseEvent, jobId: string) => void
 }
 
-export function Board({ summaries, onMove, onOpen }: Props) {
+export function Board({ summaries, onMove, onOpen, onCardMenu }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [activeId, setActiveId] = useState<string | null>(null)
   const [closedOpen, setClosedOpen] = useState(() => readPref('closedOpen', 'true') === 'true')
@@ -68,6 +71,7 @@ export function Board({ summaries, onMove, onOpen }: Props) {
             collapsed={status === 'closed' && !closedOpen}
             onToggle={status === 'closed' ? toggleClosed : undefined}
             onOpen={open}
+            onCardMenu={onCardMenu}
           />
         ))}
       </div>
@@ -82,19 +86,26 @@ function Column({
   collapsed,
   onToggle,
   onOpen,
+  onCardMenu,
 }: {
   status: Status
   items: main.JobSummary[]
   collapsed: boolean
   onToggle?: () => void
   onOpen: (jobId: string) => void
+  onCardMenu: (e: React.MouseEvent, jobId: string) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
+  const headerMenu = (e: React.MouseEvent) =>
+    openMenu(e, [
+      ...(status !== 'closed' ? [{ label: 'Add job here', icon: Plus, onSelect: () => requestNewApplication(status) }] : []),
+      ...(onToggle ? [{ label: collapsed ? 'Expand column' : 'Collapse column', icon: ChevronsLeftRight, onSelect: onToggle }] : []),
+    ])
   const ring = isOver ? 'border-accent/60 bg-accent/5' : 'border-line bg-panel/50'
 
   if (collapsed) {
     return (
-      <section ref={setNodeRef} className={`flex w-12 shrink-0 flex-col items-center gap-3 rounded-2xl border py-3 ${ring}`}>
+      <section ref={setNodeRef} onContextMenu={headerMenu} className={`flex w-12 shrink-0 flex-col items-center gap-3 rounded-2xl border py-3 ${ring}`}>
         <button onClick={onToggle} className="text-ink-2 hover:text-ink" title="Show closed jobs" aria-label="Show closed jobs">
           <ChevronLeft size={16} />
         </button>
@@ -106,7 +117,7 @@ function Column({
 
   return (
     <section ref={setNodeRef} className={`flex w-72 shrink-0 flex-col rounded-2xl border backdrop-blur ${ring}`}>
-      <header className="flex items-center gap-2 border-b border-line px-4 py-3">
+      <header onContextMenu={headerMenu} className="flex items-center gap-2 border-b border-line px-4 py-3">
         <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
         <h3 className="text-xs font-bold tracking-wider uppercase">{STATUS_LABEL[status]}</h3>
         <span className="rounded-full bg-white/10 px-2 font-mono text-[11px] text-ink-2">{items.length}</span>
@@ -118,7 +129,7 @@ function Column({
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3">
         {items.map((s) => (
-          <DraggableCard key={s.job.id} summary={s} onOpen={onOpen} />
+          <DraggableCard key={s.job.id} summary={s} onOpen={onOpen} onMenu={(e) => onCardMenu(e, s.job.id)} />
         ))}
         {items.length === 0 && <p className="py-8 text-center font-mono text-[11px] text-ink-3">Drop jobs here</p>}
       </div>
@@ -126,7 +137,15 @@ function Column({
   )
 }
 
-function DraggableCard({ summary, onOpen }: { summary: main.JobSummary; onOpen: (jobId: string) => void }) {
+function DraggableCard({
+  summary,
+  onOpen,
+  onMenu,
+}: {
+  summary: main.JobSummary
+  onOpen: (jobId: string) => void
+  onMenu: (e: React.MouseEvent) => void
+}) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: summary.job.id })
   return (
     <div
@@ -134,6 +153,7 @@ function DraggableCard({ summary, onOpen }: { summary: main.JobSummary; onOpen: 
       {...listeners}
       {...attributes}
       onClick={() => onOpen(summary.job.id)}
+      onContextMenu={onMenu}
       className={isDragging ? 'opacity-30' : ''}
     >
       <JobCard summary={summary} />

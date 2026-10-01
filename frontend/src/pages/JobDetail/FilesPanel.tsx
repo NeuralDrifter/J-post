@@ -1,9 +1,18 @@
-import { FileText, Paperclip, Trash2 } from 'lucide-react'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { FileText, FolderOpen, Paperclip, PenLine, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { confirmDialog, promptDialog } from '../../components/ConfirmDialog'
+import { openMenu } from '../../lib/menu'
 import { IconButton } from '../../components/IconButton'
 import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
-import { DeleteAttachment, ListAttachments, OpenAttachment, PickAndAttachFile, type main } from '../../lib/backend'
+import {
+  DeleteAttachment,
+  ListAttachments,
+  OpenAttachment,
+  PickAndAttachFile,
+  RenameAttachment,
+  ShowAttachmentInFolder,
+  type main,
+} from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDate } from '../../lib/format'
 import { toast } from '../../lib/toast'
@@ -29,6 +38,11 @@ export function FilesPanel({ jobId }: { jobId: string }) {
     if (ok && (await apiOk(DeleteAttachment(f.id)))) notifyDataChanged()
   }
 
+  const rename = async (f: main.Attachment) => {
+    const label = await promptDialog({ title: 'Rename file', label: 'Label', initial: f.label })
+    if (label && label !== f.label && (await apiOk(RenameAttachment(f.id, label)))) notifyDataChanged()
+  }
+
   return (
     <Panel
       title="Files"
@@ -41,7 +55,19 @@ export function FilesPanel({ jobId }: { jobId: string }) {
       {files?.length ? (
         <ul className="space-y-1.5">
           {files.map((f) => (
-            <li key={f.id} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5">
+            <li
+              key={f.id}
+              className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5"
+              onContextMenu={(e) =>
+                openMenu(e, [
+                  { label: 'Open', icon: SquareArrowOutUpRight, onSelect: () => apiOk(OpenAttachment(f.id)) },
+                  { label: 'Show in folder', icon: FolderOpen, onSelect: () => apiOk(ShowAttachmentInFolder(f.id)) },
+                  { label: 'Rename label…', icon: PenLine, onSelect: () => rename(f) },
+                  'separator',
+                  { label: 'Remove', icon: Trash2, danger: true, onSelect: () => remove(f) },
+                ])
+              }
+            >
               <FileText size={16} className="shrink-0 text-ink-3" />
               <button className="min-w-0 flex-1 text-left" onClick={() => apiOk(OpenAttachment(f.id))} title={`Open ${f.fileName}`}>
                 <p className="truncate text-sm hover:underline">{f.label}</p>

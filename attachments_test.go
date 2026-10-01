@@ -77,3 +77,24 @@ func TestDeleteJobRemovesFiles(t *testing.T) {
 		t.Fatal("attachment survived job delete")
 	}
 }
+
+func TestRenameAttachment(t *testing.T) {
+	r := newTestRepo(t)
+	j := mustCreate(t, r, Job{Company: "Acme", Position: "Dev"})
+	a, err := r.AddAttachment(j.ID, writeTemp(t, "cv.pdf", "x"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.RenameAttachment(a.ID, "  Resume sent to Acme  "); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := r.GetAttachment(a.ID); got.Label != "Resume sent to Acme" || got.FileName != "cv.pdf" {
+		t.Fatalf("got %+v", got)
+	}
+	if err := r.RenameAttachment(a.ID, "   "); err == nil {
+		t.Fatal("empty label should be rejected")
+	}
+	if err := r.RenameAttachment("nope", "x"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v", err)
+	}
+}

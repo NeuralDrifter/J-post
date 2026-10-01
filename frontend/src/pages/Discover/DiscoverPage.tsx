@@ -95,7 +95,7 @@ export default function DiscoverPage() {
           ) : (
             <>
               <p className="mb-2 font-mono text-[11px] text-ink-3">{response.results.length} results</p>
-              <ResultsList results={response.results} selectedKey={selectedKey} onSelect={setSelectedKey} />
+              <ResultsList results={response.results} selectedKey={selectedKey} onSelect={setSelectedKey} onSave={save} />
             </>
           )}
         </div>

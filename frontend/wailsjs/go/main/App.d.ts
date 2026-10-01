@@ -62,6 +62,8 @@ export function PickAndAttachFile(arg1:string):Promise<main.Attachment>;
 
 export function PreviewComp(arg1:main.CompPackage):Promise<main.PackageResult>;
 
+export function RenameAttachment(arg1:string,arg2:string):Promise<void>;
+
 export function SaveCompPackage(arg1:main.CompPackage):Promise<main.CompPackage>;
 
 export function SaveContact(arg1:main.Contact):Promise<main.Contact>;
@@ -73,6 +75,8 @@ export function SaveSettings(arg1:main.Settings):Promise<void>;
 export function SearchAreas(arg1:string):Promise<Array<main.Option>>;
 
 export function SearchOccupations(arg1:string):Promise<Array<main.Option>>;
+
+export function ShowAttachmentInFolder(arg1:string):Promise<void>;
 
 export function TestPython(arg1:string):Promise<string>;
 

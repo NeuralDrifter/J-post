@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { Circle, CircleCheck, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Circle, CircleCheck, Copy, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
+import { copyText } from '../../components/ContextMenu'
+import { openMenu } from '../../lib/menu'
 import { confirmDialog } from '../../components/ConfirmDialog'
 import { IconButton } from '../../components/IconButton'
 import { Field } from '../../components/JobForm'
@@ -52,7 +54,22 @@ export function InterviewsPanel({ jobId }: { jobId: string }) {
       {interviews?.length ? (
         <ul className="space-y-2.5">
           {interviews.map((iv) => (
-            <li key={iv.id} className={`group rounded-xl border border-line bg-white/[0.03] p-3 ${iv.completed ? 'opacity-55' : ''}`}>
+            <li
+              key={iv.id}
+              className={`group rounded-xl border border-line bg-white/[0.03] p-3 ${iv.completed ? 'opacity-55' : ''}`}
+              onContextMenu={(e) => {
+                const isLink = /^https?:\/\//i.test(iv.locationOrLink)
+                openMenu(e, [
+                  { label: 'Edit', icon: Pencil, onSelect: () => setEditing(iv) },
+                  { label: iv.completed ? 'Mark not done' : 'Mark done', icon: iv.completed ? Circle : CircleCheck, onSelect: () => toggle(iv) },
+                  'separator',
+                  { label: 'Open meeting link', icon: ExternalLink, disabled: !isLink, onSelect: () => BrowserOpenURL(iv.locationOrLink) },
+                  { label: isLink ? 'Copy link' : 'Copy location', icon: Copy, disabled: !iv.locationOrLink, onSelect: () => copyText(iv.locationOrLink) },
+                  'separator',
+                  { label: 'Delete', icon: Trash2, danger: true, onSelect: () => remove(iv) },
+                ])
+              }}
+            >
               <div className="flex items-start gap-2">
                 <button
                   className={`mt-0.5 shrink-0 ${iv.completed ? 'text-success' : 'text-ink-3 hover:text-ink'}`}

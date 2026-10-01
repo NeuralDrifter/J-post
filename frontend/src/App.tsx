@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { HashRouter, Route, Routes, useParams } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { ConfirmHost } from './components/ConfirmDialog'
+import { ContextMenuHost } from './components/ContextMenu'
 import { StartupErrorScreen } from './components/StartupErrorScreen'
 import { Toaster } from './components/Toaster'
 import { GetStartupError } from './lib/backend'
@@ -38,6 +39,7 @@ export default function App() {
       </Routes>
       <Toaster />
       <ConfirmHost />
+      <ContextMenuHost />
     </HashRouter>
   )
 }

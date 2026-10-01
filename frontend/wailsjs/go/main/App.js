@@ -122,6 +122,10 @@ export function PreviewComp(arg1) {
   return window['go']['main']['App']['PreviewComp'](arg1);
 }
 
+export function RenameAttachment(arg1, arg2) {
+  return window['go']['main']['App']['RenameAttachment'](arg1, arg2);
+}
+
 export function SaveCompPackage(arg1) {
   return window['go']['main']['App']['SaveCompPackage'](arg1);
 }
@@ -144,6 +148,10 @@ export function SearchAreas(arg1) {
 
 export function SearchOccupations(arg1) {
   return window['go']['main']['App']['SearchOccupations'](arg1);
+}
+
+export function ShowAttachmentInFolder(arg1) {
+  return window['go']['main']['App']['ShowAttachmentInFolder'](arg1);
 }
 
 export function TestPython(arg1) {
