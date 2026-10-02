@@ -47,6 +47,10 @@ export class InterviewSession {
     private cb: SessionCallbacks,
   ) {}
 
+  get isEnded(): boolean {
+    return this.ended
+  }
+
   get lines(): Line[] {
     return this.state.lines
   }

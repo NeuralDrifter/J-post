@@ -573,6 +573,9 @@ export namespace main {
 	    wsUrl: string;
 	    setup: Record<string, any>;
 	    minutes: number;
+	    kind: string;
+	    company: string;
+	    position: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new LiveSession(source);
@@ -585,6 +588,9 @@ export namespace main {
 	        this.wsUrl = source["wsUrl"];
 	        this.setup = source["setup"];
 	        this.minutes = source["minutes"];
+	        this.kind = source["kind"];
+	        this.company = source["company"];
+	        this.position = source["position"];
 	    }
 	}
 	

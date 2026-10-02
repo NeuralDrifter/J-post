@@ -78,7 +78,7 @@ func TestPrepareInterview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" {
+	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" || live.Company != "Acme" || live.Kind != "behavioral" {
 		t.Fatalf("live = %+v", live)
 	}
 	if sentSetup["model"] != "models/gemini-3.8-live" {

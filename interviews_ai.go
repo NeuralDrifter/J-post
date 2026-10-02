@@ -76,6 +76,9 @@ type LiveSession struct {
 	WSURL     string         `json:"wsUrl"`
 	Setup     map[string]any `json:"setup"`
 	Minutes   int            `json:"minutes"`
+	Kind      string         `json:"kind"`
+	Company   string         `json:"company"`
+	Position  string         `json:"position"`
 }
 
 type Nudge struct {
@@ -314,7 +317,8 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 		_ = r.setInterviewStatus(mi.ID, "failed", nil, err.Error())
 		return LiveSession{}, err
 	}
-	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes}, nil
+	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
+		Kind: setup.Kind, Company: job.Company, Position: job.Position}, nil
 }
 
 var nudgeSchema = map[string]any{
