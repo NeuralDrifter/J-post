@@ -11,6 +11,9 @@ import {
   DescribeArea,
   DescribeOccupation,
   GetCurrentComp,
+  GetProfile,
+  UpdateResumeText,
+  UploadResume,
   GetSettings,
   OpenDataDir,
   SaveSettings,
@@ -52,6 +55,50 @@ function Section({ title, hint, children }: { title: string; hint: string; child
       <p className="mb-4 text-xs text-ink-3">{hint}</p>
       {children}
     </section>
+  )
+}
+
+function ResumeSection() {
+  const { data: profile } = useLoad(() => api(GetProfile()), [])
+  const [text, setText] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const value = text ?? profile?.resumeText ?? ''
+
+  const upload = async () => {
+    setBusy(true)
+    const p = await api(UploadResume())
+    setBusy(false)
+    if (!p) return
+    setText(null)
+    notifyDataChanged()
+    toast.success(`Read ${p.resumeFileName}. Check the text below.`)
+  }
+
+  const save = async () => {
+    if (await apiOk(UpdateResumeText(value))) {
+      setText(null)
+      notifyDataChanged()
+      toast.success('Resume text saved')
+    }
+  }
+
+  return (
+    <Section title="Resume" hint="Used by every AI feature. Review the extracted text and fix anything that came out wrong.">
+      <div className="mb-3 flex items-center gap-3">
+        <button type="button" className="btn btn-ghost" onClick={upload} disabled={busy}>
+          {busy ? <LoaderCircle size={15} className="animate-spin" /> : null} {profile?.resumeFileName ? 'Replace resume' : 'Upload resume'}
+        </button>
+        <span className="font-mono text-xs text-ink-3">{profile?.resumeFileName || 'PDF, DOCX, TXT or Markdown'}</span>
+      </div>
+      <textarea className="field min-h-48 font-mono text-[12px] leading-relaxed" value={value} onChange={(e) => setText(e.target.value)} placeholder="Your resume text appears here after upload. You can also paste it." />
+      {text !== null && text !== profile?.resumeText && (
+        <div className="mt-2 flex justify-end">
+          <button type="button" className="btn btn-primary py-1.5 text-xs" onClick={save}>
+            Save resume text
+          </button>
+        </div>
+      )}
+    </Section>
   )
 }
 
@@ -214,6 +261,28 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
           </button>
         </div>
       </Section>
+
+      <Section title="AI (Google Gemini)" hint="Powers mock interviews and, later, fit scores and writing help.">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Gemini API key" wide>
+            <input className="field" type="password" autoComplete="off" value={s.geminiKey} onChange={(e) => setS({ ...s, geminiKey: e.target.value })} />
+          </Field>
+          <Field label="Text model">
+            <input className="field font-mono text-xs" value={s.geminiTextModel} onChange={(e) => setS({ ...s, geminiTextModel: e.target.value })} />
+          </Field>
+          <Field label="Live (voice) model">
+            <input className="field font-mono text-xs" value={s.geminiLiveModel} onChange={(e) => setS({ ...s, geminiLiveModel: e.target.value })} />
+          </Field>
+        </div>
+        <button type="button" className="mt-3 flex items-center gap-1 text-xs text-indigo-300 hover:underline" onClick={() => BrowserOpenURL('https://aistudio.google.com/apikey')}>
+          <ExternalLink size={12} /> Get a Gemini API key
+        </button>
+        <p className="mt-3 rounded-xl border border-warn/30 bg-warn/5 px-3 py-2 text-[11px] leading-relaxed text-amber-200/90">
+          Privacy: on Google's free tier, what you send (your resume, interview audio and transcripts) may be used by Google to improve its products. The paid tier doesn't.
+        </p>
+      </Section>
+
+      <ResumeSection />
 
       <Section title="Data" hint="Your database, settings and attached files live here. Back this folder up to keep your history.">
         <div className="flex items-center gap-2">

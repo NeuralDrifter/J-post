@@ -13,6 +13,7 @@ import { DescriptionCard } from './DescriptionCard'
 import { EditJobModal } from './EditJobModal'
 import { FilesPanel } from './FilesPanel'
 import { InterviewsPanel } from './InterviewsPanel'
+import { MockInterviewsPanel } from './MockInterviewsPanel'
 import { JobHeader } from './JobHeader'
 import { NotesPad } from './NotesPad'
 import { StageTimeline } from './StageTimeline'
@@ -54,6 +55,7 @@ export default function JobDetailPage({ id }: { id: string }) {
           <NotesPad jobId={job.id} initial={job.notes} />
         </div>
         <aside className="col-start-2 space-y-4 min-[1200px]:col-start-3 min-[1200px]:row-start-1">
+          <MockInterviewsPanel job={job} />
           <InterviewsPanel jobId={job.id} />
           <CompPanel jobId={job.id} />
           <ContactsPanel jobId={job.id} />

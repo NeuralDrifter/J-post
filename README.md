@@ -30,6 +30,12 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
   - Compare real offers, estimates, counter-offer drafts and your current job side by side.
   - Each one shows 4-year total comp with vesting schedules and raises, after-tax take-home, equity scenarios (0×/1×/3×/10×), where the base sits in the local market for your occupation, what it's worth in your home city's dollars, and, if you have no current job set, how its base compares with the typical (median) pay for your occupation where you live.
   - Every figure that comes from a government or published dataset is marked ✦¹ ✦² ✦³. Hover the mark to see exactly which data was used.
+- **Mock interviews (AI)**: a real-time voice interviewer (Google Gemini Live) for any job on your board.
+  - It has read the job description, your notes and your resume.
+  - Pick the interview type, length (10/25/45 min), interviewer style, voice and focus.
+  - Live coaching cues (pace, filler words, answer timer, and a one-line AI tip after each answer) can be hidden for a realistic run.
+  - Afterwards you get a scorecard (communication, structure, relevance, depth, confidence), per-question feedback with a stronger example answer, and three things to practice. The transcript and a recording are saved to the job; click a transcript line to replay it.
+  - Needs a Gemini API key (Settings → AI). Upload your resume in Settings → Resume.
 - **Screen-aware window**: opens sized to your monitor (or maximised on small screens) and remembers its size.
 
 ## Setup

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowRightLeft, BadgeDollarSign, Copy, ExternalLink, FolderOpen, Pencil, Receipt, Trash2 } from 'lucide-react'
+import { ArrowRightLeft, BadgeDollarSign, Copy, ExternalLink, FolderOpen, Mic, Pencil, Receipt, Trash2 } from 'lucide-react'
+import { InterviewSetupModal } from './interview/InterviewSetupModal'
 import { apiOk, api } from '../lib/api'
 import { BrowserOpenURL, DeleteJob, NewEstimate, type main } from '../lib/backend'
 import { notifyDataChanged } from '../lib/events'
@@ -20,6 +21,7 @@ export function useJobMenu(move?: (jobId: string, status: Status) => void) {
   const navigate = useNavigate()
   const { request, picker } = useStatusChange()
   const [editor, setEditor] = useState<main.CompPackage | null>(null)
+  const [interviewFor, setInterviewFor] = useState<main.Job | null>(null)
 
   const addComp = async (job: main.Job, kind: 'estimate' | 'offer') => {
     const draft = await api(NewEstimate(job.id))
@@ -51,6 +53,7 @@ export function useJobMenu(move?: (jobId: string, status: Status) => void) {
       })),
     },
     'separator',
+    { label: 'Mock interview…', icon: Mic, onSelect: () => setInterviewFor(job) },
     { label: 'Add estimate', icon: Receipt, onSelect: () => addComp(job, 'estimate') },
     { label: 'Add offer', icon: BadgeDollarSign, onSelect: () => addComp(job, 'offer') },
     'separator',
@@ -64,6 +67,7 @@ export function useJobMenu(move?: (jobId: string, status: Status) => void) {
     <>
       {picker}
       {editor && <PackageEditor initial={editor} onClose={() => setEditor(null)} />}
+      {interviewFor && <InterviewSetupModal job={interviewFor} onClose={() => setInterviewFor(null)} />}
     </>
   )
 
