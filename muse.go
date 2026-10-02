@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -86,11 +87,9 @@ func fetchMusePage(ctx context.Context, category, location string, page int) (mu
 		return out, 0, fmt.Errorf("could not reach The Muse: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return out, 0, errors.New("The Muse is rate-limiting requests; try again later")
-	}
 	if resp.StatusCode != http.StatusOK {
-		return out, 0, fmt.Errorf("The Muse error %d", resp.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return out, 0, errors.New(httpErrorMessage("The Muse", resp.StatusCode, body))
 	}
 	remaining := -1
 	if v, err := strconv.Atoi(resp.Header.Get("X-RateLimit-Remaining")); err == nil {

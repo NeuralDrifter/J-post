@@ -250,8 +250,8 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 300))
-		return nil, fmt.Errorf("Adzuna error %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, errors.New(httpErrorMessage("Adzuna", resp.StatusCode, body))
 	}
 	var parsed adzunaResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {

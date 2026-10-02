@@ -145,3 +145,39 @@ func TestJobicySearch(t *testing.T) {
 		t.Fatal("non-USD salaries should be dropped rather than shown as dollars")
 	}
 }
+
+func TestHTTPErrorMessage(t *testing.T) {
+	html := `<!DOCTYPE html> <html> <!-- This file is managed by Chef --> <head><title>Uh oh, something isn't right</title>`
+	cases := []struct {
+		status int
+		body   string
+		want   string
+	}{
+		{503, html, "Adzuna is temporarily unavailable (503). Try again later."},
+		{502, "", "Adzuna is temporarily unavailable (502). Try again later."},
+		{401, html, "Adzuna rejected the API key (401). Check it in Settings."},
+		{403, "", "Adzuna rejected the API key (403). Check it in Settings."},
+		{429, html, "Adzuna is rate-limiting requests (429). Try again later."},
+		{404, "<html>not found</html>", "Adzuna returned an error (404)."},
+		{400, `{"error":"bad where parameter"}`, `Adzuna error 400: {"error":"bad where parameter"}`},
+	}
+	for _, c := range cases {
+		if got := httpErrorMessage("Adzuna", c.status, []byte(c.body)); got != c.want {
+			t.Errorf("%d: got %q, want %q", c.status, got, c.want)
+		}
+	}
+}
+
+func TestAdzunaHTMLErrorPage(t *testing.T) {
+	url := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`<!DOCTYPE html><html><head><title>Uh oh</title></head></html>`))
+	})
+	old := adzunaBaseURL
+	adzunaBaseURL = url
+	t.Cleanup(func() { adzunaBaseURL = old })
+	_, err := adzunaSearch(context.Background(), "id", "key", DiscoverQuery{Term: "x"}, fetchOptions{})
+	if err == nil || strings.Contains(err.Error(), "<") || !strings.Contains(err.Error(), "temporarily unavailable") {
+		t.Fatalf("err = %v", err)
+	}
+}
