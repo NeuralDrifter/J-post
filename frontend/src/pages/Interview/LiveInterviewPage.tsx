@@ -10,6 +10,7 @@ import type { Line } from '../../lib/live/reducer'
 import { InterviewSession, type SessionStatus } from '../../lib/live/session'
 import { clock, MOCK_KIND_LABEL, peekSession, releaseSession } from '../../lib/interview'
 import { readPref, writePref } from '../../lib/prefs'
+import { DeviceCheck, type DeviceChoice } from './DeviceCheck'
 import { toast } from '../../lib/toast'
 
 type NudgeItem = { text: string; kind: string; atMs: number }
@@ -37,6 +38,8 @@ export default function LiveInterviewPage() {
   const [nudges, setNudges] = useState<NudgeItem[]>([])
   const [elapsed, setElapsed] = useState(0)
   const [ending, setEnding] = useState(false)
+  const [devices, setDevices] = useState<DeviceChoice>({ micDeviceId: '', outputDeviceId: '' })
+  const [micLevel, setMicLevel] = useState(0)
   const transcriptEnd = useRef<HTMLDivElement>(null)
 
   // Clock + periodic transcript save (crash safety).
@@ -85,7 +88,7 @@ export default function LiveInterviewPage() {
 
   const begin = async () => {
     const session = new InterviewSession(
-      { token: live.token, wsUrl: live.wsUrl, setup: live.setup, minutes: live.minutes },
+      { token: live.token, wsUrl: live.wsUrl, setup: live.setup, minutes: live.minutes, ...devices },
       {
         onLines: setLines,
         onStatus: (s, d) => {
@@ -93,6 +96,7 @@ export default function LiveInterviewPage() {
           setDetail(d ?? '')
         },
         onSpeaking: setSpeaking,
+        onMicLevel: setMicLevel,
         onAnswerEnded: (e) => {
           NudgeAnswer(e.question, e.answer)
             .then((n) => n.nudge && setNudges((list) => [{ text: n.nudge, kind: n.kind, atMs: e.endMs }, ...list].slice(0, 6)))
@@ -152,6 +156,14 @@ export default function LiveInterviewPage() {
           {(status === 'connecting' || status === 'reconnecting') && started && <LoaderCircle size={11} className="animate-spin" />}
           {started ? STATUS_TEXT[status] : 'Ready'}
         </Chip>
+        {started && (
+          <span className="flex items-center gap-1.5" title={muted ? 'Muted' : 'Your microphone level'}>
+            <Mic size={13} className={muted ? 'text-danger' : micLevel > 0.15 ? 'text-success' : 'text-ink-3'} />
+            <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/5">
+              <span className="block h-full rounded-full bg-success transition-[width] duration-75" style={{ width: muted ? 0 : `${Math.round(micLevel * 100)}%` }} />
+            </span>
+          </span>
+        )}
         <span className={`font-mono text-sm ${elapsed > total ? 'text-warn' : 'text-ink-2'}`}>
           {clock(elapsed)} / {clock(total)}
         </span>
@@ -176,14 +188,15 @@ export default function LiveInterviewPage() {
 
       {!started ? (
         <div className="glass grid flex-1 place-items-center rounded-2xl p-8 text-center">
-          <div className="max-w-md space-y-4">
+          <div className="flex w-full max-w-lg flex-col items-center space-y-5">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent/20 text-indigo-200 shadow-[0_0_40px_rgb(99_102_241/0.35)]">
               <Mic size={28} />
             </div>
             <p className="text-sm text-ink-2">
-              The interviewer will greet you and start asking questions. Speak naturally; you can interrupt. Headphones prevent echo.
+              Check your microphone and output, then start. The interviewer will greet you and begin; speak naturally, you can interrupt.
             </p>
-            <button className="btn btn-primary" onClick={begin}>
+            <DeviceCheck onChange={setDevices} />
+            <button className="btn btn-primary" onClick={begin} disabled={!devices.micDeviceId}>
               Start interview
             </button>
           </div>

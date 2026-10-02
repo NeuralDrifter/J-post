@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { base64ToBytes, bytesToBase64, downsample, floatToPCM16, pcm16ToFloat } from './audio'
+import { base64ToBytes, bytesToBase64, downsample, floatToPCM16, micLevel, pcm16ToFloat } from './audio'
+import { chooseDevice } from './devices'
 import { answerStats, countFillers, wordCount } from './metrics'
 import { applyServerMessage, initialLiveState, type LiveState } from './reducer'
 
@@ -100,5 +101,31 @@ describe('live reducer', () => {
     ])
     expect(state.handle).toBe('h1')
     expect(effects).toEqual([{ type: 'setupComplete' }, { type: 'reconnect' }])
+  })
+})
+
+
+describe('mic level', () => {
+  it('is 0 for silence and grows with loudness, capped at 1', () => {
+    expect(micLevel(new Float32Array(128))).toBe(0)
+    const quiet = micLevel(new Float32Array(128).fill(0.02))
+    const loud = micLevel(new Float32Array(128).fill(0.3))
+    expect(quiet).toBeGreaterThan(0)
+    expect(loud).toBeGreaterThan(quiet)
+    expect(micLevel(new Float32Array(128).fill(1))).toBe(1)
+  })
+})
+
+describe('chooseDevice', () => {
+  const devices = [
+    { deviceId: 'default', label: 'Default - Realtek' },
+    { deviceId: 'abc', label: 'Arctis Nova Pro Microphone' },
+  ]
+  it('keeps the remembered device when it is still plugged in', () => {
+    expect(chooseDevice(devices, 'abc')).toBe('abc')
+  })
+  it('falls back to the system default when the remembered one is gone', () => {
+    expect(chooseDevice(devices, 'unplugged')).toBe('default')
+    expect(chooseDevice([], 'abc')).toBe('')
   })
 })

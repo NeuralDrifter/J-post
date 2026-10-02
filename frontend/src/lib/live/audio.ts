@@ -59,3 +59,11 @@ export function decodeModelAudio(b64: string): Float32Array<ArrayBuffer> {
   const bytes = base64ToBytes(b64)
   return pcm16ToFloat(new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2)))
 }
+
+/** 0..1 loudness for a level meter (square root of RMS, so quiet speech still shows). */
+export function micLevel(frames: Float32Array): number {
+  if (frames.length === 0) return 0
+  let sum = 0
+  for (let i = 0; i < frames.length; i++) sum += frames[i] * frames[i]
+  return Math.min(1, Math.sqrt(Math.sqrt(sum / frames.length)) * 1.4)
+}

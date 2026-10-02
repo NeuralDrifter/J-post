@@ -1,17 +1,26 @@
 // Runs one voice interview against the Gemini Live API: microphone capture,
 // interviewer playback, recording, transcript, timekeeping and reconnection.
-import { decodeModelAudio, encodeMicChunk, OUTPUT_RATE } from './audio'
+import { decodeModelAudio, encodeMicChunk, micLevel, OUTPUT_RATE } from './audio'
+import { routeOutput } from './devices'
 import { applyServerMessage, initialLiveState, type LiveEffect, type LiveState, type Line } from './reducer'
 
 export type SessionStatus = 'connecting' | 'live' | 'reconnecting' | 'ended' | 'error'
 
-export type LiveConfig = { token: string; wsUrl: string; setup: Record<string, unknown>; minutes: number }
+export type LiveConfig = {
+  token: string
+  wsUrl: string
+  setup: Record<string, unknown>
+  minutes: number
+  micDeviceId?: string
+  outputDeviceId?: string
+}
 
 export type SessionCallbacks = {
   onLines: (lines: Line[]) => void
   onStatus: (status: SessionStatus, detail?: string) => void
   onAnswerEnded: (e: Extract<LiveEffect, { type: 'answerEnded' }>) => void
   onSpeaking: (who: 'interviewer' | 'you' | null) => void
+  onMicLevel?: (level: number) => void
 }
 
 const MAX_RECONNECTS = 3
@@ -66,7 +75,13 @@ export class InterviewSession {
     this.cb.onStatus('connecting')
     try {
       this.mic = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+        audio: {
+          deviceId: this.config.micDeviceId ? { exact: this.config.micDeviceId } : undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
       })
     } catch (err) {
       throw new Error(
@@ -75,6 +90,7 @@ export class InterviewSession {
     }
     const ctx = new AudioContext()
     this.ctx = ctx
+    await routeOutput(ctx, this.config.outputDeviceId ?? '').catch(() => {}) // fall back to the default output
     const workletUrl = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }))
     await ctx.audioWorklet.addModule(workletUrl)
     URL.revokeObjectURL(workletUrl)
@@ -227,6 +243,7 @@ export class InterviewSession {
     }
     this.pending = []
     this.pendingLength = 0
+    this.cb.onMicLevel?.(micLevel(joined))
     const data = encodeMicChunk(joined, this.ctx.sampleRate)
     this.ws.send(JSON.stringify({ realtimeInput: { audio: { data, mimeType: 'audio/pcm;rate=16000' } } }))
   }
