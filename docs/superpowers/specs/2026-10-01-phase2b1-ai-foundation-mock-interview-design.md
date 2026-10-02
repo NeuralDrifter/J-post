@@ -57,7 +57,7 @@
 | Lifecycle | `status` (`live` / `scoring` / `done` / `failed`), `started_at`, `ended_at` |
 | Results | `transcript` (JSON `[{speaker:"interviewer"|"you", text, atMs}]`), `scorecard` (JSON), `recording_path`, `error` |
 
-**Voices:** `Kore`, `Puck`, `Charon`, `Aoede` (prebuilt).
+**Voices:** all 30 prebuilt Gemini voices, each shown with its style. **Previews** come from the **Live model** (the same one that runs the interview): the backend opens a short Live session (API key stays in Go), has it say a greeting line, and caches the WAV in `<dataDir>/voice-previews/<Voice>-live.wav`.
 
 ## 4. Interview flow
 

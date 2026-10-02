@@ -7,9 +7,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/gorilla/websocket"
 )
 
 func TestVoicesCatalog(t *testing.T) {
@@ -24,50 +28,78 @@ func TestVoicesCatalog(t *testing.T) {
 	}
 }
 
-func ttsServer(t *testing.T, mime string, audio []byte, calls *int) {
-	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
+// fakeLive is a minimal Live API server: setup → setupComplete, text turn → audio chunks → turnComplete.
+func fakeLive(t *testing.T, chunks [][]byte, calls *int, sawVoice *string) {
+	upgrader := websocket.Upgrader{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*calls++
-		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
-		voice := body["generationConfig"].(map[string]any)["speechConfig"].(map[string]any)["voiceConfig"].(map[string]any)["prebuiltVoiceConfig"].(map[string]any)["voiceName"]
-		if r.URL.Path != "/v1beta/models/gemini-3.8-flash-tts:generateContent" || voice != "Sulafat" {
-			t.Errorf("path=%s voice=%v", r.URL.Path, voice)
+		if r.URL.Query().Get("key") != "k3y" {
+			t.Errorf("missing key param: %s", r.URL.RawQuery)
 		}
-		resp, _ := json.Marshal(map[string]any{"candidates": []any{map[string]any{"content": map[string]any{"parts": []any{
-			map[string]any{"inlineData": map[string]any{"mimeType": mime, "data": base64.StdEncoding.EncodeToString(audio)}},
-		}}}}})
-		w.Write(resp)
-	})
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer c.Close()
+		var setup map[string]any
+		c.ReadJSON(&setup)
+		gc := setup["setup"].(map[string]any)["generationConfig"].(map[string]any)
+		*sawVoice = gc["speechConfig"].(map[string]any)["voiceConfig"].(map[string]any)["prebuiltVoiceConfig"].(map[string]any)["voiceName"].(string)
+		c.WriteJSON(map[string]any{"setupComplete": map[string]any{}})
+		var turn map[string]any
+		c.ReadJSON(&turn)
+		for _, ch := range chunks {
+			msg, _ := json.Marshal(map[string]any{"serverContent": map[string]any{"modelTurn": map[string]any{"parts": []any{
+				map[string]any{"inlineData": map[string]any{"mimeType": "audio/pcm;rate=24000", "data": base64.StdEncoding.EncodeToString(ch)}},
+			}}}})
+			c.WriteMessage(websocket.BinaryMessage, msg) // Live sends JSON in binary frames
+		}
+		c.WriteJSON(map[string]any{"serverContent": map[string]any{"turnComplete": true}})
+		c.ReadMessage() // wait for the client to close
+	}))
+	t.Cleanup(srv.Close)
+	old := geminiLiveWSBase
+	geminiLiveWSBase = "ws" + strings.TrimPrefix(srv.URL, "http")
+	t.Cleanup(func() { geminiLiveWSBase = old })
 }
 
-func TestSynthesizeSpeechWrapsRawPCM(t *testing.T) {
-	calls := 0
-	pcm := []byte{1, 0, 2, 0, 3, 0, 4, 0}
-	ttsServer(t, "audio/L16;codec=pcm;rate=24000", pcm, &calls)
-	wav, err := synthesizeSpeech(context.Background(), "k", "Sulafat", "Hello")
+func TestLiveVoiceSample(t *testing.T) {
+	calls, voice := 0, ""
+	fakeLive(t, [][]byte{{1, 0, 2, 0}, {3, 0, 4, 0}}, &calls, &voice)
+	wav, err := liveVoiceSample(context.Background(), "k3y", "gemini-3.8-live", "Sulafat", "Hello")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.HasPrefix(wav, []byte("RIFF")) || string(wav[8:12]) != "WAVE" || binary.LittleEndian.Uint32(wav[24:28]) != 24000 || !bytes.HasSuffix(wav, pcm) {
-		t.Fatalf("not a 24 kHz WAV wrapping the PCM: % x", wav[:44])
+	if voice != "Sulafat" || !bytes.HasPrefix(wav, []byte("RIFF")) || binary.LittleEndian.Uint32(wav[24:28]) != 24000 ||
+		!bytes.HasSuffix(wav, []byte{1, 0, 2, 0, 3, 0, 4, 0}) {
+		t.Fatalf("voice=%s wav=% x", voice, wav)
+	}
+}
+
+func TestLiveVoiceSampleErrorsHideKey(t *testing.T) {
+	old := geminiLiveWSBase
+	geminiLiveWSBase = "ws://127.0.0.1:1"
+	t.Cleanup(func() { geminiLiveWSBase = old })
+	_, err := liveVoiceSample(context.Background(), "s3cretkey", "m", "Kore", "Hi")
+	if err == nil || strings.Contains(err.Error(), "s3cretkey") {
+		t.Fatalf("err = %v", err)
 	}
 }
 
 func TestVoicePreviewIsCached(t *testing.T) {
-	calls := 0
-	wav := append([]byte("RIFF\x00\x00\x00\x00WAVE"), make([]byte, 40)...)
-	ttsServer(t, "audio/wav", wav, &calls)
+	calls, voice := 0, ""
+	fakeLive(t, [][]byte{{1, 0, 2, 0}}, &calls, &voice)
 	dir := t.TempDir()
-	s := Settings{GeminiKey: "k"}
+	s := Settings{GeminiKey: "k3y", GeminiLiveModel: "gemini-3.8-live"}
 	first, err := voicePreview(context.Background(), s, dir, "Sulafat")
-	if err != nil || !bytes.Equal(first, wav) {
+	if err != nil || !bytes.HasPrefix(first, []byte("RIFF")) {
 		t.Fatalf("first = %d bytes, %v", len(first), err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "Sulafat.wav")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "Sulafat-live.wav")); err != nil {
 		t.Fatal("preview should be saved to disk")
 	}
 	second, _ := voicePreview(context.Background(), s, dir, "Sulafat")
-	if calls != 1 || !bytes.Equal(second, wav) {
+	if calls != 1 || !bytes.Equal(second, first) {
 		t.Fatalf("second preview should come from disk: calls=%d", calls)
 	}
 	if _, err := voicePreview(context.Background(), s, dir, "../../etc"); err == nil {
