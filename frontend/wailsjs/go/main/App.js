@@ -38,6 +38,10 @@ export function DeleteJob(arg1) {
   return window['go']['main']['App']['DeleteJob'](arg1);
 }
 
+export function DeleteMockInterview(arg1) {
+  return window['go']['main']['App']['DeleteMockInterview'](arg1);
+}
+
 export function DeleteSearch(arg1) {
   return window['go']['main']['App']['DeleteSearch'](arg1);
 }
@@ -62,12 +66,24 @@ export function GetCurrentComp() {
   return window['go']['main']['App']['GetCurrentComp']();
 }
 
+export function GetInterviewRecording(arg1) {
+  return window['go']['main']['App']['GetInterviewRecording'](arg1);
+}
+
 export function GetJob(arg1) {
   return window['go']['main']['App']['GetJob'](arg1);
 }
 
 export function GetMetrics() {
   return window['go']['main']['App']['GetMetrics']();
+}
+
+export function GetMockInterview(arg1) {
+  return window['go']['main']['App']['GetMockInterview'](arg1);
+}
+
+export function GetProfile() {
+  return window['go']['main']['App']['GetProfile']();
 }
 
 export function GetSettings() {
@@ -106,6 +122,10 @@ export function ListJobSummaries() {
   return window['go']['main']['App']['ListJobSummaries']();
 }
 
+export function ListMockInterviews(arg1) {
+  return window['go']['main']['App']['ListMockInterviews'](arg1);
+}
+
 export function ListPostings(arg1) {
   return window['go']['main']['App']['ListPostings'](arg1);
 }
@@ -130,6 +150,10 @@ export function NewEstimate(arg1) {
   return window['go']['main']['App']['NewEstimate'](arg1);
 }
 
+export function NudgeAnswer(arg1, arg2) {
+  return window['go']['main']['App']['NudgeAnswer'](arg1, arg2);
+}
+
 export function OpenAttachment(arg1) {
   return window['go']['main']['App']['OpenAttachment'](arg1);
 }
@@ -140,6 +164,10 @@ export function OpenDataDir() {
 
 export function PickAndAttachFile(arg1) {
   return window['go']['main']['App']['PickAndAttachFile'](arg1);
+}
+
+export function PrepareInterview(arg1, arg2) {
+  return window['go']['main']['App']['PrepareInterview'](arg1, arg2);
 }
 
 export function PreviewComp(arg1) {
@@ -170,12 +198,24 @@ export function SaveInterview(arg1) {
   return window['go']['main']['App']['SaveInterview'](arg1);
 }
 
+export function SaveInterviewRecording(arg1, arg2) {
+  return window['go']['main']['App']['SaveInterviewRecording'](arg1, arg2);
+}
+
+export function SaveInterviewTranscript(arg1, arg2) {
+  return window['go']['main']['App']['SaveInterviewTranscript'](arg1, arg2);
+}
+
 export function SavePosting(arg1) {
   return window['go']['main']['App']['SavePosting'](arg1);
 }
 
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
+export function ScoreInterview(arg1) {
+  return window['go']['main']['App']['ScoreInterview'](arg1);
 }
 
 export function SearchAreas(arg1) {
@@ -200,4 +240,12 @@ export function UpdateJob(arg1) {
 
 export function UpdateJobNotes(arg1, arg2) {
   return window['go']['main']['App']['UpdateJobNotes'](arg1, arg2);
+}
+
+export function UpdateResumeText(arg1) {
+  return window['go']['main']['App']['UpdateResumeText'](arg1);
+}
+
+export function UploadResume() {
+  return window['go']['main']['App']['UploadResume']();
 }

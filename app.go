@@ -713,3 +713,104 @@ func (a *App) resumeFromPDF(path string) (string, error) {
 		}, schema, &out)
 	return out.Markdown, err
 }
+
+// ---- AI: mock interviews ----
+
+func (a *App) PrepareInterview(jobID string, setup InterviewSetup) (LiveSession, error) {
+	if err := a.ready(); err != nil {
+		return LiveSession{}, err
+	}
+	s, err := a.settings.Load()
+	if err != nil {
+		return LiveSession{}, err
+	}
+	return prepareInterview(context.Background(), a.repo, s, jobID, setup)
+}
+
+// NudgeAnswer returns one short coaching cue for the answer just given.
+func (a *App) NudgeAnswer(question, answer string) (Nudge, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return Nudge{}, err
+	}
+	return nudgeAnswer(context.Background(), s, question, answer)
+}
+
+func (a *App) ScoreInterview(id string) (MockInterview, error) {
+	if err := a.ready(); err != nil {
+		return MockInterview{}, err
+	}
+	s, err := a.settings.Load()
+	if err != nil {
+		return MockInterview{}, err
+	}
+	return scoreInterview(context.Background(), a.repo, s, id)
+}
+
+func (a *App) SaveInterviewTranscript(id string, lines []TranscriptLine) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.SaveInterviewTranscript(id, lines)
+}
+
+// SaveInterviewRecording stores the session audio (webm/opus, base64 from the page).
+func (a *App) SaveInterviewRecording(id, base64Data string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	mi, err := a.repo.GetMockInterview(id)
+	if err != nil {
+		return err
+	}
+	raw, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return errors.New("the recording couldn't be decoded")
+	}
+	dir := filepath.Join(a.dataDir, "files", mi.JobID)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	path := filepath.Join(dir, "interview-"+id+".webm")
+	if err := os.WriteFile(path, raw, 0o644); err != nil {
+		return err
+	}
+	return a.repo.SetInterviewRecording(id, path)
+}
+
+// GetInterviewRecording returns the recording as a data URL for the audio player.
+func (a *App) GetInterviewRecording(id string) (string, error) {
+	if err := a.ready(); err != nil {
+		return "", err
+	}
+	path := a.repo.recordingPath(id)
+	if path == "" {
+		return "", nil
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("the recording file is missing: %w", err)
+	}
+	return "data:audio/webm;base64," + base64.StdEncoding.EncodeToString(raw), nil
+}
+
+func (a *App) ListMockInterviews(jobID string) ([]MockInterview, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	return a.repo.ListMockInterviews(jobID)
+}
+
+func (a *App) GetMockInterview(id string) (MockInterview, error) {
+	if err := a.ready(); err != nil {
+		return MockInterview{}, err
+	}
+	return a.repo.GetMockInterview(id)
+}
+
+func (a *App) DeleteMockInterview(id string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.DeleteMockInterview(id)
+}

@@ -20,6 +20,8 @@ export function DeleteInterview(arg1:string):Promise<void>;
 
 export function DeleteJob(arg1:string):Promise<void>;
 
+export function DeleteMockInterview(arg1:string):Promise<void>;
+
 export function DeleteSearch(arg1:string):Promise<void>;
 
 export function DescribeArea(arg1:string):Promise<main.Option>;
@@ -32,9 +34,15 @@ export function DraftCounter(arg1:string):Promise<main.CompPackage>;
 
 export function GetCurrentComp():Promise<main.CompPackage>;
 
+export function GetInterviewRecording(arg1:string):Promise<string>;
+
 export function GetJob(arg1:string):Promise<main.Job>;
 
 export function GetMetrics():Promise<main.Metrics>;
+
+export function GetMockInterview(arg1:string):Promise<main.MockInterview>;
+
+export function GetProfile():Promise<main.Profile>;
 
 export function GetSettings():Promise<main.Settings>;
 
@@ -54,6 +62,8 @@ export function ListInterviews(arg1:string):Promise<Array<main.Interview>>;
 
 export function ListJobSummaries():Promise<Array<main.JobSummary>>;
 
+export function ListMockInterviews(arg1:string):Promise<Array<main.MockInterview>>;
+
 export function ListPostings(arg1:main.PostingFilter):Promise<Array<main.Posting>>;
 
 export function ListRecentSearches():Promise<Array<main.SavedSearch>>;
@@ -66,11 +76,15 @@ export function MarketSources():Promise<main.DataSources>;
 
 export function NewEstimate(arg1:string):Promise<main.CompPackage>;
 
+export function NudgeAnswer(arg1:string,arg2:string):Promise<main.Nudge>;
+
 export function OpenAttachment(arg1:string):Promise<void>;
 
 export function OpenDataDir():Promise<void>;
 
 export function PickAndAttachFile(arg1:string):Promise<main.Attachment>;
+
+export function PrepareInterview(arg1:string,arg2:main.InterviewSetup):Promise<main.LiveSession>;
 
 export function PreviewComp(arg1:main.CompPackage):Promise<main.PackageResult>;
 
@@ -86,9 +100,15 @@ export function SaveContact(arg1:main.Contact):Promise<main.Contact>;
 
 export function SaveInterview(arg1:main.Interview):Promise<main.Interview>;
 
+export function SaveInterviewRecording(arg1:string,arg2:string):Promise<void>;
+
+export function SaveInterviewTranscript(arg1:string,arg2:Array<main.TranscriptLine>):Promise<void>;
+
 export function SavePosting(arg1:string):Promise<main.Job>;
 
 export function SaveSettings(arg1:main.Settings):Promise<void>;
+
+export function ScoreInterview(arg1:string):Promise<main.MockInterview>;
 
 export function SearchAreas(arg1:string):Promise<Array<main.Option>>;
 
@@ -101,3 +121,7 @@ export function TestPython(arg1:string):Promise<string>;
 export function UpdateJob(arg1:main.Job):Promise<main.Job>;
 
 export function UpdateJobNotes(arg1:string,arg2:string):Promise<void>;
+
+export function UpdateResumeText(arg1:string):Promise<void>;
+
+export function UploadResume():Promise<main.Profile>;
