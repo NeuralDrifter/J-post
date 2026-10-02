@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -618,4 +619,97 @@ func (a *App) MarketSources() DataSources {
 		ds.BLS, ds.BEA, ds.Built = md.Sources["bls"], md.Sources["bea"], md.Built
 	}
 	return ds
+}
+
+// ---- AI: resume ----
+
+const maxResumeBytes = 15 << 20 // Gemini's inline file limit is ~20 MB
+
+func (a *App) GetProfile() (Profile, error) {
+	if err := a.ready(); err != nil {
+		return Profile{}, err
+	}
+	return a.repo.GetProfile()
+}
+
+func (a *App) UpdateResumeText(text string) error {
+	if err := a.ready(); err != nil {
+		return err
+	}
+	return a.repo.UpdateResumeText(text)
+}
+
+// UploadResume picks a resume file, keeps a copy, and extracts its text
+// (PDFs are converted by Gemini). Returns nil if the dialog was cancelled.
+func (a *App) UploadResume() (*Profile, error) {
+	if err := a.ready(); err != nil {
+		return nil, err
+	}
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:   "Choose your resume",
+		Filters: []runtime.FileFilter{{DisplayName: "Resume (*.pdf, *.docx, *.txt, *.md)", Pattern: "*.pdf;*.docx;*.txt;*.md"}},
+	})
+	if err != nil || path == "" {
+		return nil, err
+	}
+	dir := filepath.Join(a.dataDir, "resume")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	dest := filepath.Join(dir, filepath.Base(path))
+	if err := copyFile(path, dest); err != nil {
+		return nil, err
+	}
+	var text string
+	switch strings.ToLower(filepath.Ext(dest)) {
+	case ".txt", ".md":
+		raw, err := os.ReadFile(dest)
+		if err != nil {
+			return nil, err
+		}
+		text = string(raw)
+	case ".docx":
+		if text, err = extractDocxText(dest); err != nil {
+			return nil, err
+		}
+	case ".pdf":
+		if text, err = a.resumeFromPDF(dest); err != nil {
+			return nil, fmt.Errorf("reading the PDF: %w", err)
+		}
+	default:
+		return nil, errors.New("use a PDF, DOCX, TXT or Markdown file")
+	}
+	if strings.TrimSpace(text) == "" {
+		return nil, errors.New("no text could be read from that file")
+	}
+	if err := a.repo.SaveResume(filepath.Base(dest), dest, text); err != nil {
+		return nil, err
+	}
+	p, err := a.repo.GetProfile()
+	return &p, err
+}
+
+func (a *App) resumeFromPDF(path string) (string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	if len(raw) > maxResumeBytes {
+		return "", errors.New("the PDF is larger than 15 MB")
+	}
+	s, err := a.settings.Load()
+	if err != nil {
+		return "", err
+	}
+	var out struct {
+		Markdown string `json:"markdown"`
+	}
+	schema := map[string]any{"type": "OBJECT", "properties": map[string]any{"markdown": map[string]any{"type": "STRING"}}, "required": []string{"markdown"}}
+	err = generateJSON(context.Background(), s.GeminiKey, s.GeminiTextModel,
+		"You convert resumes to clean Markdown. Keep every fact exactly; never add, infer or embellish anything.",
+		[]geminiPart{
+			{Text: "Convert this resume to clean Markdown (headings for sections, bullet lists for items). Return it in the markdown field."},
+			{InlineData: &geminiBlob{MimeType: "application/pdf", Data: base64.StdEncoding.EncodeToString(raw)}},
+		}, schema, &out)
+	return out.Markdown, err
 }

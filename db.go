@@ -245,6 +245,32 @@ var migrations = []string{
 		PRIMARY KEY (muse_id, slice_key)
 	);
 	CREATE INDEX idx_muse_jobs_slice ON muse_jobs(slice_key, publication_date);`,
+	// 6: AI — the user's resume and mock interview sessions.
+	`CREATE TABLE profile (
+		id INTEGER PRIMARY KEY CHECK (id = 1),
+		resume_file_name TEXT NOT NULL DEFAULT '',
+		resume_path TEXT NOT NULL DEFAULT '',
+		resume_text TEXT NOT NULL DEFAULT '',
+		updated_at TEXT NOT NULL DEFAULT ''
+	);
+	INSERT INTO profile (id) VALUES (1);
+	CREATE TABLE mock_interviews (
+		id TEXT PRIMARY KEY,
+		job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+		kind TEXT NOT NULL,
+		minutes INTEGER NOT NULL,
+		persona TEXT NOT NULL,
+		voice TEXT NOT NULL DEFAULT '',
+		focus TEXT NOT NULL DEFAULT '',
+		status TEXT NOT NULL DEFAULT 'live',
+		started_at TEXT NOT NULL,
+		ended_at TEXT NOT NULL DEFAULT '',
+		transcript TEXT NOT NULL DEFAULT '[]',
+		scorecard TEXT NOT NULL DEFAULT '',
+		recording_path TEXT NOT NULL DEFAULT '',
+		error TEXT NOT NULL DEFAULT ''
+	);
+	CREATE INDEX idx_mock_interviews_job ON mock_interviews(job_id, started_at);`,
 }
 
 func openDB(path string) (*sql.DB, error) {
