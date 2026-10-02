@@ -26,6 +26,16 @@ type Deltas struct {
 	Year1TakeHome int64 `json:"year1TakeHome"`
 }
 
+// MarketBaseline compares base salary with the BLS median for the user's usual
+// occupation where they live. Used when there's no current job to compare with.
+type MarketBaseline struct {
+	OccTitle  string `json:"occTitle"`
+	AreaTitle string `json:"areaTitle"`
+	Level     string `json:"level"`
+	Median    int64  `json:"median"`
+	BaseDelta int64  `json:"baseDelta"`
+}
+
 type Scenario struct {
 	Multiplier float64 `json:"multiplier"`
 	Value      int64   `json:"value"` // 4-year equity value at this multiple of today's share value
@@ -39,6 +49,7 @@ type PackageResult struct {
 	Year1TakeHome    int64            `json:"year1TakeHome"`
 	Tax1             TaxResult        `json:"tax1"`
 	DeltaVsCurrent   *Deltas          `json:"deltaVsCurrent,omitempty"`
+	MarketBaseline   *MarketBaseline  `json:"marketBaseline,omitempty"`
 	PTOValue         int64            `json:"ptoValue"`
 	Scenarios        []Scenario       `json:"scenarios"`
 	Market           *MarketResult    `json:"market,omitempty"`
@@ -157,6 +168,21 @@ func Evaluate(p CompPackage, s Settings, md *MarketData, current *CompPackage) (
 	}
 	if p.TaxState == "" {
 		res.Warnings = append(res.Warnings, "No state chosen, so state income tax isn't included.")
+	}
+
+	// No current job: compare base pay with the typical (median) pay for the
+	// user's occupation at home. OEWS wages exclude stock and most bonuses, so base only.
+	if current == nil && md != nil && s.DefaultOccupation != "" && p.Kind != "current" {
+		home := s.HomeAreaCode
+		if home == "" {
+			home = "US"
+		}
+		if m := md.MarketPosition(s.DefaultOccupation, home, p.BaseSalary); m.Found && m.Points[2] > 0 {
+			res.MarketBaseline = &MarketBaseline{
+				OccTitle: m.OccTitle, AreaTitle: m.AreaTitle, Level: m.Level,
+				Median: m.Points[2], BaseDelta: p.BaseSalary - m.Points[2],
+			}
+		}
 	}
 
 	if current != nil && current.ID != p.ID {

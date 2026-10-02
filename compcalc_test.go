@@ -152,3 +152,43 @@ func TestEvaluateWarningsAndNoState(t *testing.T) {
 		t.Fatalf("warnings = %v tax = %+v", r.Warnings, r.Tax1)
 	}
 }
+
+func TestMarketBaselinePresent(t *testing.T) {
+	p := basePackage("j")
+	p.BaseSalary = 160000
+	s := Settings{FilingStatus: "single", HomeAreaCode: "19740", DefaultOccupation: "15-1252"}
+	r, err := Evaluate(p, s, testMarket(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := r.MarketBaseline
+	// Denver Software Developers median is 150k in the test data.
+	if b == nil || b.Median != 150000 || b.BaseDelta != 10000 || b.Level != "area" || b.OccTitle != "Software Developers" {
+		t.Fatalf("baseline = %+v", b)
+	}
+	// Falls back to national figures when the home area has none for this occupation.
+	s.DefaultOccupation = "99-9999"
+	r, _ = Evaluate(p, s, testMarket(), nil)
+	if r.MarketBaseline == nil || r.MarketBaseline.Level != "national" || r.MarketBaseline.Median != 70000 {
+		t.Fatalf("fallback baseline = %+v", r.MarketBaseline)
+	}
+}
+
+func TestMarketBaselineAbsent(t *testing.T) {
+	p := basePackage("j")
+	cur := CompPackage{ID: "cur", Kind: "current", BaseSalary: 120000, EquityType: "none", Vesting: "standard"}
+	withOcc := Settings{FilingStatus: "single", HomeAreaCode: "19740", DefaultOccupation: "15-1252"}
+	if r, _ := Evaluate(p, withOcc, testMarket(), &cur); r.MarketBaseline != nil {
+		t.Error("a current job is the baseline when it exists")
+	}
+	if r, _ := Evaluate(p, Settings{FilingStatus: "single"}, testMarket(), nil); r.MarketBaseline != nil {
+		t.Error("no default occupation → no market baseline")
+	}
+	// The Denver p90 is top-coded in the test data, but the median is not; a fully top-coded median gives no baseline.
+	md := testMarket()
+	top := int64(-1)
+	md.Wages["19740"]["15-1252"][2] = &top
+	if r, _ := Evaluate(p, withOcc, md, nil); r.MarketBaseline != nil {
+		t.Errorf("top-coded median should give no baseline: %+v", r.MarketBaseline)
+	}
+}
