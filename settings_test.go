@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -16,12 +17,12 @@ func TestSettingsDefaults(t *testing.T) {
 func TestSettingsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := NewSettingsStore(dir)
-	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, WindowWidth: 1400, WindowHeight: 900, WindowMaximised: true}
+	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, WindowWidth: 1400, WindowHeight: 900, WindowMaximised: true}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
 	}
 	got, err := store.Load()
-	if err != nil || got != want {
+	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 	if err := store.Save(Settings{}); err != nil {
@@ -37,6 +38,9 @@ func TestSettingsRoundTrip(t *testing.T) {
 
 func TestSettingsRejectsHugeFollowUp(t *testing.T) {
 	dir := t.TempDir()
+	if err := NewSettingsStore(dir).Save(Settings{USAJobsKey: "k", USAJobsEmail: "nope"}); err == nil {
+		t.Fatal("a USAJobs key needs a real email")
+	}
 	if err := NewSettingsStore(dir).Save(Settings{FilingStatus: "widowed"}); err == nil {
 		t.Fatal("bad filing status should error")
 	}

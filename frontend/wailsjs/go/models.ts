@@ -136,6 +136,26 @@ export namespace main {
 	        this.value = source["value"];
 	    }
 	}
+	export class MarketBaseline {
+	    occTitle: string;
+	    areaTitle: string;
+	    level: string;
+	    median: number;
+	    baseDelta: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MarketBaseline(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.occTitle = source["occTitle"];
+	        this.areaTitle = source["areaTitle"];
+	        this.level = source["level"];
+	        this.median = source["median"];
+	        this.baseDelta = source["baseDelta"];
+	    }
+	}
 	export class Deltas {
 	    year1Total: number;
 	    avgPerYear: number;
@@ -218,6 +238,7 @@ export namespace main {
 	    year1TakeHome: number;
 	    tax1: TaxResult;
 	    deltaVsCurrent?: Deltas;
+	    marketBaseline?: MarketBaseline;
 	    ptoValue: number;
 	    scenarios: Scenario[];
 	    market?: MarketResult;
@@ -242,6 +263,7 @@ export namespace main {
 	        this.year1TakeHome = source["year1TakeHome"];
 	        this.tax1 = this.convertValues(source["tax1"], TaxResult);
 	        this.deltaVsCurrent = this.convertValues(source["deltaVsCurrent"], Deltas);
+	        this.marketBaseline = this.convertValues(source["marketBaseline"], MarketBaseline);
 	        this.ptoValue = source["ptoValue"];
 	        this.scenarios = this.convertValues(source["scenarios"], Scenario);
 	        this.market = this.convertValues(source["market"], MarketResult);
@@ -526,6 +548,7 @@ export namespace main {
 		}
 	}
 	
+	
 	export class NextUp {
 	    interview: Interview;
 	    company: string;
@@ -769,6 +792,9 @@ export namespace main {
 	    filingStatus: string;
 	    homeAreaCode: string;
 	    defaultOccupation: string;
+	    usajobsKey: string;
+	    usajobsEmail: string;
+	    museCategories: string[];
 	    discoverCacheHours: number;
 	    windowWidth: number;
 	    windowHeight: number;
@@ -787,6 +813,9 @@ export namespace main {
 	        this.filingStatus = source["filingStatus"];
 	        this.homeAreaCode = source["homeAreaCode"];
 	        this.defaultOccupation = source["defaultOccupation"];
+	        this.usajobsKey = source["usajobsKey"];
+	        this.usajobsEmail = source["usajobsEmail"];
+	        this.museCategories = source["museCategories"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
 	        this.windowWidth = source["windowWidth"];
 	        this.windowHeight = source["windowHeight"];

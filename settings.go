@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -22,6 +23,10 @@ type Settings struct {
 	FilingStatus      string `json:"filingStatus"`
 	HomeAreaCode      string `json:"homeAreaCode"`
 	DefaultOccupation string `json:"defaultOccupation"`
+	// Official job APIs.
+	USAJobsKey     string   `json:"usajobsKey"`
+	USAJobsEmail   string   `json:"usajobsEmail"`
+	MuseCategories []string `json:"museCategories"`
 	// DiscoverCacheHours: re-running a search within this window reuses stored results.
 	DiscoverCacheHours int  `json:"discoverCacheHours"`
 	WindowWidth        int  `json:"windowWidth"`
@@ -57,6 +62,9 @@ func applySettingsDefaults(s *Settings) {
 	if s.HomeAreaCode == "" {
 		s.HomeAreaCode = "US"
 	}
+	if s.MuseCategories == nil {
+		s.MuseCategories = []string{}
+	}
 	if s.DiscoverCacheHours <= 0 {
 		s.DiscoverCacheHours = defaultDiscoverCacheHours
 	}
@@ -90,6 +98,9 @@ func (s *SettingsStore) Save(settings Settings) error {
 	applySettingsDefaults(&settings)
 	if settings.FilingStatus != "single" && settings.FilingStatus != "married" && settings.FilingStatus != "head" {
 		return errors.New("filing status must be single, married or head of household")
+	}
+	if settings.USAJobsKey != "" && !strings.Contains(settings.USAJobsEmail, "@") {
+		return errors.New("USAJobs needs the email address you registered the key with")
 	}
 	if settings.DiscoverCacheHours > 168 {
 		return errors.New("search results can be reused for at most 168 hours (a week)")

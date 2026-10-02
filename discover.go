@@ -30,7 +30,10 @@ var (
 )
 
 // knownSources are the values DiscoverQuery.Sources may contain.
-var knownSources = map[string]bool{"indeed": true, "linkedin": true, "zip_recruiter": true, "adzuna": true}
+var knownSources = map[string]bool{
+	"indeed": true, "linkedin": true, "zip_recruiter": true, // scraped via JobSpy
+	"adzuna": true, "usajobs": true, "himalayas": true, "jobicy": true, "themuse": true, // official APIs
+}
 
 type DiscoverQuery struct {
 	Term       string   `json:"term"`

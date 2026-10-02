@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -294,8 +295,25 @@ func (a *App) RunSearch(q SearchQuery, force bool) (SearchRun, error) {
 	}
 	cwd, _ := os.Getwd()
 	fetch := func(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-		if source == "adzuna" {
+		switch source {
+		case "adzuna":
 			return adzunaSearch(ctx, settings.AdzunaAppID, settings.AdzunaAppKey, q, opts)
+		case "usajobs":
+			return usajobsSearch(ctx, settings.USAJobsKey, settings.USAJobsEmail, q, opts)
+		case "himalayas":
+			return himalayasSearch(ctx, q, opts)
+		case "jobicy":
+			// Jobicy asks for at most one call per hour across everything we do.
+			next, ok, err := a.repo.takeSourceSlot("jobicy", time.Hour)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				return nil, fmt.Errorf("skipped: Jobicy allows one request an hour; next after %s", next.Format("3:04 PM"))
+			}
+			return jobicySearch(ctx, q, opts)
+		case "themuse":
+			return a.repo.museSearch(ctx, q, opts, settings.MuseCategories)
 		}
 		python, err := resolvePython(settings.PythonPath, exeDir(), cwd)
 		if err != nil {
