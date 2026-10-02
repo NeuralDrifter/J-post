@@ -89,10 +89,17 @@ func TestPrepareInterview(t *testing.T) {
 	if voice != "Puck" || !strings.Contains(brief, "Jane") {
 		t.Fatalf("voice=%v brief has resume=%v", voice, strings.Contains(brief, "Jane"))
 	}
-	for _, k := range []string{"inputAudioTranscription", "outputAudioTranscription", "contextWindowCompression", "sessionResumption"} {
+	for _, k := range []string{"inputAudioTranscription", "outputAudioTranscription", "contextWindowCompression"} {
 		if _, ok := sentSetup[k]; !ok {
-			t.Errorf("setup missing %s", k)
+			t.Errorf("locked setup missing %s", k)
 		}
+	}
+	// Resumption isn't locked into the token; the page sends it so it can reconnect with a handle.
+	if _, ok := sentSetup["sessionResumption"]; ok {
+		t.Error("sessionResumption must not be in the token's locked setup")
+	}
+	if _, ok := live.Setup["sessionResumption"]; !ok {
+		t.Error("the page's setup needs sessionResumption")
 	}
 	mi, err := r.GetMockInterview(live.SessionID)
 	if err != nil || mi.Status != "live" || mi.Kind != "behavioral" || mi.Company != "Acme" {

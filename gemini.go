@@ -134,11 +134,19 @@ func generateJSON(ctx context.Context, key, model, system string, parts []gemini
 // (model, voice, brief) so the page never holds the real API key.
 func createLiveToken(ctx context.Context, key string, setup map[string]any, minutes int, now time.Time) (string, error) {
 	expires := now.Add(time.Duration(minutes)*time.Minute + 30*time.Minute).UTC().Format(time.RFC3339)
+	// The locked setup may only contain fields named in fieldMask (Google returns
+	// 400 otherwise); the rest, e.g. sessionResumption, comes from the page.
+	locked := map[string]any{}
+	for _, field := range strings.Split(liveLockedFields, ",") {
+		if v, ok := setup[field]; ok {
+			locked[field] = v
+		}
+	}
 	body := map[string]any{
 		"uses":                     0, // unlimited: reconnects open new sessions
 		"expireTime":               expires,
 		"newSessionExpireTime":     expires,
-		"bidiGenerateContentSetup": setup,
+		"bidiGenerateContentSetup": locked,
 		"fieldMask":                liveLockedFields,
 	}
 	var resp struct {

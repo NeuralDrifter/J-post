@@ -85,13 +85,24 @@ func TestCreateLiveToken(t *testing.T) {
 		if !strings.Contains(mask, "systemInstruction") || strings.Contains(mask, "sessionResumption") {
 			t.Errorf("fieldMask = %q", mask)
 		}
-		if setup := body["bidiGenerateContentSetup"].(map[string]any); setup["model"] != "models/gemini-3.8-live" {
+		setup := body["bidiGenerateContentSetup"].(map[string]any)
+		if setup["model"] != "models/gemini-3.8-live" {
 			t.Errorf("setup = %v", setup)
+		}
+		// Google rejects a locked setup containing fields outside fieldMask (400).
+		for k := range setup {
+			if !strings.Contains(","+mask+",", ","+k+",") {
+				t.Errorf("setup field %q is not in fieldMask %q", k, mask)
+			}
 		}
 		w.Write([]byte(`{"name":"auth_tokens/abc123"}`))
 	})
-	tok, err := createLiveToken(context.Background(), "k3y", map[string]any{"model": "models/gemini-3.8-live"}, 25, now)
+	setup := map[string]any{"model": "models/gemini-3.8-live", "sessionResumption": map[string]any{}, "systemInstruction": map[string]any{}}
+	tok, err := createLiveToken(context.Background(), "k3y", setup, 25, now)
 	if err != nil || tok != "auth_tokens/abc123" {
 		t.Fatalf("tok=%q err=%v", tok, err)
+	}
+	if _, ok := setup["sessionResumption"]; !ok {
+		t.Fatal("the caller's setup must not be modified; the page still sends sessionResumption")
 	}
 }
