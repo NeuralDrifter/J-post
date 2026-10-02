@@ -5,7 +5,9 @@ import { ConfirmHost } from './components/ConfirmDialog'
 import { ContextMenuHost } from './components/ContextMenu'
 import { StartupErrorScreen } from './components/StartupErrorScreen'
 import { Toaster } from './components/Toaster'
+import { errorMessage } from './lib/api'
 import { GetStartupError } from './lib/backend'
+import { toast } from './lib/toast'
 import DiscoverPage from './pages/Discover/DiscoverPage'
 import JobDetailPage from './pages/JobDetail/JobDetailPage'
 import OffersPage from './pages/Offers/OffersPage'
@@ -24,6 +26,13 @@ export default function App() {
   const [startupError, setStartupError] = useState<string | null>(null)
   useEffect(() => {
     GetStartupError().then(setStartupError, (err: unknown) => setStartupError(String(err)))
+  }, [])
+
+  // Background failures (rejected promises) become toasts instead of failing silently.
+  useEffect(() => {
+    const onRejection = (e: PromiseRejectionEvent) => toast.error(`Unexpected error: ${errorMessage(e.reason)}`)
+    window.addEventListener('unhandledrejection', onRejection)
+    return () => window.removeEventListener('unhandledrejection', onRejection)
   }, [])
 
   if (startupError === null) return null

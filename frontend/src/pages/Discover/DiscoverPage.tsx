@@ -70,7 +70,9 @@ export default function DiscoverPage() {
   const { data: counts } = useLoad(() => api(InboxCounts()), [])
   const { data: recent } = useLoad(() => api(ListRecentSearches()), [])
 
-  useEffect(() => writePref('discoverQuery', JSON.stringify(query)), [query])
+  useEffect(() => {
+    writePref('discoverQuery', JSON.stringify(query))
+  }, [query])
 
   const selected = useMemo(() => postings?.find((p) => p.id === selectedId), [postings, selectedId])
 

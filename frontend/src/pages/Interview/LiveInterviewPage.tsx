@@ -53,7 +53,10 @@ export default function LiveInterviewPage() {
     }
   }, [started, id])
 
-  useEffect(() => transcriptEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), [lines])
+  useEffect(() => {
+    // Block body: smooth scrollIntoView returns a Promise in current Chromium, which must not become the cleanup.
+    void transcriptEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [lines])
 
   // Leaving the page mid-interview still saves what was said.
   useEffect(

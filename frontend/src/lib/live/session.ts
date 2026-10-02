@@ -16,6 +16,8 @@ export type SessionCallbacks = {
 
 const MAX_RECONNECTS = 3
 const CHUNK_SECONDS = 0.1
+const PLAYBACK_CUSHION = 0.15 // seconds of buffer when speech (re)starts, absorbs network jitter
+const decoder = new TextDecoder()
 
 // Inline AudioWorklet: copies microphone frames to the main thread.
 const WORKLET = `class MicCapture extends AudioWorkletProcessor {
@@ -121,13 +123,16 @@ export class InterviewSession {
 
   private connect() {
     const ws = new WebSocket(`${this.config.wsUrl}?access_token=${encodeURIComponent(this.config.token)}`)
+    // ArrayBuffer frames decode synchronously, so messages (and audio chunks) are
+    // handled strictly in arrival order. Async Blob.text() could reorder them.
+    ws.binaryType = 'arraybuffer'
     this.ws = ws
     ws.onopen = () => {
       const resumption = this.state.handle ? { handle: this.state.handle } : {}
       ws.send(JSON.stringify({ setup: { ...this.config.setup, sessionResumption: resumption } }))
     }
-    ws.onmessage = async (ev) => {
-      const text = typeof ev.data === 'string' ? ev.data : await (ev.data as Blob).text()
+    ws.onmessage = (ev) => {
+      const text = typeof ev.data === 'string' ? ev.data : decoder.decode(ev.data as ArrayBuffer)
       let msg: unknown
       try {
         msg = JSON.parse(text)
@@ -138,7 +143,13 @@ export class InterviewSession {
       const linesChanged = state.lines !== this.state.lines
       this.state = state
       if (linesChanged) this.cb.onLines(state.lines)
-      effects.forEach((e) => this.handle(e))
+      for (const e of effects) {
+        try {
+          this.handle(e)
+        } catch (err) {
+          console.error('live session effect failed', e.type, err)
+        }
+      }
     }
     ws.onclose = (ev) => {
       if (this.ws !== ws || this.ended) return
@@ -231,7 +242,8 @@ export class InterviewSession {
     src.buffer = buffer
     src.connect(ctx.destination)
     if (this.recDest) src.connect(this.recDest)
-    const startAt = Math.max(ctx.currentTime + 0.02, this.playHead)
+    // Back-to-back while speaking; a small cushion when the queue had run dry.
+    const startAt = this.playHead > ctx.currentTime ? this.playHead : ctx.currentTime + PLAYBACK_CUSHION
     src.start(startAt)
     this.playHead = startAt + buffer.duration
     this.sources.add(src)
