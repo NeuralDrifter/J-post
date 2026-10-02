@@ -73,7 +73,8 @@ export default function InterviewReviewPage() {
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-extrabold tracking-tight">Mock interview review</h1>
             <p className="mt-1 text-sm text-ink-2">
-              {mi.position} · {MOCK_KIND_LABEL[mi.kind]} · {mi.minutes} min · {mi.persona} · {formatDateTime(mi.startedAt)}
+              {mi.position} · {MOCK_KIND_LABEL[mi.kind]} · {mi.minutes} min · {mi.persona}
+              {mi.interviewerName && ` · with ${mi.interviewerName} (${mi.voice})`} · {formatDateTime(mi.startedAt)}
             </p>
           </div>
           {avg !== undefined && <div className="font-mono text-3xl font-bold text-indigo-200">{avg}<span className="text-base text-ink-3"> / 5</span></div>}

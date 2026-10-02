@@ -14,11 +14,12 @@ import (
 // model gives per-answer nudges and the final scorecard.
 
 type InterviewSetup struct {
-	Kind    string `json:"kind"`
-	Minutes int    `json:"minutes"`
-	Persona string `json:"persona"`
-	Voice   string `json:"voice"`
-	Focus   string `json:"focus"`
+	Kind            string `json:"kind"`
+	Minutes         int    `json:"minutes"`
+	Persona         string `json:"persona"`
+	Voice           string `json:"voice"`           // "" = surprise me (random)
+	InterviewerName string `json:"interviewerName"` // "" = random name matching the voice
+	Focus           string `json:"focus"`
 }
 
 type TranscriptLine struct {
@@ -51,34 +52,37 @@ type Scorecard struct {
 }
 
 type MockInterview struct {
-	ID           string           `json:"id"`
-	JobID        string           `json:"jobId"`
-	Company      string           `json:"company"`
-	Position     string           `json:"position"`
-	Kind         string           `json:"kind"`
-	Minutes      int              `json:"minutes"`
-	Persona      string           `json:"persona"`
-	Voice        string           `json:"voice"`
-	Focus        string           `json:"focus"`
-	Status       string           `json:"status"` // live, scoring, done, failed
-	StartedAt    string           `json:"startedAt"`
-	EndedAt      string           `json:"endedAt"`
-	Transcript   []TranscriptLine `json:"transcript"`
-	Scorecard    *Scorecard       `json:"scorecard,omitempty"`
-	HasRecording bool             `json:"hasRecording"`
-	Error        string           `json:"error"`
+	ID              string           `json:"id"`
+	JobID           string           `json:"jobId"`
+	Company         string           `json:"company"`
+	Position        string           `json:"position"`
+	Kind            string           `json:"kind"`
+	Minutes         int              `json:"minutes"`
+	Persona         string           `json:"persona"`
+	Voice           string           `json:"voice"`
+	InterviewerName string           `json:"interviewerName"`
+	Focus           string           `json:"focus"`
+	Status          string           `json:"status"` // live, scoring, done, failed
+	StartedAt       string           `json:"startedAt"`
+	EndedAt         string           `json:"endedAt"`
+	Transcript      []TranscriptLine `json:"transcript"`
+	Scorecard       *Scorecard       `json:"scorecard,omitempty"`
+	HasRecording    bool             `json:"hasRecording"`
+	Error           string           `json:"error"`
 }
 
 // LiveSession is what the page needs to open the voice connection.
 type LiveSession struct {
-	SessionID string         `json:"sessionId"`
-	Token     string         `json:"token"`
-	WSURL     string         `json:"wsUrl"`
-	Setup     map[string]any `json:"setup"`
-	Minutes   int            `json:"minutes"`
-	Kind      string         `json:"kind"`
-	Company   string         `json:"company"`
-	Position  string         `json:"position"`
+	SessionID       string         `json:"sessionId"`
+	Token           string         `json:"token"`
+	WSURL           string         `json:"wsUrl"`
+	Setup           map[string]any `json:"setup"`
+	Minutes         int            `json:"minutes"`
+	Kind            string         `json:"kind"`
+	Company         string         `json:"company"`
+	Position        string         `json:"position"`
+	Voice           string         `json:"voice"`
+	InterviewerName string         `json:"interviewerName"`
 }
 
 type Nudge struct {
@@ -100,6 +104,13 @@ var (
 		"tough":    "demanding: probe vague answers, ask pointed follow-ups and push back on weak reasoning",
 	}
 	interviewMinutes = map[int]bool{10: true, 25: true, 45: true}
+	interviewerRoles = map[string]string{
+		"phone_screen":   "a recruiter",
+		"behavioral":     "a team lead on the hiring team",
+		"technical":      "a senior engineer on the team",
+		"hiring_manager": "the hiring manager",
+		"final_round":    "a director",
+	}
 )
 
 func validateInterviewSetup(s *InterviewSetup) error {
@@ -112,11 +123,15 @@ func validateInterviewSetup(s *InterviewSetup) error {
 	if _, ok := interviewPersonas[s.Persona]; !ok {
 		return fmt.Errorf("unknown interviewer style %q", s.Persona)
 	}
-	if s.Voice == "" {
-		s.Voice = "Kore"
+	if s.Voice == "" || s.Voice == "random" {
+		s.Voice = pick(interviewVoiceList).Name // a stranger's voice, like a real interview
 	}
 	if !interviewVoices[s.Voice] {
 		return fmt.Errorf("unknown voice %q", s.Voice)
+	}
+	s.InterviewerName = strings.Join(strings.Fields(s.InterviewerName), " ")
+	if s.InterviewerName == "" {
+		s.InterviewerName = randomInterviewerName(s.Voice)
 	}
 	s.Focus = strings.TrimSpace(s.Focus)
 	return nil
@@ -125,10 +140,10 @@ func validateInterviewSetup(s *InterviewSetup) error {
 // buildInterviewBrief is the interviewer's system instruction.
 func buildInterviewBrief(job Job, contacts []Contact, resume string, s InterviewSetup) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "You are an interviewer at %s conducting a %s interview for the %s role. ", job.Company, interviewKinds[s.Kind], job.Position)
+	fmt.Fprintf(&b, "You are %s, %s at %s, conducting a %s interview for the %s role. ", s.InterviewerName, interviewerRoles[s.Kind], job.Company, interviewKinds[s.Kind], job.Position)
 	fmt.Fprintf(&b, "The interview lasts %d minutes. Be a %s interviewer: %s.\n\n", s.Minutes, s.Persona, interviewPersonas[s.Persona])
 	b.WriteString(`How to run it:
-- Greet the candidate briefly and introduce yourself with a plausible first name and title.
+- Greet the candidate briefly and introduce yourself by name and role.
 - Ask one question at a time, then listen. Ask realistic follow-ups based on what they actually said.
 - Ground questions in the job description and in the candidate's real experience from their resume.
 - Never coach, grade or give feedback during the interview. Stay in character the whole time.
@@ -143,7 +158,7 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 		fmt.Fprintf(&b, "\nThe candidate's own notes about this job (context only):\n%s\n", job.Notes)
 	}
 	if len(contacts) > 0 {
-		b.WriteString("\nPeople the candidate knows at the company (you may play one of these roles):\n")
+		b.WriteString("\nPeople the candidate has been in touch with at the company (background only; you are not one of them):\n")
 		for _, c := range contacts {
 			fmt.Fprintf(&b, "- %s, %s\n", c.Name, orDefault(c.Role, "role unknown"))
 		}
@@ -174,13 +189,13 @@ func liveSetup(model, voice, brief string) map[string]any {
 
 // ---- storage ----
 
-const mockColumns = `m.id, m.job_id, j.company, j.position, m.kind, m.minutes, m.persona, m.voice, m.focus, m.status,
+const mockColumns = `m.id, m.job_id, j.company, j.position, m.kind, m.minutes, m.persona, m.voice, m.interviewer_name, m.focus, m.status,
 	m.started_at, m.ended_at, m.transcript, m.scorecard, m.recording_path, m.error`
 
 func scanMock(s rowScanner) (MockInterview, error) {
 	var m MockInterview
 	var transcript, scorecard, recording string
-	err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona, &m.Voice, &m.Focus, &m.Status,
+	err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona, &m.Voice, &m.InterviewerName, &m.Focus, &m.Status,
 		&m.StartedAt, &m.EndedAt, &transcript, &scorecard, &recording, &m.Error)
 	if err != nil {
 		return m, err
@@ -205,8 +220,8 @@ func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup) (MockIntervie
 		return MockInterview{}, err
 	}
 	id := newID()
-	_, err := r.db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, voice, focus, status, started_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 'live', ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.Focus, ts(r.now()))
+	_, err := r.db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, voice, interviewer_name, focus, status, started_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'live', ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.InterviewerName, s.Focus, ts(r.now()))
 	if err != nil {
 		return MockInterview{}, err
 	}
@@ -317,7 +332,7 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 		return LiveSession{}, err
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
-		Kind: setup.Kind, Company: job.Company, Position: job.Position}, nil
+		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName}, nil
 }
 
 var nudgeSchema = map[string]any{

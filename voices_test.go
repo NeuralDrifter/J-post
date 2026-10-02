@@ -109,3 +109,67 @@ func TestVoicePreviewIsCached(t *testing.T) {
 		t.Fatal("no key and no cached preview should error")
 	}
 }
+
+func TestVoiceGenders(t *testing.T) {
+	female, male := 0, 0
+	for _, v := range interviewVoiceList {
+		switch v.Gender {
+		case "female":
+			female++
+		case "male":
+			male++
+		default:
+			t.Errorf("%s has no gender", v.Name)
+		}
+	}
+	if female != 14 || male != 16 || voiceGender["Kore"] != "female" || voiceGender["Charon"] != "male" {
+		t.Fatalf("female=%d male=%d", female, male)
+	}
+}
+
+func TestRandomInterviewerByDefault(t *testing.T) {
+	seenVoices := map[string]bool{}
+	for i := 0; i < 40; i++ {
+		s := InterviewSetup{Kind: "behavioral", Minutes: 10, Persona: "neutral"}
+		if err := validateInterviewSetup(&s); err != nil {
+			t.Fatal(err)
+		}
+		if !interviewVoices[s.Voice] || s.InterviewerName == "" {
+			t.Fatalf("setup = %+v", s)
+		}
+		first := strings.Fields(s.InterviewerName)[0]
+		if !nameMatches(first, voiceGender[s.Voice]) {
+			t.Fatalf("%q doesn't match %s voice %s", s.InterviewerName, voiceGender[s.Voice], s.Voice)
+		}
+		seenVoices[s.Voice] = true
+	}
+	if len(seenVoices) < 5 {
+		t.Fatalf("voices should vary, saw only %v", seenVoices)
+	}
+}
+
+func TestChosenVoiceAndName(t *testing.T) {
+	s := InterviewSetup{Kind: "behavioral", Minutes: 10, Persona: "neutral", Voice: "Charon"}
+	validateInterviewSetup(&s)
+	if s.Voice != "Charon" || !nameMatches(strings.Fields(s.InterviewerName)[0], "male") {
+		t.Fatalf("a chosen voice keeps a gender-matched random name: %+v", s)
+	}
+	s = InterviewSetup{Kind: "behavioral", Minutes: 10, Persona: "neutral", Voice: "Kore", InterviewerName: "  Pat Lee "}
+	validateInterviewSetup(&s)
+	if s.InterviewerName != "Pat Lee" {
+		t.Fatalf("a typed name is kept: %+v", s)
+	}
+}
+
+func nameMatches(first, gender string) bool {
+	list := maleFirstNames
+	if gender == "female" {
+		list = femaleFirstNames
+	}
+	for _, n := range list {
+		if n == first {
+			return true
+		}
+	}
+	return false
+}

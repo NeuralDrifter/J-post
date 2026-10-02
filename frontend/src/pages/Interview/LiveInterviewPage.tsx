@@ -150,6 +150,7 @@ export default function LiveInterviewPage() {
           <p className="font-mono text-[11px] text-ink-2">Mock interview · {MOCK_KIND_LABEL[live.kind]}</p>
           <p className="truncate text-sm font-semibold">
             {live.position} · {live.company}
+            {started && <span className="font-normal text-ink-2"> · with {live.interviewerName}</span>}
           </p>
         </div>
         <Chip tone={status === 'live' ? 'success' : status === 'error' ? 'danger' : 'info'}>

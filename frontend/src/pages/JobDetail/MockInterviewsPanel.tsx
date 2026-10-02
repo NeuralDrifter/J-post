@@ -45,7 +45,10 @@ export function MockInterviewsPanel({ job }: { job: main.Job }) {
                   onClick={() => navigate(`/interviews/${m.id}`)}
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm">{MOCK_KIND_LABEL[m.kind]}</span>
+                    <span className="block truncate text-sm">
+                      {MOCK_KIND_LABEL[m.kind]}
+                      {m.interviewerName && <span className="text-ink-3"> · {m.interviewerName}</span>}
+                    </span>
                     <span className="block font-mono text-[11px] text-ink-3">{formatDateTime(m.startedAt)}</span>
                   </span>
                   {avg !== undefined ? <Chip tone={avg >= 4 ? 'success' : avg >= 3 ? 'info' : 'warn'}>{avg} / 5</Chip> : <Chip>{m.status}</Chip>}

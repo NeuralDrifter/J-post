@@ -17,7 +17,8 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
     kind: job.status === 'interviewing' ? 'behavioral' : 'phone_screen',
     minutes: 25,
     persona: 'neutral',
-    voice: 'Kore',
+    voice: '', // surprise me
+    interviewerName: '',
     focus: '',
   })
   const [starting, setStarting] = useState(false)
@@ -101,8 +102,18 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
               </div>
             </Field>
             <Field label="Interviewer voice" wide>
-              <VoicePicker value={setup.voice} onChange={(voice) => setSetup({ ...setup, voice })} />
+              <VoicePicker value={setup.voice} onChange={(voice) => setSetup({ ...setup, voice, interviewerName: voice ? setup.interviewerName : '' })} />
             </Field>
+            {setup.voice && (
+              <Field label="Interviewer name (optional)" wide>
+                <input
+                  className="field"
+                  value={setup.interviewerName}
+                  onChange={(e) => setSetup({ ...setup, interviewerName: e.target.value })}
+                  placeholder="Leave blank for a random name that fits the voice"
+                />
+              </Field>
+            )}
             <Field label="Focus (optional)" wide>
               <textarea
                 className="field"

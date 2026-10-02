@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-var testSetup = InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough", Voice: "Puck", Focus: "conflict stories"}
+var testSetup = InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough", Voice: "Puck", InterviewerName: "Dana Reyes", Focus: "conflict stories"}
 
 func interviewJob(t *testing.T, r *Repo) Job {
 	return mustCreate(t, r, Job{Company: "Acme", Position: "Staff Engineer", Status: StatusInterviewing,
@@ -22,10 +22,13 @@ func TestBriefContents(t *testing.T) {
 	job := Job{Company: "Acme", Position: "Staff Engineer", Description: "Lead payments.", Notes: "Values ownership."}
 	brief := buildInterviewBrief(job, []Contact{{Name: "Maya", Role: "Hiring manager"}}, "# Jane\n- Built billing at Brex", testSetup)
 	for _, want := range []string{"Acme", "Staff Engineer", "behavioral", "25 minutes", "tough", "conflict stories",
-		"Lead payments.", "Values ownership.", "Built billing at Brex", "Hiring manager", "one question at a time"} {
+		"Lead payments.", "Values ownership.", "Built billing at Brex", "Hiring manager", "one question at a time", "Dana Reyes"} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("brief is missing %q", want)
 		}
+	}
+	if strings.Contains(brief, "you may play") {
+		t.Error("contacts are background only; the interviewer has a fixed name")
 	}
 }
 
@@ -102,7 +105,7 @@ func TestPrepareInterview(t *testing.T) {
 		t.Error("the page's setup needs sessionResumption")
 	}
 	mi, err := r.GetMockInterview(live.SessionID)
-	if err != nil || mi.Status != "live" || mi.Kind != "behavioral" || mi.Company != "Acme" {
+	if err != nil || mi.Status != "live" || mi.Kind != "behavioral" || mi.Company != "Acme" || mi.InterviewerName != "Dana Reyes" || live.InterviewerName != "Dana Reyes" {
 		t.Fatalf("stored = %+v, %v", mi, err)
 	}
 }

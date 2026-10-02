@@ -271,6 +271,8 @@ var migrations = []string{
 		error TEXT NOT NULL DEFAULT ''
 	);
 	CREATE INDEX idx_mock_interviews_job ON mock_interviews(job_id, started_at);`,
+	// 7: the interviewer's name (matched to the voice).
+	`ALTER TABLE mock_interviews ADD COLUMN interviewer_name TEXT NOT NULL DEFAULT '';`,
 }
 
 func openDB(path string) (*sql.DB, error) {

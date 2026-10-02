@@ -462,6 +462,7 @@ export namespace main {
 	    minutes: number;
 	    persona: string;
 	    voice: string;
+	    interviewerName: string;
 	    focus: string;
 	
 	    static createFrom(source: any = {}) {
@@ -474,6 +475,7 @@ export namespace main {
 	        this.minutes = source["minutes"];
 	        this.persona = source["persona"];
 	        this.voice = source["voice"];
+	        this.interviewerName = source["interviewerName"];
 	        this.focus = source["focus"];
 	    }
 	}
@@ -576,6 +578,8 @@ export namespace main {
 	    kind: string;
 	    company: string;
 	    position: string;
+	    voice: string;
+	    interviewerName: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new LiveSession(source);
@@ -591,6 +595,8 @@ export namespace main {
 	        this.kind = source["kind"];
 	        this.company = source["company"];
 	        this.position = source["position"];
+	        this.voice = source["voice"];
+	        this.interviewerName = source["interviewerName"];
 	    }
 	}
 	
@@ -772,6 +778,7 @@ export namespace main {
 	    minutes: number;
 	    persona: string;
 	    voice: string;
+	    interviewerName: string;
 	    focus: string;
 	    status: string;
 	    startedAt: string;
@@ -795,6 +802,7 @@ export namespace main {
 	        this.minutes = source["minutes"];
 	        this.persona = source["persona"];
 	        this.voice = source["voice"];
+	        this.interviewerName = source["interviewerName"];
 	        this.focus = source["focus"];
 	        this.status = source["status"];
 	        this.startedAt = source["startedAt"];
@@ -1091,6 +1099,7 @@ export namespace main {
 	export class VoiceOption {
 	    name: string;
 	    style: string;
+	    gender: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new VoiceOption(source);
@@ -1100,6 +1109,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.style = source["style"];
+	        this.gender = source["gender"];
 	    }
 	}
 

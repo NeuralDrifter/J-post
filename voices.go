@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,27 +20,55 @@ import (
 
 // VoiceOption is one of Google's prebuilt voices (usable by Live and TTS models).
 type VoiceOption struct {
-	Name  string `json:"name"`
-	Style string `json:"style"`
+	Name   string `json:"name"`
+	Style  string `json:"style"`
+	Gender string `json:"gender"` // female | male
 }
 
-// interviewVoiceList is Google's prebuilt voice catalog (Gemini speech-generation docs).
+// interviewVoiceList is Google's prebuilt voice catalog: names and styles from the
+// Gemini speech-generation docs, genders from the Cloud TTS "Chirp 3 HD" catalog
+// (the same 30 voices).
 var interviewVoiceList = []VoiceOption{
-	{"Zephyr", "Bright"}, {"Puck", "Upbeat"}, {"Charon", "Informative"}, {"Kore", "Firm"}, {"Fenrir", "Excitable"},
-	{"Leda", "Youthful"}, {"Orus", "Firm"}, {"Aoede", "Breezy"}, {"Callirrhoe", "Easy-going"}, {"Autonoe", "Bright"},
-	{"Enceladus", "Breathy"}, {"Iapetus", "Clear"}, {"Umbriel", "Easy-going"}, {"Algieba", "Smooth"}, {"Despina", "Smooth"},
-	{"Erinome", "Clear"}, {"Algenib", "Gravelly"}, {"Rasalgethi", "Informative"}, {"Laomedeia", "Upbeat"}, {"Achernar", "Soft"},
-	{"Alnilam", "Firm"}, {"Schedar", "Even"}, {"Gacrux", "Mature"}, {"Pulcherrima", "Forward"}, {"Achird", "Friendly"},
-	{"Zubenelgenubi", "Casual"}, {"Vindemiatrix", "Gentle"}, {"Sadachbia", "Lively"}, {"Sadaltager", "Knowledgeable"}, {"Sulafat", "Warm"},
+	{"Zephyr", "Bright", "female"}, {"Puck", "Upbeat", "male"}, {"Charon", "Informative", "male"}, {"Kore", "Firm", "female"}, {"Fenrir", "Excitable", "male"},
+	{"Leda", "Youthful", "female"}, {"Orus", "Firm", "male"}, {"Aoede", "Breezy", "female"}, {"Callirrhoe", "Easy-going", "female"}, {"Autonoe", "Bright", "female"},
+	{"Enceladus", "Breathy", "male"}, {"Iapetus", "Clear", "male"}, {"Umbriel", "Easy-going", "male"}, {"Algieba", "Smooth", "male"}, {"Despina", "Smooth", "female"},
+	{"Erinome", "Clear", "female"}, {"Algenib", "Gravelly", "male"}, {"Rasalgethi", "Informative", "male"}, {"Laomedeia", "Upbeat", "female"}, {"Achernar", "Soft", "female"},
+	{"Alnilam", "Firm", "male"}, {"Schedar", "Even", "male"}, {"Gacrux", "Mature", "female"}, {"Pulcherrima", "Forward", "female"}, {"Achird", "Friendly", "male"},
+	{"Zubenelgenubi", "Casual", "male"}, {"Vindemiatrix", "Gentle", "female"}, {"Sadachbia", "Lively", "male"}, {"Sadaltager", "Knowledgeable", "male"}, {"Sulafat", "Warm", "female"},
 }
 
-var interviewVoices = func() map[string]bool {
-	m := map[string]bool{}
+var (
+	interviewVoices = map[string]bool{}
+	voiceGender     = map[string]string{}
+)
+
+func init() {
 	for _, v := range interviewVoiceList {
-		m[v.Name] = true
+		interviewVoices[v.Name] = true
+		voiceGender[v.Name] = v.Gender
 	}
-	return m
-}()
+}
+
+// Names for the interviewer, matched to the voice's gender.
+var (
+	femaleFirstNames = []string{"Maya", "Priya", "Elena", "Grace", "Aisha", "Sofia", "Hannah", "Mei", "Olivia", "Camila",
+		"Nadia", "Rachel", "Laura", "Fatima", "Chloe", "Ingrid", "Yuki", "Amara", "Julia", "Teresa"}
+	maleFirstNames = []string{"Daniel", "Marcus", "Ravi", "Tomas", "James", "Kenji", "Omar", "Lucas", "Ethan", "Andre",
+		"Samuel", "Victor", "Hiro", "David", "Mateo", "Noah", "Kwame", "Felix", "Arjun", "Peter"}
+	lastNames = []string{"Chen", "Patel", "Garcia", "Okafor", "Nguyen", "Kowalski", "Hughes", "Rossi", "Kim", "Silva",
+		"Bennett", "Haddad", "Larsen", "Moreno", "Tanaka", "Brooks", "Ibrahim", "Fischer", "Walsh", "Ortiz"}
+)
+
+func pick[T any](list []T) T { return list[rand.IntN(len(list))] }
+
+// randomInterviewerName returns a full name matching the voice's gender.
+func randomInterviewerName(voice string) string {
+	first := maleFirstNames
+	if voiceGender[voice] == "female" {
+		first = femaleFirstNames
+	}
+	return pick(first) + " " + pick(lastNames)
+}
 
 // geminiLiveWSBase is the Live API host (a var so tests can use a fake server).
 var geminiLiveWSBase = "wss://generativelanguage.googleapis.com"
