@@ -271,8 +271,8 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 
 // ---- Normalization ----
 
-var intervalFactor = map[string]float64{"yearly": 1, "monthly": 12, "weekly": 52, "daily": 260, "hourly": 2080}
-var intervalUnit = map[string]string{"yearly": "yr", "monthly": "mo", "weekly": "wk", "daily": "day", "hourly": "hr"}
+var intervalFactor = map[string]float64{"yearly": 1, "monthly": 12, "biweekly": 26, "weekly": 52, "daily": 260, "hourly": 2080}
+var intervalUnit = map[string]string{"yearly": "yr", "monthly": "mo", "biweekly": "2 wk", "weekly": "wk", "daily": "day", "hourly": "hr"}
 
 // moneyText formats 120000 as "$120,000" and 22.5 as "$22.50".
 func moneyText(v float64) string {
