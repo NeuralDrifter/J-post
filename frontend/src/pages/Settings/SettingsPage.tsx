@@ -24,6 +24,16 @@ import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 
+// Category names exactly as The Muse's API documents them.
+const MUSE_CATEGORIES = [
+  'Accounting and Finance', 'Account Management/Customer Success', 'Administration and Office', 'Advertising and Marketing',
+  'Business Operations', 'Computer and IT', 'Customer Service', 'Data and Analytics', 'Data Science', 'Design and UX',
+  'Education', 'Healthcare', 'Human Resources and Recruitment', 'IT', 'Legal Services', 'Management',
+  'Manufacturing and Warehouse', 'Marketing', 'Media PR and Communications', 'Product Management', 'Project Management',
+  'Real Estate', 'Retail', 'Sales', 'Science and Engineering', 'Software Engineering', 'Transportation and Logistics',
+  'Writing and Editing',
+]
+
 export default function SettingsPage() {
   const { data: settings } = useLoad(() => api(GetSettings()), [])
   const { data: dataDir } = useLoad(() => api(DataDir()), [])
@@ -74,7 +84,7 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
   return (
     <>
     <form onSubmit={save} className="space-y-4">
-      <Section title="Job sources" hint="Indeed, LinkedIn and ZipRecruiter need no keys. Adzuna needs a free API key.">
+      <Section title="Job sources" hint="Himalayas, Jobicy and the JobSpy boards need no setup. Adzuna and USAJobs need free keys; The Muse needs categories.">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Adzuna App ID">
             <input className="field" type="password" autoComplete="off" value={s.adzunaAppId} onChange={(e) => setS({ ...s, adzunaAppId: e.target.value })} />
@@ -86,6 +96,40 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
         <button type="button" className="mt-3 flex items-center gap-1 text-xs text-indigo-300 hover:underline" onClick={() => BrowserOpenURL('https://developer.adzuna.com/')}>
           <ExternalLink size={12} /> Get Adzuna keys
         </button>
+        <div className="mt-5 grid grid-cols-2 gap-4">
+          <Field label="USAJobs API key">
+            <input className="field" type="password" autoComplete="off" value={s.usajobsKey} onChange={(e) => setS({ ...s, usajobsKey: e.target.value })} />
+          </Field>
+          <Field label="Email you registered with USAJobs">
+            <input className="field" type="email" value={s.usajobsEmail} onChange={(e) => setS({ ...s, usajobsEmail: e.target.value })} />
+          </Field>
+        </div>
+        <button
+          type="button"
+          className="mt-3 flex items-center gap-1 text-xs text-indigo-300 hover:underline"
+          onClick={() => BrowserOpenURL('https://developer.usajobs.gov/apirequest/')}
+        >
+          <ExternalLink size={12} /> Request a free USAJobs key (federal jobs)
+        </button>
+        <div className="mt-5">
+          <p className="label-mono mb-2">The Muse categories (copied locally, refreshed daily)</p>
+          <div className="grid max-h-40 grid-cols-3 gap-x-4 gap-y-1 overflow-y-auto rounded-xl border border-line p-3 text-xs text-ink-2">
+            {MUSE_CATEGORIES.map((c) => (
+              <label key={c} className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  className="accent-indigo-500"
+                  checked={s.museCategories.includes(c)}
+                  onChange={() =>
+                    setS({ ...s, museCategories: s.museCategories.includes(c) ? s.museCategories.filter((x) => x !== c) : [...s.museCategories, c] })
+                  }
+                />
+                {c}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-ink-3">Each category × search location is a separate copy (about a minute to download the first time).</p>
+        </div>
         <div className="mt-4 flex items-center gap-2 text-sm">
           <span className="text-ink-2">Re-use search results for</span>
           <input

@@ -15,6 +15,11 @@ export function marketDetail(m: main.MarketResult, sources?: main.DataSources): 
   return LEVEL_NOTE[m.level] ? `${base} — ${LEVEL_NOTE[m.level]}` : base
 }
 
+export function baselineDetail(b: main.MarketBaseline, sources?: main.DataSources): string {
+  const base = `BLS OEWS ${sources?.bls.release ?? ''} · median pay $${b.median.toLocaleString('en-US')} for ${b.occTitle} · ${b.areaTitle} · base salary only`
+  return LEVEL_NOTE[b.level] ? `${base} — ${LEVEL_NOTE[b.level]}` : base
+}
+
 export function colDetail(r: main.PackageResult, sources?: main.DataSources): string {
   const base = `BEA Regional Price Parities ${sources?.bea.release ?? ''} · ${r.colAreaTitle} ${r.colIndex} vs ${r.homeAreaTitle} ${r.homeColIndex} (US average = 100)`
   return r.colLevel && r.colLevel !== 'metro' && r.colLevel !== 'national' ? `${base} — ${r.colLevel} index used` : base

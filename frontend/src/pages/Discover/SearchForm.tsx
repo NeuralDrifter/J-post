@@ -2,25 +2,31 @@ import { LoaderCircle, MapPin, RefreshCw, Search } from 'lucide-react'
 import type { main } from '../../lib/backend'
 import { SOURCE_LABEL } from '../../lib/format'
 
-export const ALL_SOURCES = ['indeed', 'linkedin', 'zip_recruiter', 'adzuna'] as const
+export const OFFICIAL_SOURCES = ['adzuna', 'usajobs', 'himalayas', 'jobicy', 'themuse'] as const
+export const SCRAPED_SOURCES = ['indeed', 'linkedin', 'zip_recruiter'] as const
+export const ALL_SOURCES = [...OFFICIAL_SOURCES, ...SCRAPED_SOURCES]
 export const DEFAULT_PER_SOURCE = 20
+
+const MAX_PER_SOURCE: Record<string, number> = { adzuna: 50 }
+const SOURCE_NOTE: Record<string, string> = { himalayas: 'remote only', jobicy: 'remote only, 1 call/hour' }
 
 type Props = {
   query: main.SearchQuery
   onChange: (q: main.SearchQuery) => void
   onSearch: (force: boolean) => void
   searching: boolean
-  adzunaReady: boolean
+  /** Sources that can't run yet, with the reason (missing keys etc.). */
+  unavailable: Record<string, string>
 }
 
-export function SearchForm({ query, onChange, onSearch, searching, adzunaReady }: Props) {
+export function SearchForm({ query, onChange, onSearch, searching, unavailable }: Props) {
   const toggle = (source: string) =>
     onChange({
       ...query,
       sources: query.sources.includes(source) ? query.sources.filter((s) => s !== source) : [...query.sources, source],
     })
   const setCount = (source: string, n: number) => onChange({ ...query, perSource: { ...query.perSource, [source]: n } })
-  const active = query.sources.filter((s) => s !== 'adzuna' || adzunaReady)
+  const active = query.sources.filter((s) => !unavailable[s])
   const linkedInHigh = query.sources.includes('linkedin') && (query.perSource.linkedin ?? DEFAULT_PER_SOURCE) > 25
 
   return (
@@ -81,35 +87,59 @@ export function SearchForm({ query, onChange, onSearch, searching, adzunaReady }
           />
           Remote only
         </label>
-        <span className="h-4 w-px bg-line" />
-        {ALL_SOURCES.map((s) => {
-          const disabled = s === 'adzuna' && !adzunaReady
-          const checked = !disabled && query.sources.includes(s)
-          return (
-            <span key={s} className={`flex items-center gap-1.5 ${disabled ? 'opacity-50' : ''}`} title={disabled ? 'Add your Adzuna keys in Settings' : undefined}>
-              <label className="flex items-center gap-1.5">
-                <input type="checkbox" className="accent-indigo-500" disabled={disabled} checked={checked} onChange={() => toggle(s)} />
-                {SOURCE_LABEL[s]}
-                {disabled && ' (needs keys)'}
-              </label>
-              {checked && (
-                <input
-                  type="number"
-                  min={5}
-                  max={s === 'adzuna' ? 50 : 100}
-                  step={5}
-                  value={query.perSource[s] ?? DEFAULT_PER_SOURCE}
-                  onChange={(e) => setCount(s, Number(e.target.value) || DEFAULT_PER_SOURCE)}
-                  className="field w-16 px-2 py-0.5 text-xs"
-                  title={`Results to fetch from ${SOURCE_LABEL[s]}`}
-                  aria-label={`Results from ${SOURCE_LABEL[s]}`}
-                />
-              )}
-            </span>
-          )
-        })}
       </div>
+
+      <SourceRow title="Official APIs" sources={OFFICIAL_SOURCES} query={query} toggle={toggle} setCount={setCount} unavailable={unavailable} />
+      <SourceRow title="Scraped via JobSpy" sources={SCRAPED_SOURCES} query={query} toggle={toggle} setCount={setCount} unavailable={unavailable} />
       {linkedInHigh && <p className="text-[11px] text-amber-300/90">LinkedIn often blocks requests above ~25 results.</p>}
     </form>
+  )
+}
+
+function SourceRow({
+  title,
+  sources,
+  query,
+  toggle,
+  setCount,
+  unavailable,
+}: {
+  title: string
+  sources: readonly string[]
+  query: main.SearchQuery
+  toggle: (s: string) => void
+  setCount: (s: string, n: number) => void
+  unavailable: Record<string, string>
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-2">
+      <span className="label-mono w-36 shrink-0">{title}</span>
+      {sources.map((s) => {
+        const reason = unavailable[s]
+        const checked = !reason && query.sources.includes(s)
+        return (
+          <span key={s} className={`flex items-center gap-1.5 ${reason ? 'opacity-50' : ''}`} title={reason ?? SOURCE_NOTE[s]}>
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" className="accent-indigo-500" disabled={!!reason} checked={checked} onChange={() => toggle(s)} />
+              {SOURCE_LABEL[s]}
+              {reason ? <span className="text-ink-3">(setup needed)</span> : SOURCE_NOTE[s] && <span className="text-ink-3">({SOURCE_NOTE[s]})</span>}
+            </label>
+            {checked && (
+              <input
+                type="number"
+                min={5}
+                max={MAX_PER_SOURCE[s] ?? 100}
+                step={5}
+                value={query.perSource[s] ?? DEFAULT_PER_SOURCE}
+                onChange={(e) => setCount(s, Number(e.target.value) || DEFAULT_PER_SOURCE)}
+                className="field w-16 px-2 py-0.5 text-xs"
+                title={`Results to fetch from ${SOURCE_LABEL[s]}`}
+                aria-label={`Results from ${SOURCE_LABEL[s]}`}
+              />
+            )}
+          </span>
+        )
+      })}
+    </div>
   )
 }

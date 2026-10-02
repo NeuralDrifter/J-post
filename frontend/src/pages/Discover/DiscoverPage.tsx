@@ -35,7 +35,7 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 function loadQuery(): main.SearchQuery {
-  const fallback = { term: '', location: '', remoteOnly: false, sources: ['indeed', 'linkedin', 'zip_recruiter'], perSource: {} }
+  const fallback = { term: '', location: '', remoteOnly: false, sources: ['usajobs', 'himalayas', 'jobicy', 'themuse', 'indeed', 'linkedin', 'zip_recruiter'], perSource: {} }
   try {
     return { ...fallback, ...(JSON.parse(readPref('discoverQuery', '{}')) as Partial<main.SearchQuery>) }
   } catch {
@@ -50,7 +50,10 @@ const isWide = () => window.innerWidth >= 1100
 
 export default function DiscoverPage() {
   const { data: settings } = useLoad(() => api(GetSettings()), [])
-  const adzunaReady = Boolean(settings?.adzunaAppId && settings?.adzunaAppKey)
+  const unavailable: Record<string, string> = {}
+  if (settings && !(settings.adzunaAppId && settings.adzunaAppKey)) unavailable.adzuna = 'Add your Adzuna keys in Settings'
+  if (settings && !(settings.usajobsKey && settings.usajobsEmail)) unavailable.usajobs = 'Add your USAJobs key and email in Settings'
+  if (settings && !settings.museCategories?.length) unavailable.themuse = 'Pick The Muse categories in Settings'
   const [query, setQuery] = useState(loadQuery)
   const [tab, setTab] = useState<Tab>('inbox')
   const [filter, setFilter] = useState({ query: '', source: '', onlyNew: false })
@@ -74,7 +77,7 @@ export default function DiscoverPage() {
   const search = async (force: boolean, q: main.SearchQuery = query) => {
     setSearching(true)
     setShowErrors(true)
-    const sources = q.sources.filter((s) => s !== 'adzuna' || adzunaReady)
+    const sources = q.sources.filter((s) => !unavailable[s])
     const r = await api(RunSearch({ ...q, sources }, force))
     setSearching(false)
     if (!r) return
@@ -151,7 +154,7 @@ export default function DiscoverPage() {
   return (
     <div className="flex h-full min-h-[520px] flex-col gap-3">
       <PageTitle title="Discover" subtitle="Every posting your searches find lands in one inbox. Deal with each once." />
-      <SearchForm query={query} onChange={setQuery} onSearch={search} searching={searching} adzunaReady={adzunaReady} />
+      <SearchForm query={query} onChange={setQuery} onSearch={search} searching={searching} unavailable={unavailable} />
       <RecentSearches searches={recent ?? []} onRun={runSaved} onRemove={removeSearch} />
 
       {run && (

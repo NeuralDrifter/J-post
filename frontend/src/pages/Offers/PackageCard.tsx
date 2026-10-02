@@ -5,7 +5,7 @@ import { IconButton } from '../../components/IconButton'
 import { SourceMark } from '../../components/SourceMark'
 import type { main } from '../../lib/backend'
 import { formatDelta, formatMoneyFull, KIND_LABEL, KIND_TONE, percentileLabel } from '../../lib/comp'
-import { colDetail, marketDetail, taxDetail } from '../../lib/sources'
+import { baselineDetail, colDetail, marketDetail, taxDetail } from '../../lib/sources'
 
 type Props = {
   item: main.ComparisonItem
@@ -55,11 +55,18 @@ export function PackageCard({ item, sources, selected, onToggle, onEdit, onCount
       <div className="mt-4">
         <p className="label-mono">Year-1 total</p>
         <p className="font-mono text-2xl font-bold tracking-tight">{formatMoneyFull(r.year1Total)}</p>
-        {delta && (
+        {delta ? (
           <p className={`font-mono text-xs ${delta.year1Total >= 0 ? 'text-success' : 'text-danger'}`}>
             {formatDelta(delta.year1Total)} vs current
           </p>
-        )}
+        ) : r.marketBaseline ? (
+          <p className={`font-mono text-xs ${r.marketBaseline.baseDelta >= 0 ? 'text-success' : 'text-danger'}`}>
+            {formatDelta(r.marketBaseline.baseDelta)} base vs typical
+            <SourceMark source="bls" detail={baselineDetail(r.marketBaseline, sources)} />
+          </p>
+        ) : p.kind !== 'current' ? (
+          <p className="text-[11px] text-ink-3">Set your occupation in Settings to compare with typical pay.</p>
+        ) : null}
       </div>
 
       <dl className="mt-3 space-y-1.5 border-t border-line pt-3 font-mono text-xs">

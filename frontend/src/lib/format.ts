@@ -35,6 +35,10 @@ export const SOURCE_LABEL: Record<string, string> = {
   indeed: 'Indeed',
   zip_recruiter: 'ZipRecruiter',
   adzuna: 'Adzuna',
+  usajobs: 'USAJobs',
+  himalayas: 'Himalayas',
+  jobicy: 'Jobicy',
+  themuse: 'The Muse',
   manual: 'Manual',
 }
 

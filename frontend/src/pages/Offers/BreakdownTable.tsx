@@ -1,8 +1,8 @@
 import { SourceMark } from '../../components/SourceMark'
 import type { main } from '../../lib/backend'
-import { formatMoneyFull, percentileLabel } from '../../lib/comp'
+import { formatDelta, formatMoneyFull, percentileLabel } from '../../lib/comp'
 import { formatMoney } from '../../lib/format'
-import { colDetail, marketDetail, taxDetail } from '../../lib/sources'
+import { baselineDetail, colDetail, marketDetail, taxDetail } from '../../lib/sources'
 
 type Row = { label: string; value: (r: main.PackageResult) => number; sub?: boolean; tax?: boolean; strong?: boolean }
 
@@ -71,6 +71,26 @@ export function BreakdownTable({ items, sources }: { items: main.ComparisonItem[
               )
             })}
           </tr>
+          {items.some((it) => it.result.marketBaseline) && (
+            <tr className="border-t border-line">
+              <td className="px-4 py-2 font-sans text-ink-2">Base vs typical (BLS median)</td>
+              {items.map((it) => {
+                const b = it.result.marketBaseline
+                return (
+                  <td key={it.package.id} className={`px-4 py-2 text-right ${b ? (b.baseDelta >= 0 ? 'text-success' : 'text-rose-300') : ''}`}>
+                    {b ? (
+                      <>
+                        {formatDelta(b.baseDelta)}
+                        <SourceMark source="bls" detail={baselineDetail(b, sources)} />
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                )
+              })}
+            </tr>
+          )}
           <tr className="border-t border-line">
             <td className="px-4 py-2 font-sans text-ink-2">Year-1 total in home dollars</td>
             {items.map((it) => (

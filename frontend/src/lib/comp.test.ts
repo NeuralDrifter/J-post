@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { main } from './backend'
 import { blankPackage, formatDelta, formatMoneyFull, ordinal, percentileLabel } from './comp'
-import { colDetail, marketDetail, taxDetail } from './sources'
+import { baselineDetail, colDetail, marketDetail, taxDetail } from './sources'
 
 describe('money formatting', () => {
   it('formats full amounts and signed deltas', () => {
@@ -57,5 +57,14 @@ describe('source details', () => {
     const t = { year: 2026, stateName: 'Colorado', stateSource: 'Tax Foundation 2026' } as main.TaxResult
     expect(taxDetail(t)).toBe('Tax year 2026 · federal (IRS) + Colorado (Tax Foundation 2026) · estimate')
     expect(taxDetail({ year: 2026, stateName: '', stateSource: '' } as main.TaxResult)).toBe('Tax year 2026 · federal (IRS), no state tax · estimate')
+  })
+})
+
+describe('baselineDetail', () => {
+  it('names the median, occupation, area and fallback level', () => {
+    const sources = { bls: { release: 'May 2025' } } as main.DataSources
+    const b = { occTitle: 'Software Developers', areaTitle: 'Denver-Aurora-Centennial, CO', level: 'area', median: 150000, baseDelta: 10000 } as main.MarketBaseline
+    expect(baselineDetail(b, sources)).toBe('BLS OEWS May 2025 · median pay $150,000 for Software Developers · Denver-Aurora-Centennial, CO · base salary only')
+    expect(baselineDetail({ ...b, level: 'national', areaTitle: 'U.S.' } as main.MarketBaseline, sources)).toContain('national figures')
   })
 })
