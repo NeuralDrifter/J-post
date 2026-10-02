@@ -70,6 +70,8 @@ export function ListRecentSearches():Promise<Array<main.SavedSearch>>;
 
 export function ListStageEvents(arg1:string):Promise<Array<main.StageEvent>>;
 
+export function ListVoices():Promise<Array<main.VoiceOption>>;
+
 export function MarkPostingSeen(arg1:string):Promise<void>;
 
 export function MarketSources():Promise<main.DataSources>;
@@ -125,3 +127,5 @@ export function UpdateJobNotes(arg1:string,arg2:string):Promise<void>;
 export function UpdateResumeText(arg1:string):Promise<void>;
 
 export function UploadResume():Promise<main.Profile>;
+
+export function VoicePreview(arg1:string):Promise<string>;

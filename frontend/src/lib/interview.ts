@@ -17,8 +17,6 @@ export const MOCK_PERSONAS: [string, string, string][] = [
   ['tough', 'Tough', 'Probes vague answers and pushes back'],
 ]
 
-export const MOCK_VOICES = ['Kore', 'Puck', 'Charon', 'Aoede']
-
 export const SCORE_DIMENSIONS: [keyof main.ScoreSet, string][] = [
   ['communication', 'Communication'],
   ['structure', 'Structure'],

@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router'
 import { Mic, TriangleAlert } from 'lucide-react'
 import { api } from '../../lib/api'
 import { GetProfile, GetSettings, PrepareInterview, type main } from '../../lib/backend'
-import { holdSession, MOCK_KINDS, MOCK_LENGTHS, MOCK_PERSONAS, MOCK_VOICES } from '../../lib/interview'
+import { holdSession, MOCK_KINDS, MOCK_LENGTHS, MOCK_PERSONAS } from '../../lib/interview'
 import { useLoad } from '../../lib/useLoad'
 import { Field } from '../JobForm'
 import { Modal } from '../Modal'
+import { VoicePicker } from './VoicePicker'
 
 export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: () => void }) {
   const navigate = useNavigate()
@@ -36,7 +37,7 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
   }
 
   return (
-    <Modal title={`Mock interview · ${job.company}`} onClose={onClose}>
+    <Modal title={`Mock interview · ${job.company}`} onClose={onClose} width="max-w-2xl">
       {noKey ? (
         <div className="space-y-4">
           <p className="text-sm text-ink-2">Mock interviews use Google Gemini. Add your Gemini API key in Settings → AI first.</p>
@@ -99,12 +100,8 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
                 ))}
               </div>
             </Field>
-            <Field label="Voice">
-              <select className="field" value={setup.voice} onChange={(e) => setSetup({ ...setup, voice: e.target.value })}>
-                {MOCK_VOICES.map((v) => (
-                  <option key={v}>{v}</option>
-                ))}
-              </select>
+            <Field label="Interviewer voice" wide>
+              <VoicePicker value={setup.voice} onChange={(voice) => setSetup({ ...setup, voice })} />
             </Field>
             <Field label="Focus (optional)" wide>
               <textarea

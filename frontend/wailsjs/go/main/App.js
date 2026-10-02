@@ -138,6 +138,10 @@ export function ListStageEvents(arg1) {
   return window['go']['main']['App']['ListStageEvents'](arg1);
 }
 
+export function ListVoices() {
+  return window['go']['main']['App']['ListVoices']();
+}
+
 export function MarkPostingSeen(arg1) {
   return window['go']['main']['App']['MarkPostingSeen'](arg1);
 }
@@ -248,4 +252,8 @@ export function UpdateResumeText(arg1) {
 
 export function UploadResume() {
   return window['go']['main']['App']['UploadResume']();
+}
+
+export function VoicePreview(arg1) {
+  return window['go']['main']['App']['VoicePreview'](arg1);
 }

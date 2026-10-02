@@ -100,7 +100,6 @@ var (
 		"tough":    "demanding: probe vague answers, ask pointed follow-ups and push back on weak reasoning",
 	}
 	interviewMinutes = map[int]bool{10: true, 25: true, 45: true}
-	interviewVoices  = map[string]bool{"Kore": true, "Puck": true, "Charon": true, "Aoede": true}
 )
 
 func validateInterviewSetup(s *InterviewSetup) error {

@@ -1088,6 +1088,20 @@ export namespace main {
 	}
 	
 	
+	export class VoiceOption {
+	    name: string;
+	    style: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VoiceOption(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.style = source["style"];
+	    }
+	}
 
 }
 

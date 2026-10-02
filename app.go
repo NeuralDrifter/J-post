@@ -787,3 +787,19 @@ func (a *App) DeleteMockInterview(id string) error {
 	}
 	return a.repo.DeleteMockInterview(id)
 }
+
+// ListVoices returns the prebuilt interviewer voices with their style.
+func (a *App) ListVoices() []VoiceOption { return interviewVoiceList }
+
+// VoicePreview returns a sample of a voice as a WAV data URL (generated once, then cached).
+func (a *App) VoicePreview(voice string) (string, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return "", err
+	}
+	wav, err := voicePreview(context.Background(), s, filepath.Join(a.dataDir, "voice-previews"), voice)
+	if err != nil {
+		return "", err
+	}
+	return "data:audio/wav;base64," + base64.StdEncoding.EncodeToString(wav), nil
+}
