@@ -12,9 +12,9 @@ import (
 
 func withGeminiServer(t *testing.T, h http.HandlerFunc) {
 	url := fakeServer(t, h)
-	old := geminiBaseURL
-	geminiBaseURL = url
-	t.Cleanup(func() { geminiBaseURL = old })
+	oldURL, oldDelays := geminiBaseURL, geminiRetryDelays
+	geminiBaseURL, geminiRetryDelays = url, []time.Duration{0, 0}
+	t.Cleanup(func() { geminiBaseURL, geminiRetryDelays = oldURL, oldDelays })
 }
 
 func TestGenerateJSON(t *testing.T) {
@@ -104,5 +104,40 @@ func TestCreateLiveToken(t *testing.T) {
 	}
 	if _, ok := setup["sessionResumption"]; !ok {
 		t.Fatal("the caller's setup must not be modified; the page still sends sessionResumption")
+	}
+}
+
+func TestGeminiRetriesBusyErrors(t *testing.T) {
+	calls := 0
+	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if calls < 3 {
+			http.Error(w, `{"error":{"message":"This model is currently experiencing high demand."}}`, http.StatusServiceUnavailable)
+			return
+		}
+		w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{\"ok\":true}"}]}}]}`))
+	})
+	var out struct{ OK bool }
+	if err := generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out); err != nil || !out.OK || calls != 3 {
+		t.Fatalf("calls=%d out=%+v err=%v", calls, out, err)
+	}
+
+	calls = 0
+	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		http.Error(w, "busy", http.StatusTooManyRequests)
+	})
+	if err := generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out); err == nil || calls != 3 {
+		t.Fatalf("should give up after 3 tries: calls=%d err=%v", calls, err)
+	}
+
+	calls = 0
+	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		http.Error(w, "bad key", http.StatusBadRequest)
+	})
+	generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out)
+	if calls != 1 {
+		t.Fatalf("other errors must not be retried: calls=%d", calls)
 	}
 }

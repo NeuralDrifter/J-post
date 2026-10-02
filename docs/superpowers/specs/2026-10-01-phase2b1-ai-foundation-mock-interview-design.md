@@ -35,7 +35,7 @@
 **Live endpoint** (a constant):
 `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=…`
 
-**Errors:** HTTP status plus a short body, never the key. A missing key gives "Add your Gemini API key in Settings".
+**Errors:** HTTP status plus a short body, never the key. 503 (high demand) and 429 (rate limit) are retried twice, after 2 s and 5 s. A missing key gives "Add your Gemini API key in Settings".
 
 ## 2. Resume (migration 6: `profile`)
 
@@ -45,7 +45,7 @@
 - **Text extraction:**
   - TXT/MD: read as-is.
   - DOCX: unzip `word/document.xml`; `<w:p>` becomes a newline, `<w:t>` is text.
-  - PDF: Gemini text model with an `inlineData` PDF, prompted to "Convert this resume to clean Markdown. Don't add anything." It returns `{markdown}` (structured).
+  - PDF: extracted **locally** (pure-Go `ledongthuc/pdf`): glyphs grouped into lines by baseline. Nothing is uploaded at this point. A PDF with no text layer (a scan) gives an error asking the user to paste the text instead.
 - **Review:** the user can view and edit `resume_text` in Settings (Save). Every AI feature uses `resume_text`.
 
 ## 3. Mock interview data (migration 6: `mock_interviews`)

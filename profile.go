@@ -6,7 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"sort"
 	"strings"
+
+	"github.com/ledongthuc/pdf"
 )
 
 // Profile holds the user's resume. Every AI feature reads ResumeText, which the
@@ -93,4 +97,70 @@ func docxXMLText(r io.Reader) (string, error) {
 		}
 	}
 	return strings.TrimSpace(b.String()), nil
+}
+
+// extractPDFText reads a PDF's text layer locally (nothing is uploaded),
+// rebuilding lines top-to-bottom from the positioned text runs.
+func extractPDFText(path string) (string, error) {
+	f, r, err := pdf.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("not a readable PDF: %v", err)
+	}
+	defer f.Close()
+	var lines []string
+	for i := 1; i <= r.NumPage(); i++ {
+		page := r.Page(i)
+		if page.V.IsNull() {
+			continue
+		}
+		lines = append(lines, pdfPageLines(page.Content().Text)...)
+		lines = append(lines, "") // blank line between pages
+	}
+	text := tidyText(strings.Join(lines, "\n"))
+	if len(text) < 20 {
+		return "", errors.New("this PDF has no readable text (it may be a scanned image). Copy the text from your resume and paste it into the Resume box instead")
+	}
+	return text, nil
+}
+
+// pdfPageLines groups positioned glyphs into lines by their baseline (top to
+// bottom), keeping reading order within a line. GetTextByRow isn't used because
+// it loses positions for some PDFs (e.g. standard fonts without width tables).
+func pdfPageLines(glyphs []pdf.Text) []string {
+	type row struct {
+		y      float64
+		glyphs []pdf.Text
+	}
+	var rows []*row
+	byY := map[int64]*row{}
+	for _, g := range glyphs {
+		key := int64(math.Round(g.Y))
+		r, ok := byY[key]
+		if !ok {
+			r = &row{y: g.Y}
+			byY[key] = r
+			rows = append(rows, r)
+		}
+		r.glyphs = append(r.glyphs, g)
+	}
+	sort.SliceStable(rows, func(a, b int) bool { return rows[a].y > rows[b].y })
+	var lines []string
+	for _, r := range rows {
+		sort.SliceStable(r.glyphs, func(a, b int) bool { return r.glyphs[a].X < r.glyphs[b].X })
+		var b strings.Builder
+		for i, g := range r.glyphs {
+			// Add a space where the layout leaves a word-sized gap without a space glyph.
+			if i > 0 {
+				prev := r.glyphs[i-1]
+				if prev.W > 0 && g.X-(prev.X+prev.W) > g.FontSize*0.2 && prev.S != " " && g.S != " " {
+					b.WriteByte(' ')
+				}
+			}
+			b.WriteString(g.S)
+		}
+		if line := strings.TrimSpace(innerSpaceRun.ReplaceAllString(b.String(), " ")); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
 }

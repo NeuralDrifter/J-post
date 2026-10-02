@@ -623,8 +623,6 @@ func (a *App) MarketSources() DataSources {
 
 // ---- AI: resume ----
 
-const maxResumeBytes = 15 << 20 // Gemini's inline file limit is ~20 MB
-
 func (a *App) GetProfile() (Profile, error) {
 	if err := a.ready(); err != nil {
 		return Profile{}, err
@@ -639,8 +637,8 @@ func (a *App) UpdateResumeText(text string) error {
 	return a.repo.UpdateResumeText(text)
 }
 
-// UploadResume picks a resume file, keeps a copy, and extracts its text
-// (PDFs are converted by Gemini). Returns nil if the dialog was cancelled.
+// UploadResume picks a resume file, keeps a copy, and extracts its text locally
+// (nothing is uploaded). Returns nil if the dialog was cancelled.
 func (a *App) UploadResume() (*Profile, error) {
 	if err := a.ready(); err != nil {
 		return nil, err
@@ -673,8 +671,8 @@ func (a *App) UploadResume() (*Profile, error) {
 			return nil, err
 		}
 	case ".pdf":
-		if text, err = a.resumeFromPDF(dest); err != nil {
-			return nil, fmt.Errorf("reading the PDF: %w", err)
+		if text, err = extractPDFText(dest); err != nil {
+			return nil, err
 		}
 	default:
 		return nil, errors.New("use a PDF, DOCX, TXT or Markdown file")
@@ -687,31 +685,6 @@ func (a *App) UploadResume() (*Profile, error) {
 	}
 	p, err := a.repo.GetProfile()
 	return &p, err
-}
-
-func (a *App) resumeFromPDF(path string) (string, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	if len(raw) > maxResumeBytes {
-		return "", errors.New("the PDF is larger than 15 MB")
-	}
-	s, err := a.settings.Load()
-	if err != nil {
-		return "", err
-	}
-	var out struct {
-		Markdown string `json:"markdown"`
-	}
-	schema := map[string]any{"type": "OBJECT", "properties": map[string]any{"markdown": map[string]any{"type": "STRING"}}, "required": []string{"markdown"}}
-	err = generateJSON(context.Background(), s.GeminiKey, s.GeminiTextModel,
-		"You convert resumes to clean Markdown. Keep every fact exactly; never add, infer or embellish anything.",
-		[]geminiPart{
-			{Text: "Convert this resume to clean Markdown (headings for sections, bullet lists for items). Return it in the markdown field."},
-			{InlineData: &geminiBlob{MimeType: "application/pdf", Data: base64.StdEncoding.EncodeToString(raw)}},
-		}, schema, &out)
-	return out.Markdown, err
 }
 
 // ---- AI: mock interviews ----

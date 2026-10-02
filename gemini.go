@@ -18,6 +18,8 @@ import (
 var (
 	geminiBaseURL = "https://generativelanguage.googleapis.com"
 	geminiTimeout = 120 * time.Second
+	// Waits before retrying "high demand" (503) and rate-limit (429) errors.
+	geminiRetryDelays = []time.Duration{2 * time.Second, 5 * time.Second}
 )
 
 // geminiLiveURL is where the frontend opens the voice session with an ephemeral token.
@@ -47,24 +49,39 @@ func geminiPost(ctx context.Context, key, path string, body any, out any) error 
 	if err != nil {
 		return err
 	}
+	for attempt := 0; ; attempt++ {
+		status, err := geminiPostOnce(ctx, key, path, payload, out)
+		busy := status == http.StatusServiceUnavailable || status == http.StatusTooManyRequests
+		if err == nil || !busy || attempt >= len(geminiRetryDelays) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(geminiRetryDelays[attempt]):
+		}
+	}
+}
+
+func geminiPostOnce(ctx context.Context, key, path string, payload []byte, out any) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, geminiTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, geminiBaseURL+path, bytes.NewReader(payload))
 	if err != nil {
-		return errors.New("could not build Gemini request")
+		return 0, errors.New("could not build Gemini request")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-goog-api-key", key)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return fmt.Errorf("Gemini timed out after %s", geminiTimeout)
+			return 0, fmt.Errorf("Gemini timed out after %s", geminiTimeout)
 		}
 		var uerr *url.Error
 		if errors.As(err, &uerr) {
 			err = uerr.Err
 		}
-		return fmt.Errorf("could not reach Gemini: %v", err)
+		return 0, fmt.Errorf("could not reach Gemini: %v", err)
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
@@ -78,12 +95,12 @@ func geminiPost(ctx context.Context, key, path string, body any, out any) error 
 		if json.Unmarshal(raw, &e) == nil && e.Error.Message != "" {
 			msg = e.Error.Message
 		}
-		return fmt.Errorf("Gemini error %d: %s", resp.StatusCode, truncate(strings.ReplaceAll(msg, key, "[key]"), 300))
+		return resp.StatusCode, fmt.Errorf("Gemini error %d: %s", resp.StatusCode, truncate(strings.ReplaceAll(msg, key, "[key]"), 300))
 	}
 	if err := json.Unmarshal(raw, out); err != nil {
-		return fmt.Errorf("unexpected Gemini response: %v", err)
+		return resp.StatusCode, fmt.Errorf("unexpected Gemini response: %v", err)
 	}
-	return nil
+	return resp.StatusCode, nil
 }
 
 // generateJSON asks a text model for JSON matching schema and decodes it into out.
