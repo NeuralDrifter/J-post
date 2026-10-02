@@ -220,6 +220,31 @@ var migrations = []string{
 	`UPDATE jobs SET status = 'interested' WHERE status = 'wishlist';
 	UPDATE stage_events SET to_status = 'interested' WHERE to_status = 'wishlist';
 	UPDATE stage_events SET from_status = 'interested' WHERE from_status = 'wishlist';`,
+	// 5: per-source call log (rate limits) and the local copy of The Muse slices.
+	`CREATE TABLE source_calls (
+		source TEXT PRIMARY KEY,
+		last_called_at TEXT NOT NULL
+	);
+	CREATE TABLE muse_slices (
+		slice_key TEXT PRIMARY KEY,
+		category TEXT NOT NULL,
+		location TEXT NOT NULL,
+		synced_at TEXT NOT NULL,
+		total INTEGER NOT NULL DEFAULT 0
+	);
+	CREATE TABLE muse_jobs (
+		muse_id INTEGER NOT NULL,
+		slice_key TEXT NOT NULL,
+		title TEXT NOT NULL,
+		company TEXT NOT NULL DEFAULT '',
+		locations TEXT NOT NULL DEFAULT '',
+		levels TEXT NOT NULL DEFAULT '',
+		publication_date TEXT NOT NULL DEFAULT '',
+		url TEXT NOT NULL DEFAULT '',
+		description TEXT NOT NULL DEFAULT '',
+		PRIMARY KEY (muse_id, slice_key)
+	);
+	CREATE INDEX idx_muse_jobs_slice ON muse_jobs(slice_key, publication_date);`,
 }
 
 func openDB(path string) (*sql.DB, error) {
