@@ -8,7 +8,7 @@ import { bytesToBase64 } from '../../lib/live/audio'
 import { answerStats, LONG_ANSWER_SECONDS, PACE_RANGE } from '../../lib/live/metrics'
 import type { Line } from '../../lib/live/reducer'
 import { InterviewSession, type SessionStatus } from '../../lib/live/session'
-import { clock, MOCK_KIND_LABEL, takeSession } from '../../lib/interview'
+import { clock, MOCK_KIND_LABEL, peekSession, releaseSession } from '../../lib/interview'
 import { readPref, writePref } from '../../lib/prefs'
 import { toast } from '../../lib/toast'
 
@@ -25,7 +25,7 @@ const STATUS_TEXT: Record<SessionStatus, string> = {
 export default function LiveInterviewPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const [live] = useState<main.LiveSession | undefined>(() => takeSession(id))
+  const [live] = useState<main.LiveSession | undefined>(() => peekSession(id))
   const sessionRef = useRef<InterviewSession | null>(null)
   const [started, setStarted] = useState(false)
   const [status, setStatus] = useState<SessionStatus>('connecting')
@@ -60,6 +60,7 @@ export default function LiveInterviewPage() {
     () => () => {
       const s = sessionRef.current
       if (s && !s.isEnded) {
+        releaseSession(id)
         void s.end().then(({ lines }) => SaveInterviewTranscript(id, toTranscript(lines)).catch(() => {}))
       }
     },
@@ -70,7 +71,7 @@ export default function LiveInterviewPage() {
     return (
       <div className="grid h-full place-items-center">
         <div className="glass max-w-md rounded-2xl p-6 text-center">
-          <p className="text-sm text-ink-2">This interview session has already ended or the page was reloaded.</p>
+          <p className="text-sm text-ink-2">This interview isn't running. It may have ended, or the app was restarted. Anything said so far is saved in the review.</p>
           <button className="btn btn-ghost mt-4" onClick={() => navigate(`/interviews/${id}`)}>
             Open the review
           </button>
@@ -112,6 +113,7 @@ export default function LiveInterviewPage() {
     setEnding(true)
     const { lines, recording } = await s.end()
     sessionRef.current = null
+    releaseSession(id)
     await apiOk(SaveInterviewTranscript(id, toTranscript(lines)))
     if (recording) {
       const bytes = new Uint8Array(await recording.arrayBuffer())

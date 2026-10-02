@@ -40,11 +40,9 @@ export function clock(ms: number): string {
 }
 
 // A prepared session is handed from the setup dialog to the live page in memory;
-// the token never goes into the URL or storage.
+// the token never goes into the URL or storage. Reading doesn't consume it (React
+// may run state setup twice in development); the page releases it when done.
 const pending = new Map<string, main.LiveSession>()
 export const holdSession = (s: main.LiveSession) => pending.set(s.sessionId, s)
-export const takeSession = (id: string) => {
-  const s = pending.get(id)
-  pending.delete(id)
-  return s
-}
+export const peekSession = (id: string) => pending.get(id)
+export const releaseSession = (id: string) => pending.delete(id)
