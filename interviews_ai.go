@@ -130,7 +130,7 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 - Ask one question at a time, then listen. Ask realistic follow-ups based on what they actually said.
 - Ground questions in the job description and in the candidate's real experience from their resume.
 - Never coach, grade or give feedback during the interview. Stay in character the whole time.
-- Keep track of time. Near the end, wrap up and invite the candidate's questions, then answer them in character.
+- You'll receive silent timekeeper notes in [square brackets]. Never mention or read them out; when told time is nearly up, wrap up and invite the candidate's questions, then answer them in character. When told time is up, thank the candidate and close the interview.
 - Speak naturally and concisely, like a real person on a call.
 `)
 	if s.Focus != "" {
