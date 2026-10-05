@@ -271,17 +271,24 @@ func moneyText(v float64) string {
 	return "$" + b.String()
 }
 
+// annualSalary is a posted pay range in whole dollars a year.
+type annualSalary struct {
+	min, max   *int64 // nil = not posted
+	annualized bool   // converted from an hourly, monthly, ... rate
+	text       string // the range as posted, e.g. "$22.50–$30/hr"
+}
+
 // normalizeSalary converts a posted range to annual integers. Missing or
 // non-positive amounts count as absent; unknown intervals are treated as yearly.
-func normalizeSalary(min, max *float64, interval string) (lo, hi *int64, annualized bool, text string) {
-	if min != nil && *min <= 0 {
-		min = nil
+func normalizeSalary(minAmount, maxAmount *float64, interval string) annualSalary {
+	if minAmount != nil && *minAmount <= 0 {
+		minAmount = nil
 	}
-	if max != nil && *max <= 0 {
-		max = nil
+	if maxAmount != nil && *maxAmount <= 0 {
+		maxAmount = nil
 	}
-	if min == nil && max == nil {
-		return nil, nil, false, ""
+	if minAmount == nil && maxAmount == nil {
+		return annualSalary{}
 	}
 	interval = strings.ToLower(strings.TrimSpace(interval))
 	factor, ok := intervalFactor[interval]
@@ -296,15 +303,16 @@ func normalizeSalary(min, max *float64, interval string) (lo, hi *int64, annuali
 		return &x
 	}
 	unit := "/" + intervalUnit[interval]
+	var text string
 	switch {
-	case min != nil && max != nil:
-		text = moneyText(*min) + "–" + moneyText(*max) + unit
-	case min != nil:
-		text = "From " + moneyText(*min) + unit
+	case minAmount != nil && maxAmount != nil:
+		text = moneyText(*minAmount) + "–" + moneyText(*maxAmount) + unit
+	case minAmount != nil:
+		text = "From " + moneyText(*minAmount) + unit
 	default:
-		text = "Up to " + moneyText(*max) + unit
+		text = "Up to " + moneyText(*maxAmount) + unit
 	}
-	return annualize(min), annualize(max), interval != "yearly", text
+	return annualSalary{min: annualize(minAmount), max: annualize(maxAmount), annualized: interval != "yearly", text: text}
 }
 
 func dedupeKey(company, title string) string {
@@ -325,7 +333,8 @@ func fromRaw(r rawJob, source string) DiscoverResult {
 	if r.IsRemote {
 		res.WorkMode = "remote"
 	}
-	res.SalaryMin, res.SalaryMax, res.Annualized, res.SalaryText = normalizeSalary(r.MinAmount, r.MaxAmount, r.Interval)
+	pay := normalizeSalary(r.MinAmount, r.MaxAmount, r.Interval)
+	res.SalaryMin, res.SalaryMax, res.Annualized, res.SalaryText = pay.min, pay.max, pay.annualized, pay.text
 	res.Key = dedupeKey(res.Company, res.Title)
 	return res
 }

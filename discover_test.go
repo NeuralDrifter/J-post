@@ -40,9 +40,9 @@ func TestNormalizeSalary(t *testing.T) {
 		{"cents", f64(22.5), f64(30), "hourly", 46800, 62400, true, "$22.50–$30/hr"},
 	}
 	for _, c := range cases {
-		lo, hi, ann, text := normalizeSalary(c.lo, c.hi, c.interval)
-		if i64val(lo) != c.wantLo || i64val(hi) != c.wantHi || ann != c.annualized || text != c.text {
-			t.Errorf("%s: got %d %d %v %q", c.name, i64val(lo), i64val(hi), ann, text)
+		pay := normalizeSalary(c.lo, c.hi, c.interval)
+		if i64val(pay.min) != c.wantLo || i64val(pay.max) != c.wantHi || pay.annualized != c.annualized || pay.text != c.text {
+			t.Errorf("%s: got %d %d %v %q", c.name, i64val(pay.min), i64val(pay.max), pay.annualized, pay.text)
 		}
 	}
 }
