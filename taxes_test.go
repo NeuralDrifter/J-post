@@ -128,3 +128,25 @@ func mustTaxData(t *testing.T) *TaxData {
 	}
 	return td
 }
+
+func TestHeadOfHouseholdUsesSingleStateSchedule(t *testing.T) {
+	head := mustTax(t, TaxInput{Wages: 120000, Filing: FilingHead, State: "CA"})
+	single := mustTax(t, TaxInput{Wages: 120000, Filing: FilingSingle, State: "CA"})
+	if head.State == 0 || head.State != single.State {
+		t.Fatalf("head state tax %d, single %d", head.State, single.State)
+	}
+	if head.Federal >= single.Federal {
+		t.Fatalf("head of household should still get the larger federal deduction: head %d, single %d", head.Federal, single.Federal)
+	}
+}
+
+func TestValidFilingStatus(t *testing.T) {
+	for _, s := range []string{FilingSingle, FilingMarried, FilingHead} {
+		if !validFilingStatus(s) {
+			t.Errorf("%q rejected", s)
+		}
+	}
+	if validFilingStatus("widowed") || validFilingStatus("") {
+		t.Error("unknown status accepted")
+	}
+}

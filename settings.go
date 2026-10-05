@@ -63,7 +63,7 @@ func applySettingsDefaults(s *Settings) {
 		s.FollowUpDays = defaultFollowUpDays
 	}
 	if s.FilingStatus == "" {
-		s.FilingStatus = "single"
+		s.FilingStatus = FilingSingle
 	}
 	if s.HomeAreaCode == "" {
 		s.HomeAreaCode = nationalArea
@@ -108,7 +108,7 @@ func (s *SettingsStore) Load() (Settings, error) {
 // half-written settings file. 0600 because it holds API keys.
 func (s *SettingsStore) Save(settings Settings) error {
 	applySettingsDefaults(&settings)
-	if settings.FilingStatus != "single" && settings.FilingStatus != "married" && settings.FilingStatus != "head" {
+	if !validFilingStatus(settings.FilingStatus) {
 		return errors.New("filing status must be single, married or head of household")
 	}
 	if settings.USAJobsKey != "" && !strings.Contains(settings.USAJobsEmail, "@") {

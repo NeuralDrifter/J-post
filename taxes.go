@@ -62,10 +62,31 @@ type TaxData struct {
 	States map[string]StateTax `json:"states"`
 }
 
+// Federal filing statuses. The tax data's federal tables are keyed by these.
+const (
+	FilingSingle  = "single"
+	FilingMarried = "married" // married filing jointly
+	FilingHead    = "head"    // head of household
+)
+
+func validFilingStatus(s string) bool {
+	return s == FilingSingle || s == FilingMarried || s == FilingHead
+}
+
+// stateSchedule picks the state table for a filing status. State tables cover
+// only single and married filers, so head of household uses the single schedule
+// (it still gets its own federal brackets and deduction).
+func stateSchedule(filing string) string {
+	if filing == FilingMarried {
+		return FilingMarried
+	}
+	return FilingSingle
+}
+
 type TaxInput struct {
 	Wages      int64   `json:"wages"`      // taxable wages (salary, bonus, signing, vested RSUs)
 	PreTax401k int64   `json:"preTax401k"` // employee contribution; lowers income tax, not FICA
-	Filing     string  `json:"filing"`     // single, married, head
+	Filing     string  `json:"filing"`     // a Filing* constant
 	State      string  `json:"state"`      // 2-letter code
 	LocalPct   float64 `json:"localPct"`   // flat local/city income tax, 0-100
 }
@@ -163,11 +184,7 @@ func ComputeTax(in TaxInput) (TaxResult, error) {
 	res.Medicare = roundDollars(medicare)
 
 	if st.Type != "none" {
-		// The state table covers single and married; head of household uses the single schedule.
-		status := in.Filing
-		if status != "married" {
-			status = "single"
-		}
+		status := stateSchedule(in.Filing)
 		taxable := math.Max(0, afterRetirement-float64(st.StandardDeduction[status])-float64(st.Exemption[status]))
 		res.State = roundDollars(math.Max(0, bracketTax(taxable, st.Brackets[status])-float64(st.Credit[status])))
 	}
