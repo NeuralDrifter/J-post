@@ -3,11 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -75,28 +72,13 @@ func museSliceKey(category, location string) string { return category + "|" + lo
 func fetchMusePage(ctx context.Context, category, location string, page int) (museResponse, int, error) {
 	var out museResponse
 	params := url.Values{"page": {strconv.Itoa(page)}, "category": {category}, "location": {location}}
-	ctx, cancel := context.WithTimeout(ctx, apiTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, museBaseURL+"?"+params.Encode(), nil)
+	header, err := getJSON(ctx, apiRequest{source: "The Muse", url: museBaseURL + "?" + params.Encode()}, &out)
 	if err != nil {
-		return out, 0, errors.New("could not build The Muse request")
-	}
-	req.Header.Set("User-Agent", apiUserAgent)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return out, 0, fmt.Errorf("could not reach The Muse: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return out, 0, errors.New(httpErrorMessage("The Muse", resp.StatusCode, body))
+		return out, 0, err
 	}
 	remaining := -1
-	if v, err := strconv.Atoi(resp.Header.Get("X-RateLimit-Remaining")); err == nil {
+	if v, err := strconv.Atoi(header.Get("X-RateLimit-Remaining")); err == nil {
 		remaining = v
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return out, remaining, fmt.Errorf("unexpected The Muse response: %v", err)
 	}
 	return out, remaining, nil
 }

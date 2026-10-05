@@ -7,9 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -230,43 +228,17 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 	if opts.HoursOld > 0 {
 		params.Set("max_days_old", strconv.Itoa((opts.HoursOld+23)/24))
 	}
-	ctx, cancel := context.WithTimeout(ctx, adzunaTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, adzunaBaseURL+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, errors.New("could not build Adzuna request")
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return nil, fmt.Errorf("timed out after %s", adzunaTimeout)
-		}
-		// *url.Error includes the request URL, which contains the app key.
-		var uerr *url.Error
-		if errors.As(err, &uerr) {
-			err = uerr.Err
-		}
-		return nil, fmt.Errorf("could not reach Adzuna: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return nil, errors.New(httpErrorMessage("Adzuna", resp.StatusCode, body))
-	}
 	var parsed adzunaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return nil, fmt.Errorf("unexpected Adzuna response: %v", err)
+	req := apiRequest{source: "Adzuna", url: adzunaBaseURL + "?" + params.Encode(), timeout: adzunaTimeout}
+	if _, err := getJSON(ctx, req, &parsed); err != nil {
+		return nil, err
 	}
 	out := make([]rawJob, 0, len(parsed.Results))
 	for _, it := range parsed.Results {
-		date := it.Created
-		if len(date) >= 10 {
-			date = date[:10]
-		}
 		out = append(out, rawJob{
 			Title: it.Title, Company: it.Company.DisplayName, Location: it.Location.DisplayName,
 			MinAmount: it.SalaryMin, MaxAmount: it.SalaryMax, Interval: "yearly",
-			Description: it.Description, DatePosted: date, URL: it.RedirectURL, Site: "adzuna",
+			Description: it.Description, DatePosted: firstN(it.Created, 10), URL: it.RedirectURL, Site: "adzuna",
 		})
 	}
 	return out, nil

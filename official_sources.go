@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,8 +17,6 @@ var (
 	usajobsBaseURL   = "https://data.usajobs.gov/api/search"
 	himalayasBaseURL = "https://himalayas.app/jobs/api/search"
 	jobicyBaseURL    = "https://jobicy.com/api/v2/remote-jobs"
-	apiTimeout       = 30 * time.Second
-	apiUserAgent     = "JobTrack/1.0 (personal job tracker)"
 )
 
 const (
@@ -29,41 +25,6 @@ const (
 	jobicyMaxCount    = 200
 	usajobsMaxDays    = 60
 )
-
-// getJSON performs a GET and decodes JSON, keeping URLs (which may hold keys) out of errors.
-func getJSON(ctx context.Context, source, rawURL string, headers map[string]string, out any) error {
-	ctx, cancel := context.WithTimeout(ctx, apiTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return fmt.Errorf("could not build %s request", source)
-	}
-	req.Header.Set("User-Agent", apiUserAgent)
-	req.Header.Set("Accept", "application/json")
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return fmt.Errorf("timed out after %s", apiTimeout)
-		}
-		var uerr *url.Error
-		if errors.As(err, &uerr) {
-			err = uerr.Err
-		}
-		return fmt.Errorf("could not reach %s: %v", source, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return errors.New(httpErrorMessage(source, resp.StatusCode, body))
-	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-		return fmt.Errorf("unexpected %s response: %v", source, err)
-	}
-	return nil
-}
 
 func floatPtr(v float64) *float64 {
 	if v <= 0 {
@@ -123,7 +84,7 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 	}
 	var resp usajobsResponse
 	headers := map[string]string{"Host": "data.usajobs.gov", "User-Agent": email, "Authorization-Key": key}
-	if err := getJSON(ctx, "USAJobs", usajobsBaseURL+"?"+params.Encode(), headers, &resp); err != nil {
+	if _, err := getJSON(ctx, apiRequest{source: "USAJobs", url: usajobsBaseURL + "?" + params.Encode(), headers: headers}, &resp); err != nil {
 		return nil, err
 	}
 	out := []rawJob{}
@@ -167,7 +128,7 @@ func himalayasSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([
 	for page := 1; page <= himalayasMaxPages && len(out) < want; page++ {
 		var resp himalayasResponse
 		params := url.Values{"q": {q.Term}, "page": {strconv.Itoa(page)}}
-		if err := getJSON(ctx, "Himalayas", himalayasBaseURL+"?"+params.Encode(), nil, &resp); err != nil {
+		if _, err := getJSON(ctx, apiRequest{source: "Himalayas", url: himalayasBaseURL + "?" + params.Encode()}, &resp); err != nil {
 			if len(out) > 0 {
 				break // keep what we already have
 			}
@@ -221,7 +182,7 @@ type jobicyResponse struct {
 func jobicySearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
 	params := url.Values{"count": {strconv.Itoa(min(max(opts.Results, 1), jobicyMaxCount))}, "tag": {q.Term}}
 	var resp jobicyResponse
-	if err := getJSON(ctx, "Jobicy", jobicyBaseURL+"?"+params.Encode(), nil, &resp); err != nil {
+	if _, err := getJSON(ctx, apiRequest{source: "Jobicy", url: jobicyBaseURL + "?" + params.Encode()}, &resp); err != nil {
 		return nil, err
 	}
 	out := []rawJob{}

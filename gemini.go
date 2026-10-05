@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -64,43 +62,37 @@ func geminiPost(ctx context.Context, key, path string, body any, out any) error 
 }
 
 func geminiPostOnce(ctx context.Context, key, path string, payload []byte, out any) (int, error) {
-	ctx, cancel := context.WithTimeout(ctx, geminiTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, geminiBaseURL+path, bytes.NewReader(payload))
+	resp, err := apiRequest{
+		source:  "Gemini",
+		method:  http.MethodPost,
+		url:     geminiBaseURL + path,
+		headers: map[string]string{"Content-Type": "application/json", "x-goog-api-key": key},
+		body:    payload,
+		timeout: geminiTimeout,
+	}.send(ctx)
 	if err != nil {
-		return 0, errors.New("could not build Gemini request")
+		return 0, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-goog-api-key", key)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return 0, fmt.Errorf("Gemini timed out after %s", geminiTimeout)
-		}
-		var uerr *url.Error
-		if errors.As(err, &uerr) {
-			err = uerr.Err
-		}
-		return 0, fmt.Errorf("could not reach Gemini: %v", err)
+	if resp.status != http.StatusOK {
+		return resp.status, fmt.Errorf("Gemini error %d: %s", resp.status, truncate(strings.ReplaceAll(geminiErrorText(resp.body), key, "[key]"), 300))
 	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
-	if resp.StatusCode != http.StatusOK {
-		var e struct {
-			Error struct {
-				Message string `json:"message"`
-			} `json:"error"`
-		}
-		msg := strings.TrimSpace(string(raw))
-		if json.Unmarshal(raw, &e) == nil && e.Error.Message != "" {
-			msg = e.Error.Message
-		}
-		return resp.StatusCode, fmt.Errorf("Gemini error %d: %s", resp.StatusCode, truncate(strings.ReplaceAll(msg, key, "[key]"), 300))
+	if err := json.Unmarshal(resp.body, out); err != nil {
+		return resp.status, fmt.Errorf("unexpected Gemini response: %v", err)
 	}
-	if err := json.Unmarshal(raw, out); err != nil {
-		return resp.StatusCode, fmt.Errorf("unexpected Gemini response: %v", err)
+	return resp.status, nil
+}
+
+// geminiErrorText prefers the API's error.message over the raw body.
+func geminiErrorText(body []byte) string {
+	var e struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
 	}
-	return resp.StatusCode, nil
+	if json.Unmarshal(body, &e) == nil && e.Error.Message != "" {
+		return e.Error.Message
+	}
+	return strings.TrimSpace(string(body))
 }
 
 // generateJSON asks a text model for JSON matching schema and decodes it into out.
