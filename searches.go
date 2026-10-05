@@ -58,7 +58,7 @@ type fetchOptions struct {
 func normalizeSources(sources []string) []string {
 	out := []string{}
 	for _, s := range sources {
-		if knownSources[s] && !contains(out, s) {
+		if isKnownSource(s) && !contains(out, s) {
 			out = append(out, s)
 		}
 	}
@@ -90,11 +90,8 @@ func perSourceCount(q SearchQuery, source string) int {
 	if !ok || n <= 0 {
 		n = defaultPerSource
 	}
-	n = max(minPerSource, min(n, maxPerSource))
-	if source == "adzuna" {
-		n = min(n, maxAdzunaResults)
-	}
-	return n
+	src, _ := findSource(source)
+	return max(minPerSource, min(n, src.resultCap()))
 }
 
 // hoursOld asks scrapers only for postings newer than the previous run (plus a day

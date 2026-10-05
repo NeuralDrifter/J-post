@@ -7,8 +7,8 @@ import {
   ClearDismissed,
   DeleteSearch,
   DismissPosting,
-  GetSettings,
   InboxCounts,
+  ListJobSources,
   ListPostings,
   ListRecentSearches,
   MarkPostingSeen,
@@ -18,14 +18,15 @@ import {
   type main,
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
-import { SOURCE_LABEL, timeAgo } from '../../lib/format'
+import { timeAgo } from '../../lib/format'
+import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
 import { readPref, writePref } from '../../lib/prefs'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { PostingList, type PostingActions } from './PostingList'
 import { PreviewPane } from './PreviewPane'
 import { RecentSearches } from './RecentSearches'
-import { ALL_SOURCES, SearchForm } from './SearchForm'
+import { SearchForm } from './SearchForm'
 
 type Tab = 'inbox' | 'saved' | 'dismissed'
 const TABS: { id: Tab; label: string }[] = [
@@ -34,14 +35,19 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'dismissed', label: 'Not interested' },
 ]
 
+const QUERY_PREF = 'discoverQuery'
+
+/** The last query, or an empty one (its boards are filled in once the list loads). */
 function loadQuery(): main.SearchQuery {
-  const fallback = { term: '', location: '', remoteOnly: false, sources: ['usajobs', 'himalayas', 'jobicy', 'themuse', 'indeed', 'linkedin', 'zip_recruiter'], perSource: {} }
+  const empty = { term: '', location: '', remoteOnly: false, sources: [], perSource: {} }
   try {
-    return { ...fallback, ...(JSON.parse(readPref('discoverQuery', '{}')) as Partial<main.SearchQuery>) }
+    return { ...empty, ...(JSON.parse(readPref(QUERY_PREF, '{}')) as Partial<main.SearchQuery>) }
   } catch {
-    return fallback
+    return empty
   }
 }
+
+const hasSavedQuery = () => readPref(QUERY_PREF, '') !== ''
 
 // The last search outcome survives navigating away and back.
 let lastRun: main.SearchRun | undefined
@@ -49,12 +55,9 @@ let lastRun: main.SearchRun | undefined
 const isWide = () => window.innerWidth >= 1100
 
 export default function DiscoverPage() {
-  const { data: settings } = useLoad(() => api(GetSettings()), [])
-  const unavailable: Record<string, string> = {}
-  if (settings && !(settings.adzunaAppId && settings.adzunaAppKey)) unavailable.adzuna = 'Add your Adzuna keys in Settings'
-  if (settings && !(settings.usajobsKey && settings.usajobsEmail)) unavailable.usajobs = 'Add your USAJobs key and email in Settings'
-  if (settings && !settings.museCategories?.length) unavailable.themuse = 'Pick The Muse categories in Settings'
+  const { data: sources } = useLoad(() => api(ListJobSources()), [])
   const [query, setQuery] = useState(loadQuery)
+  const [firstVisit] = useState(() => !hasSavedQuery())
   const [tab, setTab] = useState<Tab>('inbox')
   const [filter, setFilter] = useState({ query: '', source: '', onlyNew: false })
   const [run, setRun] = useState(lastRun)
@@ -71,16 +74,21 @@ export default function DiscoverPage() {
   const { data: recent } = useLoad(() => api(ListRecentSearches()), [])
 
   useEffect(() => {
-    writePref('discoverQuery', JSON.stringify(query))
-  }, [query])
+    if (sources && firstVisit) setQuery((q) => (q.sources.length ? q : { ...q, sources: defaultSourceIds(sources) }))
+  }, [sources, firstVisit])
+
+  // Not saved until the boards load, so a first visit doesn't store an empty board list.
+  useEffect(() => {
+    if (sources) writePref(QUERY_PREF, JSON.stringify(query))
+  }, [query, sources])
 
   const selected = useMemo(() => postings?.find((p) => p.id === selectedId), [postings, selectedId])
 
   const search = async (force: boolean, q: main.SearchQuery = query) => {
     setSearching(true)
     setShowErrors(true)
-    const sources = q.sources.filter((s) => !unavailable[s])
-    const r = await api(RunSearch({ ...q, sources }, force))
+    const ready = q.sources.filter((id) => sources?.some((s) => s.id === id && !s.unavailable))
+    const r = await api(RunSearch({ ...q, sources: ready }, force))
     setSearching(false)
     if (!r) return
     lastRun = r
@@ -156,7 +164,7 @@ export default function DiscoverPage() {
   return (
     <div className="flex h-full min-h-[520px] flex-col gap-3">
       <PageTitle title="Discover" subtitle="Every posting your searches find lands in one inbox. Deal with each once." />
-      <SearchForm query={query} onChange={setQuery} onSearch={search} searching={searching} unavailable={unavailable} />
+      <SearchForm query={query} onChange={setQuery} onSearch={search} searching={searching} sources={sources ?? []} />
       <RecentSearches searches={recent ?? []} onRun={runSaved} onRemove={removeSearch} />
 
       {run && (
@@ -173,7 +181,7 @@ export default function DiscoverPage() {
           <ul className="min-w-0 flex-1 space-y-0.5">
             {errors.map(([source, message]) => (
               <li key={source} className="break-words">
-                <strong>{SOURCE_LABEL[source] ?? source}</strong> failed: {message}
+                <strong>{sourceLabel(sources ?? [], source)}</strong> failed: {message}
               </li>
             ))}
           </ul>
@@ -215,9 +223,9 @@ export default function DiscoverPage() {
         </label>
         <select className="field w-auto py-1 text-xs" value={filter.source} onChange={(e) => setFilter({ ...filter, source: e.target.value })}>
           <option value="">Any source</option>
-          {ALL_SOURCES.map((s) => (
-            <option key={s} value={s}>
-              {SOURCE_LABEL[s]}
+          {(sources ?? []).map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
             </option>
           ))}
         </select>

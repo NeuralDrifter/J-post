@@ -57,9 +57,6 @@ func TestUSAJobsSearch(t *testing.T) {
 }
 
 func TestUSAJobsErrorsDoNotLeak(t *testing.T) {
-	if _, err := usajobsSearch(context.Background(), "", "", DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil {
-		t.Fatal("missing key should error")
-	}
 	url := fakeServer(t, func(w http.ResponseWriter, r *http.Request) { http.Error(w, "unauthorized", http.StatusUnauthorized) })
 	old := usajobsBaseURL
 	usajobsBaseURL = url

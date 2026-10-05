@@ -60,6 +60,8 @@ export function ListContacts(arg1:string):Promise<Array<main.Contact>>;
 
 export function ListInterviews(arg1:string):Promise<Array<main.Interview>>;
 
+export function ListJobSources():Promise<Array<main.JobSource>>;
+
 export function ListJobSummaries():Promise<Array<main.JobSummary>>;
 
 export function ListMockInterviews(arg1:string):Promise<Array<main.MockInterview>>;

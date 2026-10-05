@@ -159,9 +159,6 @@ func (r *Repo) syncMuseSlice(ctx context.Context, category, location string) (in
 // museSearch syncs the needed slices, then keyword-searches the local copy:
 // every word must appear in the title, company or description.
 func (r *Repo) museSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions, categories []string) ([]rawJob, error) {
-	if len(categories) == 0 {
-		return nil, errors.New("pick The Muse categories in Settings first")
-	}
 	location := museLocation(q)
 	keys := []string{}
 	found := 0

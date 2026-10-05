@@ -118,6 +118,10 @@ export function ListInterviews(arg1) {
   return window['go']['main']['App']['ListInterviews'](arg1);
 }
 
+export function ListJobSources() {
+  return window['go']['main']['App']['ListJobSources']();
+}
+
 export function ListJobSummaries() {
   return window['go']['main']['App']['ListJobSummaries']();
 }

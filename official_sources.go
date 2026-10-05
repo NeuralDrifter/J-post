@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -69,9 +68,6 @@ type usajobsResponse struct {
 }
 
 func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-	if key == "" || email == "" {
-		return nil, errors.New("USAJobs needs an API key and your registered email (add them in Settings)")
-	}
 	params := url.Values{"Keyword": {q.Term}, "ResultsPerPage": {strconv.Itoa(max(opts.Results, 1))}}
 	if q.Location != "" {
 		params.Set("LocationName", q.Location)

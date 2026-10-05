@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -276,14 +275,6 @@ func (a *App) DeleteAttachment(id string) error {
 
 // ---- Discover ----
 
-func exeDir() string {
-	p, err := os.Executable()
-	if err != nil {
-		return ""
-	}
-	return filepath.Dir(p)
-}
-
 // RunSearch scrapes (or reuses recent results for) a search and files what it
 // finds into the Discover inbox.
 func (a *App) RunSearch(q SearchQuery, force bool) (SearchRun, error) {
@@ -294,35 +285,8 @@ func (a *App) RunSearch(q SearchQuery, force bool) (SearchRun, error) {
 	if err != nil {
 		return SearchRun{}, err
 	}
-	cwd, _ := os.Getwd()
-	fetch := func(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-		switch source {
-		case "adzuna":
-			return adzunaSearch(ctx, settings.AdzunaAppID, settings.AdzunaAppKey, q, opts)
-		case "usajobs":
-			return usajobsSearch(ctx, settings.USAJobsKey, settings.USAJobsEmail, q, opts)
-		case "himalayas":
-			return himalayasSearch(ctx, q, opts)
-		case "jobicy":
-			// Jobicy asks for at most one call per hour across everything we do.
-			next, ok, err := a.repo.takeSourceSlot("jobicy", time.Hour)
-			if err != nil {
-				return nil, err
-			}
-			if !ok {
-				return nil, fmt.Errorf("skipped: Jobicy allows one request an hour; next after %s", next.Format("3:04 PM"))
-			}
-			return jobicySearch(ctx, q, opts)
-		case "themuse":
-			return a.repo.museSearch(ctx, q, opts, settings.MuseCategories)
-		}
-		python, err := resolvePython(settings.PythonPath, exeDir(), cwd)
-		if err != nil {
-			return nil, err
-		}
-		return runJobSpy(ctx, python, source, q, opts)
-	}
-	return RunSearch(context.Background(), a.repo, q, force, settings, fetch)
+	fetcher := sourceFetcher{settings: settings, repo: a.repo}
+	return RunSearch(context.Background(), a.repo, q, force, settings, fetcher.fetch)
 }
 
 func (a *App) ListPostings(f PostingFilter) ([]Posting, error) {
@@ -374,6 +338,15 @@ func (a *App) ClearDismissed(olderThanDays int) (int, error) {
 	return a.repo.ClearDismissed(olderThanDays)
 }
 
+// ListJobSources returns every job board, with why each can't be searched yet.
+func (a *App) ListJobSources() ([]JobSource, error) {
+	settings, err := a.settings.Load()
+	if err != nil {
+		return nil, err
+	}
+	return ListJobSources(settings), nil
+}
+
 func (a *App) ListRecentSearches() ([]SavedSearch, error) {
 	if err := a.ready(); err != nil {
 		return nil, err
@@ -407,8 +380,7 @@ func (a *App) SaveSettings(s Settings) error {
 
 // TestPython reports which Python will be used and whether it can import JobSpy.
 func (a *App) TestPython(path string) (string, error) {
-	cwd, _ := os.Getwd()
-	python, err := resolvePython(strings.TrimSpace(path), exeDir(), cwd)
+	python, err := findPython(path)
 	if err != nil {
 		return "", err
 	}

@@ -97,9 +97,6 @@ func TestMuseEmptySlice(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "Denver") {
 		t.Fatalf("err = %v", err)
 	}
-	if _, err := r.museSearch(context.Background(), DiscoverQuery{Term: "go"}, fetchOptions{}, nil); err == nil || !strings.Contains(err.Error(), "Settings") {
-		t.Fatalf("no categories err = %v", err)
-	}
 }
 
 func TestMuseLocation(t *testing.T) {

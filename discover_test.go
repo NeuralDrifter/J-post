@@ -179,9 +179,6 @@ func TestAdzunaSearchMapsFields(t *testing.T) {
 }
 
 func TestAdzunaErrorDoesNotLeakKey(t *testing.T) {
-	if _, err := adzunaSearch(context.Background(), "", "", DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil {
-		t.Fatal("missing keys should error")
-	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "bad credentials", http.StatusUnauthorized)
 	}))

@@ -527,6 +527,30 @@ export namespace main {
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}
+	export class JobSource {
+	    id: string;
+	    label: string;
+	    kind: string;
+	    maxResults: number;
+	    note: string;
+	    defaultOn: boolean;
+	    unavailable: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new JobSource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.kind = source["kind"];
+	        this.maxResults = source["maxResults"];
+	        this.note = source["note"];
+	        this.defaultOn = source["defaultOn"];
+	        this.unavailable = source["unavailable"];
+	    }
+	}
 	export class JobSummary {
 	    job: Job;
 	    stageSince: string;

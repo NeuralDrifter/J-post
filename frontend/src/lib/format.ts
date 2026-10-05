@@ -30,18 +30,6 @@ export const CLOSE_REASON_LABEL: Record<string, string> = {
 
 export const WORK_MODE_LABEL: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }
 
-export const SOURCE_LABEL: Record<string, string> = {
-  linkedin: 'LinkedIn',
-  indeed: 'Indeed',
-  zip_recruiter: 'ZipRecruiter',
-  adzuna: 'Adzuna',
-  usajobs: 'USAJobs',
-  himalayas: 'Himalayas',
-  jobicy: 'Jobicy',
-  themuse: 'The Muse',
-  manual: 'Manual',
-}
-
 export const INTERVIEW_KINDS = ['phone_screen', 'technical', 'behavioral', 'onsite', 'panel', 'other'] as const
 
 export const INTERVIEW_KIND_LABEL: Record<string, string> = {

@@ -27,12 +27,6 @@ var (
 	adzunaBaseURL   = "https://api.adzuna.com/v1/api/jobs/us/search/1"
 )
 
-// knownSources are the values DiscoverQuery.Sources may contain.
-var knownSources = map[string]bool{
-	"indeed": true, "linkedin": true, "zip_recruiter": true, // scraped via JobSpy
-	"adzuna": true, "usajobs": true, "himalayas": true, "jobicy": true, "themuse": true, // official APIs
-}
-
 type DiscoverQuery struct {
 	Term       string   `json:"term"`
 	Location   string   `json:"location"`
@@ -97,6 +91,21 @@ func resolvePython(override, exeDir, cwd string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("Python with JobSpy not found (checked %s). Set the Python path in Settings", strings.Join(candidates, ", "))
+}
+
+// findPython locates the Python that has JobSpy: the Settings override, else a
+// venv next to the app or in the working directory.
+func findPython(override string) (string, error) {
+	cwd, _ := os.Getwd() // "" just drops that candidate's directory
+	return resolvePython(strings.TrimSpace(override), exeDir(), cwd)
+}
+
+func exeDir() string {
+	p, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	return filepath.Dir(p)
 }
 
 var errUnreadableOutput = errors.New("unreadable scraper output")
@@ -210,9 +219,6 @@ type adzunaResponse struct {
 }
 
 func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-	if appID == "" || appKey == "" {
-		return nil, errors.New("Adzuna keys are not set (add them in Settings)")
-	}
 	what := q.Term
 	if q.RemoteOnly {
 		what += " remote"
@@ -391,7 +397,7 @@ func markTracked(results []DiscoverResult, jobs []Job) {
 func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked []Job, optsFor func(source string) fetchOptions) DiscoverResponse {
 	var sources []string
 	for _, s := range q.Sources {
-		if knownSources[s] && !contains(sources, s) {
+		if isKnownSource(s) && !contains(sources, s) {
 			sources = append(sources, s)
 		}
 	}
