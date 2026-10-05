@@ -48,10 +48,15 @@ export function base64ToBytes(b64: string): Uint8Array {
   return out
 }
 
-/** Microphone frames (any rate) → base64 PCM16 at 16 kHz. */
-export function encodeMicChunk(frames: Float32Array, inRate: number): string {
+/** Audio as the Live API's realtimeInput expects it. */
+export type AudioChunk = { data: string; mimeType: string }
+
+export const INPUT_MIME = `audio/pcm;rate=${INPUT_RATE}`
+
+/** Microphone frames (any rate) → base64 PCM16 at INPUT_RATE, labelled with that format. */
+export function encodeMicChunk(frames: Float32Array, inRate: number): AudioChunk {
   const pcm = floatToPCM16(downsample(frames, inRate, INPUT_RATE))
-  return bytesToBase64(new Uint8Array(pcm.buffer))
+  return { data: bytesToBase64(new Uint8Array(pcm.buffer)), mimeType: INPUT_MIME }
 }
 
 /** Interviewer audio (base64 PCM16 little-endian) → Float32 samples. */

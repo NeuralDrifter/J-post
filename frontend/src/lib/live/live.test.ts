@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { base64ToBytes, bytesToBase64, downsample, floatToPCM16, micLevel, pcm16ToFloat } from './audio'
+import { base64ToBytes, bytesToBase64, downsample, encodeMicChunk, floatToPCM16, INPUT_RATE, micLevel, pcm16ToFloat } from './audio'
 import { chooseDevice } from './devices'
 import { answerStats, countFillers, wordCount } from './metrics'
 import { applyServerMessage, initialLiveState, type LiveState } from './reducer'
@@ -127,5 +127,13 @@ describe('chooseDevice', () => {
   it('falls back to the system default when the remembered one is gone', () => {
     expect(chooseDevice(devices, 'unplugged')).toBe('default')
     expect(chooseDevice([], 'abc')).toBe('')
+  })
+})
+
+describe('encodeMicChunk', () => {
+  it('labels the chunk with the rate it was resampled to', () => {
+    const chunk = encodeMicChunk(new Float32Array(4800), 48000)
+    expect(chunk.mimeType).toBe(`audio/pcm;rate=${INPUT_RATE}`)
+    expect(base64ToBytes(chunk.data).length).toBe(1600 * 2) // 100 ms at 16 kHz, 2 bytes per sample
   })
 })
