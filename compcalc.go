@@ -75,9 +75,9 @@ func pct(v float64) float64 { return v / 100 }
 // equityValue is the full 4-year grant value at a multiple of today's share value.
 func equityValue(p CompPackage, multiplier float64) float64 {
 	switch p.EquityType {
-	case "rsu":
+	case EquityRSU:
 		return float64(p.RSUGrantValue) * multiplier
-	case "options":
+	case EquityOptions:
 		return math.Max(0, p.ShareValue*multiplier-p.OptionStrike) * float64(p.OptionShares)
 	}
 	return 0
@@ -105,7 +105,7 @@ func Evaluate(p CompPackage, s Settings, md *MarketData, current *CompPackage) (
 
 	if md != nil {
 		addMarketFigures(&res, p, s.HomeAreaCode, md)
-		if current == nil && p.Kind != "current" {
+		if current == nil && p.Kind != PackageCurrent {
 			res.MarketBaseline = marketBaseline(p, s, md)
 		}
 	}
@@ -141,7 +141,7 @@ func yearBreakdowns(p CompPackage, filing string) ([compYears]YearBreakdown, Tax
 
 		// RSUs are taxed as wages when they vest; options are assumed unexercised.
 		yb.Taxable = yb.Base + yb.Bonus + yb.Signing
-		if p.EquityType == "rsu" {
+		if p.EquityType == EquityRSU {
 			yb.Taxable += yb.Equity
 		}
 		contrib := min(roundDollars(base*pct(p.K401ContribPct)), td.Federal.K401Limit)
@@ -161,7 +161,7 @@ func yearBreakdowns(p CompPackage, filing string) ([compYears]YearBreakdown, Tax
 // equityScenarios values the grant at several multiples of today's share value.
 func equityScenarios(p CompPackage) []Scenario {
 	out := []Scenario{}
-	if p.EquityType == "none" {
+	if p.EquityType == EquityNone {
 		return out
 	}
 	for _, m := range scenarioMultipliers {
@@ -219,7 +219,7 @@ func packageWarnings(p CompPackage) []string {
 	if p.SigningBonus > 0 && p.SigningClawbackMonths > 0 {
 		warnings = append(warnings, fmt.Sprintf("The signing bonus must be paid back if you leave within %d months.", p.SigningClawbackMonths))
 	}
-	if p.EquityType == "options" {
+	if p.EquityType == EquityOptions {
 		warnings = append(warnings, "Options are valued at today's spread and assumed unexercised, so they aren't taxed here.")
 	}
 	if p.TaxState == "" {

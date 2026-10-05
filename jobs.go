@@ -18,6 +18,9 @@ const (
 	StatusClosed       = "closed"
 )
 
+// SourceManual marks a job the user added by hand (not from a job board).
+const SourceManual = "manual"
+
 var validStatuses = map[string]bool{
 	StatusInterested: true, StatusApplied: true, StatusInterviewing: true, StatusOffer: true, StatusClosed: true,
 }
@@ -109,7 +112,7 @@ func validateJobFields(j *Job) error {
 		}
 	}
 	if j.Source == "" {
-		j.Source = "manual"
+		j.Source = SourceManual
 	}
 	return nil
 }

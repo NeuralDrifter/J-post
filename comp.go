@@ -8,12 +8,35 @@ import (
 	"strings"
 )
 
+// Package kinds.
+const (
+	PackageOffer    = "offer"
+	PackageEstimate = "estimate" // an expected offer
+	PackageCounter  = "counter"  // "what if they meet my counter"
+	PackageCurrent  = "current"  // the user's current job (baseline); at most one
+)
+
+// Equity types.
+const (
+	EquityNone    = "none"
+	EquityRSU     = "rsu"
+	EquityOptions = "options"
+)
+
+// Vesting schedules.
+const (
+	VestingStandard   = "standard"
+	VestingBackloaded = "backloaded"
+	VestingMonthly    = "monthly"
+	VestingCustom     = "custom"
+)
+
 // CompPackage is one compensation scenario: a real offer, an expected offer
 // (estimate), a counter-offer draft, or the user's current job (baseline).
 type CompPackage struct {
 	ID                    string  `json:"id"`
 	JobID                 string  `json:"jobId"`
-	Kind                  string  `json:"kind"` // offer, estimate, counter, current
+	Kind                  string  `json:"kind"` // a Package* constant
 	Label                 string  `json:"label"`
 	ParentID              string  `json:"parentId"`
 	BaseSalary            int64   `json:"baseSalary"`
@@ -21,12 +44,12 @@ type CompPackage struct {
 	SigningClawbackMonths int     `json:"signingClawbackMonths"`
 	TargetBonusPct        float64 `json:"targetBonusPct"`
 	AnnualRaisePct        float64 `json:"annualRaisePct"`
-	EquityType            string  `json:"equityType"` // none, rsu, options
+	EquityType            string  `json:"equityType"` // an Equity* constant
 	RSUGrantValue         int64   `json:"rsuGrantValue"`
 	OptionShares          int64   `json:"optionShares"`
 	OptionStrike          float64 `json:"optionStrike"`
 	ShareValue            float64 `json:"shareValue"`
-	Vesting               string  `json:"vesting"` // standard, backloaded, monthly, custom
+	Vesting               string  `json:"vesting"` // a Vesting* constant
 	VestingCustom         string  `json:"vestingCustom"`
 	K401MatchPct          float64 `json:"k401MatchPct"`
 	K401MatchCapPct       float64 `json:"k401MatchCapPct"`
@@ -179,19 +202,19 @@ func scanComp(s rowScanner) (CompPackage, error) {
 }
 
 var (
-	validKinds      = map[string]bool{"offer": true, "estimate": true, "counter": true, "current": true}
-	validEquity     = map[string]bool{"none": true, "rsu": true, "options": true}
-	validVesting    = map[string]bool{"standard": true, "backloaded": true, "monthly": true, "custom": true}
+	validKinds      = map[string]bool{PackageOffer: true, PackageEstimate: true, PackageCounter: true, PackageCurrent: true}
+	validEquity     = map[string]bool{EquityNone: true, EquityRSU: true, EquityOptions: true}
+	validVesting    = map[string]bool{VestingStandard: true, VestingBackloaded: true, VestingMonthly: true, VestingCustom: true}
 	vestingSchedule = map[string][compYears]float64{
-		"standard":   {25, 25, 25, 25},
-		"monthly":    {25, 25, 25, 25},
-		"backloaded": {5, 15, 40, 40},
+		VestingStandard:   {25, 25, 25, 25},
+		VestingMonthly:    {25, 25, 25, 25},
+		VestingBackloaded: {5, 15, 40, 40},
 	}
 )
 
 // vestingPercents returns the % of the grant vesting in each of years 1-4.
 func vestingPercents(p CompPackage) ([compYears]float64, error) {
-	if p.Vesting != "custom" {
+	if p.Vesting != VestingCustom {
 		s, ok := vestingSchedule[p.Vesting]
 		if !ok {
 			return s, fmt.Errorf("unknown vesting schedule %q", p.Vesting)
@@ -223,10 +246,10 @@ func ValidateCompPackage(p CompPackage) error {
 	if !validKinds[p.Kind] {
 		return fmt.Errorf("invalid package kind %q", p.Kind)
 	}
-	if p.Kind != "current" && p.JobID == "" {
+	if p.Kind != PackageCurrent && p.JobID == "" {
 		return errors.New("this package must belong to a job")
 	}
-	if p.Kind == "counter" && p.ParentID == "" {
+	if p.Kind == PackageCounter && p.ParentID == "" {
 		return errors.New("a counter must be based on an offer")
 	}
 	if !validEquity[p.EquityType] {
@@ -263,10 +286,10 @@ func ValidateCompPackage(p CompPackage) error {
 
 func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 	if p.EquityType == "" {
-		p.EquityType = "none"
+		p.EquityType = EquityNone
 	}
 	if p.Vesting == "" {
-		p.Vesting = "standard"
+		p.Vesting = VestingStandard
 	}
 	p.Label = strings.TrimSpace(p.Label)
 	if err := ValidateCompPackage(p); err != nil {
@@ -277,9 +300,9 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 			return p, err
 		}
 	}
-	if p.Kind == "current" {
+	if p.Kind == PackageCurrent {
 		var existing string
-		err := r.db.QueryRow(`SELECT id FROM comp_packages WHERE kind = 'current'`).Scan(&existing)
+		err := r.db.QueryRow(`SELECT id FROM comp_packages WHERE kind = ?`, PackageCurrent).Scan(&existing)
 		if err == nil && existing != p.ID {
 			return p, errors.New("you already have a current job baseline; edit that one instead")
 		}
@@ -312,7 +335,7 @@ func (r *Repo) GetCompPackage(id string) (CompPackage, error) {
 }
 
 func (r *Repo) listComp(where string, args ...any) ([]CompPackage, error) {
-	rows, err := r.db.Query(`SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = 'current' DESC, created_at, rowid`, args...)
+	rows, err := r.db.Query(`SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = ? DESC, created_at, rowid`, append(args, PackageCurrent)...)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +358,7 @@ func (r *Repo) ListCompPackagesForJob(jobID string) ([]CompPackage, error) {
 }
 
 func (r *Repo) CurrentCompPackage() (*CompPackage, error) {
-	list, err := r.listComp("WHERE kind = 'current'")
+	list, err := r.listComp("WHERE kind = ?", PackageCurrent)
 	if err != nil || len(list) == 0 {
 		return nil, err
 	}
@@ -352,7 +375,7 @@ func (r *Repo) DeleteCompPackage(id string) error {
 func withOfferTotals(summaries []JobSummary, packages []CompPackage, evaluate func(CompPackage) (PackageResult, error)) {
 	latestOffer := map[string]CompPackage{}
 	for _, p := range packages {
-		if p.Kind == "offer" {
+		if p.Kind == PackageOffer {
 			latestOffer[p.JobID] = p
 		}
 	}
@@ -374,11 +397,11 @@ func (r *Repo) DraftCounter(offerID string) (CompPackage, error) {
 	if err != nil {
 		return CompPackage{}, err
 	}
-	if src.Kind != "offer" && src.Kind != "estimate" {
+	if src.Kind != PackageOffer && src.Kind != PackageEstimate {
 		return CompPackage{}, errors.New("only offers and estimates can be countered")
 	}
 	c := src
-	c.ID, c.Kind, c.ParentID = "", "counter", src.ID
+	c.ID, c.Kind, c.ParentID = "", PackageCounter, src.ID
 	label := src.Label
 	if label == "" {
 		label = "Offer"
@@ -390,7 +413,7 @@ func (r *Repo) DraftCounter(offerID string) (CompPackage, error) {
 // NewEstimateForJob prefills (but doesn't save) an expected-offer package from a job's posted range.
 func NewEstimateForJob(j Job, occ, area, state string) CompPackage {
 	p := CompPackage{
-		JobID: j.ID, Kind: "estimate", Label: "Estimate", EquityType: "none", Vesting: "standard",
+		JobID: j.ID, Kind: PackageEstimate, Label: "Estimate", EquityType: EquityNone, Vesting: VestingStandard,
 		OccupationCode: occ, AreaCode: area, TaxState: state,
 	}
 	switch {

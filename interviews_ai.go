@@ -22,8 +22,14 @@ type InterviewSetup struct {
 	Focus           string `json:"focus"`
 }
 
+// Transcript speakers.
+const (
+	SpeakerInterviewer = "interviewer"
+	SpeakerCandidate   = "you"
+)
+
 type TranscriptLine struct {
-	Speaker string `json:"speaker"` // interviewer | you
+	Speaker string `json:"speaker"` // a Speaker* constant
 	Text    string `json:"text"`
 	AtMs    int64  `json:"atMs"`
 }
@@ -51,6 +57,14 @@ type Scorecard struct {
 	PracticeNext []string         `json:"practiceNext"`
 }
 
+// Mock interview statuses: live → scoring → done, or failed (kept so scoring can be retried).
+const (
+	MockLive    = "live"
+	MockScoring = "scoring"
+	MockDone    = "done"
+	MockFailed  = "failed"
+)
+
 type MockInterview struct {
 	ID              string           `json:"id"`
 	JobID           string           `json:"jobId"`
@@ -62,7 +76,7 @@ type MockInterview struct {
 	Voice           string           `json:"voice"`
 	InterviewerName string           `json:"interviewerName"`
 	Focus           string           `json:"focus"`
-	Status          string           `json:"status"` // live, scoring, done, failed
+	Status          string           `json:"status"` // a Mock* constant
 	StartedAt       string           `json:"startedAt"`
 	EndedAt         string           `json:"endedAt"`
 	Transcript      []TranscriptLine `json:"transcript"`
@@ -221,7 +235,7 @@ func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup) (MockIntervie
 	}
 	id := newID()
 	_, err := r.db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, voice, interviewer_name, focus, status, started_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'live', ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.InterviewerName, s.Focus, ts(r.now()))
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.InterviewerName, s.Focus, MockLive, ts(r.now()))
 	if err != nil {
 		return MockInterview{}, err
 	}
@@ -328,7 +342,7 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	}
 	token, err := createLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
-		_ = r.setInterviewStatus(mi.ID, "failed", nil, err.Error())
+		_ = r.setInterviewStatus(mi.ID, MockFailed, nil, err.Error())
 		return LiveSession{}, err
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
@@ -388,14 +402,14 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 		return mi, err
 	}
 	fail := func(err error) (MockInterview, error) {
-		_ = r.setInterviewStatus(id, "failed", nil, err.Error())
+		_ = r.setInterviewStatus(id, MockFailed, nil, err.Error())
 		m, _ := r.GetMockInterview(id)
 		return m, err
 	}
 	if len(mi.Transcript) == 0 {
 		return fail(errors.New("nothing was said, so there's nothing to score"))
 	}
-	if err := r.setInterviewStatus(id, "scoring", nil, ""); err != nil {
+	if err := r.setInterviewStatus(id, MockScoring, nil, ""); err != nil {
 		return mi, err
 	}
 	job, err := r.GetJob(mi.JobID)
@@ -406,7 +420,7 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 	var t strings.Builder
 	for _, l := range mi.Transcript {
 		who := "Interviewer"
-		if l.Speaker == "you" {
+		if l.Speaker == SpeakerCandidate {
 			who = "Candidate"
 		}
 		fmt.Fprintf(&t, "%s: %s\n", who, l.Text)
@@ -431,7 +445,7 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 	if card.Questions == nil {
 		card.Questions = []QuestionReview{}
 	}
-	if err := r.setInterviewStatus(id, "done", &card, ""); err != nil {
+	if err := r.setInterviewStatus(id, MockDone, &card, ""); err != nil {
 		return mi, err
 	}
 	return r.GetMockInterview(id)
