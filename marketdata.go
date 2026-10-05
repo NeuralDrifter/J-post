@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	_ "embed"
 	"encoding/json"
@@ -286,4 +287,20 @@ func (md *MarketData) GuessArea(location string) string {
 		return md.stateAreaCode(state)
 	}
 	return ""
+}
+
+// EstimateLocation picks the pay area and tax state for a job: the area its
+// location names, else the user's home area. Remote (national) jobs are taxed
+// in the user's home state. state is "" when no single state applies.
+func (md *MarketData) EstimateLocation(jobLocation, homeArea string) (area, state string) {
+	area = cmp.Or(md.GuessArea(jobLocation), homeArea)
+	stateArea := area
+	if area == nationalArea {
+		stateArea = homeArea
+	}
+	state = md.Areas[stateArea].State
+	if state == nationalArea {
+		state = ""
+	}
+	return area, state
 }

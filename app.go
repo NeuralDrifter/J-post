@@ -91,20 +91,14 @@ func (a *App) ListJobSummaries() ([]JobSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	offers := map[string]CompPackage{}
-	for _, p := range packages {
-		if p.Kind == "offer" {
-			offers[p.JobID] = p // latest offer per job wins
-		}
+	settings, err := a.settings.Load()
+	if err != nil {
+		return nil, err
 	}
-	for i := range summaries {
-		if p, ok := offers[summaries[i].Job.ID]; ok {
-			if res, err := a.evaluate(p, nil); err == nil {
-				total := res.Year1Total
-				summaries[i].OfferYear1Total = &total
-			}
-		}
-	}
+	md := a.market()
+	withOfferTotals(summaries, packages, func(p CompPackage) (PackageResult, error) {
+		return Evaluate(p, settings, md, nil)
+	})
 	return summaries, nil
 }
 
@@ -516,17 +510,7 @@ func (a *App) NewEstimate(jobID string) (CompPackage, error) {
 	}
 	area, state := "", ""
 	if md := a.market(); md != nil {
-		area = md.GuessArea(j.Location)
-		if area == "" {
-			area = s.HomeAreaCode
-		}
-		state = md.Areas[area].State
-		if area == "US" {
-			state = md.Areas[s.HomeAreaCode].State
-		}
-		if state == "US" {
-			state = ""
-		}
+		area, state = md.EstimateLocation(j.Location, s.HomeAreaCode)
 	}
 	return NewEstimateForJob(j, s.DefaultOccupation, area, state), nil
 }
@@ -581,12 +565,7 @@ func (a *App) DescribeOccupation(code string) Option {
 }
 
 func (a *App) MarketSources() DataSources {
-	ds := DataSources{Tax: SourceInfo{
-		Name:    "Income tax tables, tax year 2026",
-		Release: "2026",
-		URL:     "https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/",
-		Note:    "Federal: IRS Rev. Proc. 2025-32 and SSA. States: Tax Foundation 2026 table. Estimates only; credits and special rules are not modeled.",
-	}}
+	ds := DataSources{Tax: taxSource}
 	if md := a.market(); md != nil {
 		ds.BLS, ds.BEA, ds.Built = md.Sources["bls"], md.Sources["bea"], md.Built
 	}
@@ -630,27 +609,9 @@ func (a *App) UploadResume() (*Profile, error) {
 	if err := copyFile(path, dest); err != nil {
 		return nil, err
 	}
-	var text string
-	switch strings.ToLower(filepath.Ext(dest)) {
-	case ".txt", ".md":
-		raw, err := os.ReadFile(dest)
-		if err != nil {
-			return nil, err
-		}
-		text = string(raw)
-	case ".docx":
-		if text, err = extractDocxText(dest); err != nil {
-			return nil, err
-		}
-	case ".pdf":
-		if text, err = extractPDFText(dest); err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.New("use a PDF, DOCX, TXT or Markdown file")
-	}
-	if strings.TrimSpace(text) == "" {
-		return nil, errors.New("no text could be read from that file")
+	text, err := extractResumeText(dest)
+	if err != nil {
+		return nil, err
 	}
 	if err := a.repo.SaveResume(filepath.Base(dest), dest, text); err != nil {
 		return nil, err

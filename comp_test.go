@@ -197,3 +197,18 @@ func TestMigration2OnPhase1DB(t *testing.T) {
 		t.Fatalf("version = %d", v)
 	}
 }
+
+func TestWithOfferTotals(t *testing.T) {
+	summaries := []JobSummary{{Job: Job{ID: "a"}}, {Job: Job{ID: "b"}}}
+	packages := []CompPackage{
+		{JobID: "a", Kind: "offer", BaseSalary: 100},
+		{JobID: "a", Kind: "offer", BaseSalary: 200}, // the later offer wins
+		{JobID: "b", Kind: "estimate", BaseSalary: 300},
+	}
+	withOfferTotals(summaries, packages, func(p CompPackage) (PackageResult, error) {
+		return PackageResult{Year1Total: p.BaseSalary}, nil
+	})
+	if summaries[0].OfferYear1Total == nil || *summaries[0].OfferYear1Total != 200 || summaries[1].OfferYear1Total != nil {
+		t.Fatalf("summaries = %+v", summaries)
+	}
+}

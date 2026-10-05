@@ -83,6 +83,14 @@ type TaxResult struct {
 	Year           int     `json:"year"`
 }
 
+// taxSource credits the tax tables behind every take-home figure.
+var taxSource = SourceInfo{
+	Name:    "Income tax tables, tax year 2026",
+	Release: "2026",
+	URL:     "https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/",
+	Note:    "Federal: IRS Rev. Proc. 2025-32 and SSA. States: Tax Foundation 2026 table. Estimates only; credits and special rules are not modeled.",
+}
+
 var (
 	taxOnce sync.Once
 	taxData *TaxData

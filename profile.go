@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -38,6 +40,31 @@ func (r *Repo) SaveResume(fileName, storedPath, text string) error {
 func (r *Repo) UpdateResumeText(text string) error {
 	_, err := r.db.Exec(`UPDATE profile SET resume_text = ?, updated_at = ? WHERE id = 1`, strings.TrimSpace(text), ts(r.now()))
 	return err
+}
+
+// extractResumeText reads a resume's text locally (nothing is uploaded).
+func extractResumeText(path string) (string, error) {
+	var text string
+	var err error
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".txt", ".md":
+		var raw []byte
+		raw, err = os.ReadFile(path)
+		text = string(raw)
+	case ".docx":
+		text, err = extractDocxText(path)
+	case ".pdf":
+		text, err = extractPDFText(path)
+	default:
+		return "", errors.New("use a PDF, DOCX, TXT or Markdown file")
+	}
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(text) == "" {
+		return "", errors.New("no text could be read from that file")
+	}
+	return text, nil
 }
 
 // extractDocxText reads the paragraphs of a Word document (word/document.xml).

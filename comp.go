@@ -347,6 +347,27 @@ func (r *Repo) DeleteCompPackage(id string) error {
 	return expectOneRow(res, err, "package", id)
 }
 
+// withOfferTotals sets each summary's year-1 value from the job's latest offer
+// (packages are in creation order). Offers that can't be evaluated are skipped.
+func withOfferTotals(summaries []JobSummary, packages []CompPackage, evaluate func(CompPackage) (PackageResult, error)) {
+	latestOffer := map[string]CompPackage{}
+	for _, p := range packages {
+		if p.Kind == "offer" {
+			latestOffer[p.JobID] = p
+		}
+	}
+	for i := range summaries {
+		offer, ok := latestOffer[summaries[i].Job.ID]
+		if !ok {
+			continue
+		}
+		if res, err := evaluate(offer); err == nil {
+			total := res.Year1Total
+			summaries[i].OfferYear1Total = &total
+		}
+	}
+}
+
 // DraftCounter copies an offer (or estimate) as a "what if they meet my counter" package.
 func (r *Repo) DraftCounter(offerID string) (CompPackage, error) {
 	src, err := r.GetCompPackage(offerID)
