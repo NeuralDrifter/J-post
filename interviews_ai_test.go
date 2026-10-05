@@ -245,3 +245,10 @@ func TestUnreadableTranscriptIsReported(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestInterviewLengthErrorListsChoices(t *testing.T) {
+	s := InterviewSetup{Kind: "behavioral", Minutes: 7, Persona: "neutral"}
+	if err := validateInterviewSetup(&s); err == nil || !strings.Contains(err.Error(), "10, 25 or 45") {
+		t.Fatalf("err = %v", err)
+	}
+}

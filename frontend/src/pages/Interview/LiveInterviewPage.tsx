@@ -8,7 +8,8 @@ import { bytesToBase64 } from '../../lib/live/audio'
 import { answerStats, LONG_ANSWER_SECONDS, PACE_RANGE } from '../../lib/live/metrics'
 import type { Line } from '../../lib/live/reducer'
 import { InterviewSession, type SessionStatus } from '../../lib/live/session'
-import { clock, MOCK_KIND_LABEL, peekSession, releaseSession } from '../../lib/interview'
+import { clock, peekSession, releaseSession } from '../../lib/interview'
+import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { readPref, writePref } from '../../lib/prefs'
 import { DeviceCheck, type DeviceChoice } from './DeviceCheck'
 
@@ -25,6 +26,7 @@ const STATUS_TEXT: Record<SessionStatus, string> = {
 export default function LiveInterviewPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const options = useInterviewOptions()
   const [live] = useState<main.LiveSession | undefined>(() => peekSession(id))
   const sessionRef = useRef<InterviewSession | null>(null)
   const [started, setStarted] = useState(false)
@@ -147,7 +149,7 @@ export default function LiveInterviewPage() {
     <div className="flex h-full min-h-[520px] flex-col gap-4">
       <header className="glass flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[11px] text-ink-2">Mock interview · {MOCK_KIND_LABEL[live.kind]}</p>
+          <p className="font-mono text-[11px] text-ink-2">Mock interview · {kindLabel(options, live.kind)}</p>
           <p className="truncate text-sm font-semibold">
             {live.position} · {live.company}
             {started && <span className="font-normal text-ink-2"> · with {live.interviewerName}</span>}

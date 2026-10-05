@@ -9,12 +9,14 @@ import { api, apiOk } from '../../lib/api'
 import { DeleteMockInterview, ListMockInterviews, type main } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
-import { averageScore, MOCK_KIND_LABEL } from '../../lib/interview'
+import { averageScore } from '../../lib/interview'
+import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { openMenu } from '../../lib/menu'
 import { useLoad } from '../../lib/useLoad'
 
 export function MockInterviewsPanel({ job }: { job: main.Job }) {
   const navigate = useNavigate()
+  const options = useInterviewOptions()
   const { data: sessions } = useLoad(() => api(ListMockInterviews(job.id)), [job.id])
   const [setup, setSetup] = useState(false)
 
@@ -46,7 +48,7 @@ export function MockInterviewsPanel({ job }: { job: main.Job }) {
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm">
-                      {MOCK_KIND_LABEL[m.kind]}
+                      {kindLabel(options, m.kind)}
                       {m.interviewerName && <span className="text-ink-3"> · {m.interviewerName}</span>}
                     </span>
                     <span className="block font-mono text-[11px] text-ink-3">{formatDateTime(m.startedAt)}</span>

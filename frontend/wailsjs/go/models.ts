@@ -457,6 +457,71 @@ export namespace main {
 	        this.completed = source["completed"];
 	    }
 	}
+	export class InterviewKind {
+	    id: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewKind(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	    }
+	}
+	export class InterviewPersona {
+	    id: string;
+	    label: string;
+	    description: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewPersona(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.description = source["description"];
+	    }
+	}
+	export class InterviewOptions {
+	    kinds: InterviewKind[];
+	    personas: InterviewPersona[];
+	    minutes: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kinds = this.convertValues(source["kinds"], InterviewKind);
+	        this.personas = this.convertValues(source["personas"], InterviewPersona);
+	        this.minutes = source["minutes"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class InterviewSetup {
 	    kind: string;
 	    minutes: number;

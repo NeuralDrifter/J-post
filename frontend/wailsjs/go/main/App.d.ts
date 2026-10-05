@@ -58,6 +58,8 @@ export function ListComparisons():Promise<Array<main.ComparisonItem>>;
 
 export function ListContacts(arg1:string):Promise<Array<main.Contact>>;
 
+export function ListInterviewOptions():Promise<main.InterviewOptions>;
+
 export function ListInterviews(arg1:string):Promise<Array<main.Interview>>;
 
 export function ListJobSources():Promise<Array<main.JobSource>>;

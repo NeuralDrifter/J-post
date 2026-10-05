@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -104,37 +105,14 @@ type Nudge struct {
 	Kind  string `json:"kind"` // tip | good
 }
 
-var (
-	interviewKinds = map[string]string{
-		"phone_screen":   "phone screen",
-		"behavioral":     "behavioral",
-		"technical":      "technical (a verbal talk-through, no live coding)",
-		"hiring_manager": "hiring manager",
-		"final_round":    "final round",
-	}
-	interviewPersonas = map[string]string{
-		"friendly": "warm and encouraging, but still realistic",
-		"neutral":  "professional and neutral",
-		"tough":    "demanding: probe vague answers, ask pointed follow-ups and push back on weak reasoning",
-	}
-	interviewMinutes = map[int]bool{10: true, 25: true, 45: true}
-	interviewerRoles = map[string]string{
-		"phone_screen":   "a recruiter",
-		"behavioral":     "a team lead on the hiring team",
-		"technical":      "a senior engineer on the team",
-		"hiring_manager": "the hiring manager",
-		"final_round":    "a director",
-	}
-)
-
 func validateInterviewSetup(s *InterviewSetup) error {
-	if _, ok := interviewKinds[s.Kind]; !ok {
+	if _, ok := findInterviewKind(s.Kind); !ok {
 		return fmt.Errorf("unknown interview type %q", s.Kind)
 	}
-	if !interviewMinutes[s.Minutes] {
-		return errors.New("length must be 10, 25 or 45 minutes")
+	if !slices.Contains(interviewOptions.Minutes, s.Minutes) {
+		return fmt.Errorf("length must be %s minutes", minutesChoices())
 	}
-	if _, ok := interviewPersonas[s.Persona]; !ok {
+	if _, ok := findInterviewPersona(s.Persona); !ok {
 		return fmt.Errorf("unknown interviewer style %q", s.Persona)
 	}
 	if s.Voice == "" || s.Voice == "random" {
@@ -151,11 +129,13 @@ func validateInterviewSetup(s *InterviewSetup) error {
 	return nil
 }
 
-// buildInterviewBrief is the interviewer's system instruction.
+// buildInterviewBrief is the interviewer's system instruction. s must already be validated.
 func buildInterviewBrief(job Job, contacts []Contact, resume string, s InterviewSetup) string {
+	kind, _ := findInterviewKind(s.Kind)
+	persona, _ := findInterviewPersona(s.Persona)
 	var b strings.Builder
-	fmt.Fprintf(&b, "You are %s, %s at %s, conducting a %s interview for the %s role. ", s.InterviewerName, interviewerRoles[s.Kind], job.Company, interviewKinds[s.Kind], job.Position)
-	fmt.Fprintf(&b, "The interview lasts %d minutes. Be a %s interviewer: %s.\n\n", s.Minutes, s.Persona, interviewPersonas[s.Persona])
+	fmt.Fprintf(&b, "You are %s, %s at %s, conducting a %s interview for the %s role. ", s.InterviewerName, kind.interviewer, job.Company, kind.briefName, job.Position)
+	fmt.Fprintf(&b, "The interview lasts %d minutes. Be a %s interviewer: %s.\n\n", s.Minutes, s.Persona, persona.briefStyle)
 	b.WriteString(`How to run it:
 - Greet the candidate briefly and introduce yourself by name and role.
 - Ask one question at a time, then listen. Ask realistic follow-ups based on what they actually said.
@@ -422,6 +402,14 @@ var scorecardSchema = func() map[string]any {
 	}
 }()
 
+// kindBriefName falls back to the raw id for sessions saved under a retired kind.
+func kindBriefName(id string) string {
+	if k, ok := findInterviewKind(id); ok {
+		return k.briefName
+	}
+	return id
+}
+
 func clampScore(v int) int { return max(1, min(v, 5)) }
 
 // scoreInterview turns the transcript into a scorecard. Failures are recorded on
@@ -464,7 +452,7 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 		fmt.Fprintf(&t, "%s: %s\n", who, l.Text)
 	}
 	prompt := fmt.Sprintf("Role: %s at %s (%s interview, %s interviewer).\n\nJob description:\n%s\n\nCandidate's resume:\n%s\n\nTranscript:\n%s",
-		job.Position, job.Company, interviewKinds[mi.Kind], mi.Persona, orDefault(job.Description, "(not provided)"),
+		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, orDefault(job.Description, "(not provided)"),
 		orDefault(profile.ResumeText, "(not provided)"), t.String())
 	var card Scorecard
 	err = generateJSON(ctx, s.GeminiKey, s.GeminiTextModel,

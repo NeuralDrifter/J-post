@@ -722,6 +722,9 @@ func (a *App) DeleteMockInterview(id string) error {
 	return a.repo.DeleteMockInterview(id)
 }
 
+// ListInterviewOptions returns the interview types, interviewer styles and lengths.
+func (a *App) ListInterviewOptions() InterviewOptions { return interviewOptions }
+
 // ListVoices returns the prebuilt interviewer voices with their style.
 func (a *App) ListVoices() []VoiceOption { return interviewVoiceList }
 

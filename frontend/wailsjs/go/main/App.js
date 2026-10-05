@@ -114,6 +114,10 @@ export function ListContacts(arg1) {
   return window['go']['main']['App']['ListContacts'](arg1);
 }
 
+export function ListInterviewOptions() {
+  return window['go']['main']['App']['ListInterviewOptions']();
+}
+
 export function ListInterviews(arg1) {
   return window['go']['main']['App']['ListInterviews'](arg1);
 }
