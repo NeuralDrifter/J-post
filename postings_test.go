@@ -192,3 +192,19 @@ func TestClearDismissed(t *testing.T) {
 		t.Fatalf("left = %+v", left)
 	}
 }
+
+func TestSavePostingLeavesNoJobWhenPostingUpdateFails(t *testing.T) {
+	r := newTestRepo(t)
+	mustUpsert(t, r, result("Acme", "Go Dev", "https://acme.test/1", "indeed"))
+	p := mustList(t, r, PostingFilter{Tab: "inbox"})[0]
+	if _, err := r.db.Exec(`CREATE TRIGGER fail_save BEFORE UPDATE OF state ON postings
+		BEGIN SELECT RAISE(ABORT, 'simulated failure'); END`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.SavePosting(p.ID); err == nil {
+		t.Fatal("SavePosting should fail")
+	}
+	if jobs, _ := r.ListJobs(); len(jobs) != 0 {
+		t.Fatalf("orphaned job left behind: %+v", jobs)
+	}
+}

@@ -140,6 +140,20 @@ func insertStageEvent(ex execer, jobID, from, to, reason, at, note string) error
 }
 
 func (r *Repo) CreateJob(j Job) (Job, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return Job{}, err
+	}
+	defer tx.Rollback()
+	j, err = r.insertJob(tx, j)
+	if err != nil {
+		return Job{}, err
+	}
+	return j, tx.Commit()
+}
+
+// insertJob validates and inserts a new job with its first stage event, inside tx.
+func (r *Repo) insertJob(tx *sql.Tx, j Job) (Job, error) {
 	if j.Status == "" {
 		j.Status = StatusInterested
 	}
@@ -154,13 +168,7 @@ func (r *Repo) CreateJob(j Job) (Job, error) {
 	}
 	now := ts(r.now())
 	j.ID, j.CreatedAt, j.UpdatedAt = newID(), now, now
-
-	tx, err := r.db.Begin()
-	if err != nil {
-		return Job{}, err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(`INSERT INTO jobs (`+jobColumns+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := tx.Exec(`INSERT INTO jobs (`+jobColumns+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		j.ID, j.Company, j.Position, j.Status, j.CloseReason, j.Location, j.WorkMode,
 		nullInt(j.SalaryMin), nullInt(j.SalaryMax), j.SalaryText, j.URL, j.Source, j.Description,
 		j.DatePosted, j.DateApplied, j.FollowUpOn, j.Notes, j.CreatedAt, j.UpdatedAt)
@@ -170,7 +178,7 @@ func (r *Repo) CreateJob(j Job) (Job, error) {
 	if err := insertStageEvent(tx, j.ID, "", j.Status, j.CloseReason, now, ""); err != nil {
 		return Job{}, err
 	}
-	return j, tx.Commit()
+	return j, nil
 }
 
 func getJob(q querier, id string) (Job, error) {

@@ -260,7 +260,13 @@ func (r *Repo) SavePosting(id string) (Job, error) {
 	if len(p.Sources) > 0 {
 		source = p.Sources[0]
 	}
-	j, err := r.CreateJob(Job{
+	// One transaction, so a failed posting update can't leave an orphaned job.
+	tx, err := r.db.Begin()
+	if err != nil {
+		return Job{}, err
+	}
+	defer tx.Rollback()
+	j, err := r.insertJob(tx, Job{
 		Company: company, Position: p.Title, Status: StatusInterested, Location: p.Location, WorkMode: p.WorkMode,
 		SalaryMin: p.SalaryMin, SalaryMax: p.SalaryMax, SalaryText: p.SalaryText, URL: p.URL, Source: source,
 		Description: p.Description, DatePosted: p.DatePosted,
@@ -268,8 +274,10 @@ func (r *Repo) SavePosting(id string) (Job, error) {
 	if err != nil {
 		return Job{}, err
 	}
-	_, err = r.db.Exec(`UPDATE postings SET state = 'saved', job_id = ?, dismissed_at = '' WHERE id = ?`, j.ID, id)
-	return j, err
+	if _, err := tx.Exec(`UPDATE postings SET state = 'saved', job_id = ?, dismissed_at = '' WHERE id = ?`, j.ID, id); err != nil {
+		return Job{}, err
+	}
+	return j, tx.Commit()
 }
 
 // ClearDismissed deletes dismissed postings older than the given number of days.
