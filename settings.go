@@ -66,7 +66,7 @@ func applySettingsDefaults(s *Settings) {
 		s.FilingStatus = "single"
 	}
 	if s.HomeAreaCode == "" {
-		s.HomeAreaCode = "US"
+		s.HomeAreaCode = nationalArea
 	}
 	if s.MuseCategories == nil {
 		s.MuseCategories = []string{}

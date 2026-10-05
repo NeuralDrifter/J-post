@@ -182,7 +182,7 @@ var (
 	validKinds      = map[string]bool{"offer": true, "estimate": true, "counter": true, "current": true}
 	validEquity     = map[string]bool{"none": true, "rsu": true, "options": true}
 	validVesting    = map[string]bool{"standard": true, "backloaded": true, "monthly": true, "custom": true}
-	vestingSchedule = map[string][4]float64{
+	vestingSchedule = map[string][compYears]float64{
 		"standard":   {25, 25, 25, 25},
 		"monthly":    {25, 25, 25, 25},
 		"backloaded": {5, 15, 40, 40},
@@ -190,7 +190,7 @@ var (
 )
 
 // vestingPercents returns the % of the grant vesting in each of years 1-4.
-func vestingPercents(p CompPackage) ([4]float64, error) {
+func vestingPercents(p CompPackage) ([compYears]float64, error) {
 	if p.Vesting != "custom" {
 		s, ok := vestingSchedule[p.Vesting]
 		if !ok {
@@ -198,9 +198,9 @@ func vestingPercents(p CompPackage) ([4]float64, error) {
 		}
 		return s, nil
 	}
-	var out [4]float64
+	var out [compYears]float64
 	parts := strings.Split(p.VestingCustom, ",")
-	if len(parts) != 4 {
+	if len(parts) != compYears {
 		return out, errors.New("custom vesting needs four yearly percentages, e.g. 10,20,30,40")
 	}
 	sum := 0.0
