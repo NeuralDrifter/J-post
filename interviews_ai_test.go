@@ -82,7 +82,7 @@ func TestPrepareInterview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" || live.Company != "Acme" || live.Kind != "behavioral" {
+	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" || live.Company != "Acme" || live.Kind != "behavioral" || live.Cues != liveCues(25) {
 		t.Fatalf("live = %+v", live)
 	}
 	if sentSetup["model"] != "models/gemini-3.8-live" {
@@ -250,5 +250,21 @@ func TestInterviewLengthErrorListsChoices(t *testing.T) {
 	s := InterviewSetup{Kind: "behavioral", Minutes: 7, Persona: "neutral"}
 	if err := validateInterviewSetup(&s); err == nil || !strings.Contains(err.Error(), "10, 25 or 45") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestLiveCuesTiming(t *testing.T) {
+	short := liveCues(10)
+	if short.WrapUpAtMs != 8*60_000 || short.TimeUpAtMs != 10*60_000 || !strings.Contains(short.WrapUp, "about 2 minutes") {
+		t.Fatalf("10-minute cues = %+v", short)
+	}
+	long := liveCues(45)
+	if long.WrapUpAtMs != 41*60_000 || !strings.Contains(long.WrapUp, "about 4 minutes") {
+		t.Fatalf("45-minute cues = %+v", long)
+	}
+	for _, note := range []string{long.WrapUp, long.TimeUp} {
+		if !strings.HasPrefix(note, "[") || !strings.HasSuffix(note, "]") {
+			t.Errorf("timekeeper notes must be in square brackets, as the brief promises: %q", note)
+		}
 	}
 }

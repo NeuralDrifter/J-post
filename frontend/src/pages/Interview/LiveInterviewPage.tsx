@@ -90,7 +90,7 @@ export default function LiveInterviewPage() {
 
   const begin = async () => {
     const session = new InterviewSession(
-      { token: live.token, wsUrl: live.wsUrl, setup: live.setup, minutes: live.minutes, ...devices },
+      { token: live.token, wsUrl: live.wsUrl, setup: live.setup, cues: live.cues, ...devices },
       {
         onLines: setLines,
         onStatus: (s, d) => {

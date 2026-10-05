@@ -658,6 +658,26 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class LiveCues {
+	    start: string;
+	    wrapUp: string;
+	    wrapUpAtMs: number;
+	    timeUp: string;
+	    timeUpAtMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new LiveCues(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.start = source["start"];
+	        this.wrapUp = source["wrapUp"];
+	        this.wrapUpAtMs = source["wrapUpAtMs"];
+	        this.timeUp = source["timeUp"];
+	        this.timeUpAtMs = source["timeUpAtMs"];
+	    }
+	}
 	export class LiveSession {
 	    sessionId: string;
 	    token: string;
@@ -669,6 +689,7 @@ export namespace main {
 	    position: string;
 	    voice: string;
 	    interviewerName: string;
+	    cues: LiveCues;
 	
 	    static createFrom(source: any = {}) {
 	        return new LiveSession(source);
@@ -686,7 +707,26 @@ export namespace main {
 	        this.position = source["position"];
 	        this.voice = source["voice"];
 	        this.interviewerName = source["interviewerName"];
+	        this.cues = this.convertValues(source["cues"], LiveCues);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	
 	

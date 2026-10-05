@@ -1,5 +1,6 @@
 // Runs one voice interview against the Gemini Live API: microphone capture,
 // interviewer playback, recording, transcript, timekeeping and reconnection.
+import type { main } from '../backend'
 import { decodeModelAudio, encodeMicChunk, micLevel, OUTPUT_RATE } from './audio'
 import { routeOutput } from './devices'
 import { applyServerMessage, initialLiveState, type LiveEffect, type LiveState, type Line } from './reducer'
@@ -10,7 +11,8 @@ export type LiveConfig = {
   token: string
   wsUrl: string
   setup: Record<string, unknown>
-  minutes: number
+  /** What to tell the interviewer, and when (written by the backend next to the brief). */
+  cues: main.LiveCues
   micDeviceId?: string
   outputDeviceId?: string
 }
@@ -197,7 +199,7 @@ export class InterviewSession {
         this.cb.onStatus('live')
         if (!this.started) {
           this.started = true
-          this.sendText('(The candidate has joined the call. Begin the interview.)', true)
+          this.sendText(this.config.cues.start, true)
         }
         break
       case 'audio':
@@ -220,13 +222,11 @@ export class InterviewSession {
     this.ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete } }))
   }
 
-  /** The model has no clock, so the page whispers the time. */
   private scheduleTimekeeper() {
-    const total = this.config.minutes * 60_000
-    const warnBefore = (this.config.minutes <= 10 ? 2 : 4) * 60_000
+    const { wrapUp, wrapUpAtMs, timeUp, timeUpAtMs } = this.config.cues
     this.timers.push(
-      window.setTimeout(() => this.sendText(`[Timekeeper: about ${warnBefore / 60_000} minutes remain. Start wrapping up after the current answer.]`, false), total - warnBefore),
-      window.setTimeout(() => this.sendText('[Timekeeper: time is up. Thank the candidate and close the interview now.]', false), total),
+      window.setTimeout(() => this.sendText(wrapUp, false), wrapUpAtMs),
+      window.setTimeout(() => this.sendText(timeUp, false), timeUpAtMs),
     )
   }
 

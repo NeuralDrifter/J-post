@@ -98,6 +98,7 @@ type LiveSession struct {
 	Position        string         `json:"position"`
 	Voice           string         `json:"voice"`
 	InterviewerName string         `json:"interviewerName"`
+	Cues            LiveCues       `json:"cues"`
 }
 
 type Nudge struct {
@@ -165,19 +166,53 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 	return b.String()
 }
 
-// liveSetup is the Live API setup message (also locked into the session token).
-func liveSetup(model, voice, brief string) map[string]any {
+// liveVoiceSetup is the part of a Live API setup message every session shares:
+// the model, an audio-only reply in the given voice, and the system instruction.
+func liveVoiceSetup(model, voice, instruction string) map[string]any {
 	return map[string]any{
 		"model": "models/" + model,
 		"generationConfig": map[string]any{
 			"responseModalities": []string{"AUDIO"},
 			"speechConfig":       map[string]any{"voiceConfig": map[string]any{"prebuiltVoiceConfig": map[string]any{"voiceName": voice}}},
 		},
-		"systemInstruction":        map[string]any{"parts": []map[string]any{{"text": brief}}},
-		"inputAudioTranscription":  map[string]any{},
-		"outputAudioTranscription": map[string]any{},
-		"contextWindowCompression": map[string]any{"slidingWindow": map[string]any{}},
-		"sessionResumption":        map[string]any{},
+		"systemInstruction": map[string]any{"parts": []map[string]any{{"text": instruction}}},
+	}
+}
+
+// liveSetup is the interview's setup message (also locked into the session token):
+// the voice setup plus transcripts, long-session compression and resumption.
+func liveSetup(model, voice, brief string) map[string]any {
+	setup := liveVoiceSetup(model, voice, brief)
+	setup["inputAudioTranscription"] = map[string]any{}
+	setup["outputAudioTranscription"] = map[string]any{}
+	setup["contextWindowCompression"] = map[string]any{"slidingWindow": map[string]any{}}
+	setup["sessionResumption"] = map[string]any{}
+	return setup
+}
+
+// LiveCues are the notes the page sends the interviewer during a session. The
+// model has no clock, so the page "whispers" the time; the brief above tells the
+// model to treat [bracketed] notes as silent, so both halves of that protocol live here.
+type LiveCues struct {
+	Start      string `json:"start"` // sent once, when the first connection is ready
+	WrapUp     string `json:"wrapUp"`
+	WrapUpAtMs int64  `json:"wrapUpAtMs"` // since the session started
+	TimeUp     string `json:"timeUp"`
+	TimeUpAtMs int64  `json:"timeUpAtMs"`
+}
+
+func liveCues(minutes int) LiveCues {
+	warnMinutes := 4
+	if minutes <= 10 {
+		warnMinutes = 2
+	}
+	const msPerMinute = 60_000
+	return LiveCues{
+		Start:      "(The candidate has joined the call. Begin the interview.)",
+		WrapUp:     fmt.Sprintf("[Timekeeper: about %d minutes remain. Start wrapping up after the current answer.]", warnMinutes),
+		WrapUpAtMs: int64(minutes-warnMinutes) * msPerMinute,
+		TimeUp:     "[Timekeeper: time is up. Thank the candidate and close the interview now.]",
+		TimeUpAtMs: int64(minutes) * msPerMinute,
 	}
 }
 
@@ -356,7 +391,8 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 		return LiveSession{}, err
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
-		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName}, nil
+		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName,
+		Cues: liveCues(setup.Minutes)}, nil
 }
 
 var nudgeSchema = map[string]any{

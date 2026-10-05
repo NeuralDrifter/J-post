@@ -101,15 +101,8 @@ func liveVoiceSample(ctx context.Context, key, model, voice, text string) ([]byt
 		_ = conn.SetWriteDeadline(dl)
 	}
 
-	setup := map[string]any{"setup": map[string]any{
-		"model": "models/" + model,
-		"generationConfig": map[string]any{
-			"responseModalities": []string{"AUDIO"},
-			"speechConfig":       map[string]any{"voiceConfig": map[string]any{"prebuiltVoiceConfig": map[string]any{"voiceName": voice}}},
-		},
-		"systemInstruction": map[string]any{"parts": []map[string]any{{"text": "You are recording a voice sample for an interview app. " +
-			"When given a line, say exactly that line in a natural, friendly, professional interviewer tone. Say nothing else."}}},
-	}}
+	setup := map[string]any{"setup": liveVoiceSetup(model, voice, "You are recording a voice sample for an interview app. "+
+		"When given a line, say exactly that line in a natural, friendly, professional interviewer tone. Say nothing else.")}
 	if err := conn.WriteJSON(setup); err != nil {
 		return nil, fmt.Errorf("Gemini Live: %s", hide(err))
 	}
