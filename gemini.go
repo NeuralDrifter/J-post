@@ -95,17 +95,26 @@ func geminiErrorText(body []byte) string {
 	return strings.TrimSpace(string(body))
 }
 
-// generateJSON asks a text model for JSON matching schema and decodes it into out.
-func generateJSON(ctx context.Context, key, model, system string, parts []geminiPart, schema map[string]any, out any) error {
+// jsonPrompt asks a text model for structured (JSON) output.
+type jsonPrompt struct {
+	model  string
+	system string // optional system instruction
+	parts  []geminiPart
+	schema map[string]any // optional response schema
+}
+
+// generateJSON sends the prompt and decodes the model's JSON answer into out.
+func generateJSON(ctx context.Context, key string, p jsonPrompt, out any) error {
+	generationConfig := map[string]any{"responseMimeType": "application/json"}
+	if p.schema != nil {
+		generationConfig["responseSchema"] = p.schema
+	}
 	body := map[string]any{
-		"contents":         []any{map[string]any{"role": "user", "parts": parts}},
-		"generationConfig": map[string]any{"responseMimeType": "application/json"},
+		"contents":         []any{map[string]any{"role": "user", "parts": p.parts}},
+		"generationConfig": generationConfig,
 	}
-	if schema != nil {
-		body["generationConfig"].(map[string]any)["responseSchema"] = schema
-	}
-	if system != "" {
-		body["systemInstruction"] = map[string]any{"parts": []geminiPart{{Text: system}}}
+	if p.system != "" {
+		body["systemInstruction"] = map[string]any{"parts": []geminiPart{{Text: p.system}}}
 	}
 	var resp struct {
 		Candidates []struct {
@@ -120,7 +129,7 @@ func generateJSON(ctx context.Context, key, model, system string, parts []gemini
 			BlockReason string `json:"blockReason"`
 		} `json:"promptFeedback"`
 	}
-	if err := geminiPost(ctx, key, "/v1beta/models/"+url.PathEscape(model)+":generateContent", body, &resp); err != nil {
+	if err := geminiPost(ctx, key, "/v1beta/models/"+url.PathEscape(p.model)+":generateContent", body, &resp); err != nil {
 		return err
 	}
 	if len(resp.Candidates) == 0 {

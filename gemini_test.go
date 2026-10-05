@@ -35,9 +35,12 @@ func TestGenerateJSON(t *testing.T) {
 		w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{\"nudge\":\"Add a result\","},{"text":"\"kind\":\"tip\"}"}]}}]}`))
 	})
 	var out struct{ Nudge, Kind string }
-	err := generateJSON(context.Background(), "k3y", "gemini-3.8-flash", "be brief",
-		[]geminiPart{{Text: "hello"}, {InlineData: &geminiBlob{MimeType: "application/pdf", Data: "UERG"}}},
-		map[string]any{"type": "OBJECT"}, &out)
+	err := generateJSON(context.Background(), "k3y", jsonPrompt{
+		model:  "gemini-3.8-flash",
+		system: "be brief",
+		parts:  []geminiPart{{Text: "hello"}, {InlineData: &geminiBlob{MimeType: "application/pdf", Data: "UERG"}}},
+		schema: map[string]any{"type": "OBJECT"},
+	}, &out)
 	if err != nil || out.Nudge != "Add a result" || out.Kind != "tip" {
 		t.Fatalf("out=%+v err=%v", out, err)
 	}
@@ -45,26 +48,26 @@ func TestGenerateJSON(t *testing.T) {
 
 func TestGenerateJSONErrors(t *testing.T) {
 	var out map[string]any
-	if err := generateJSON(context.Background(), "", "m", "", nil, nil, &out); err == nil || !strings.Contains(err.Error(), "Settings") {
+	if err := generateJSON(context.Background(), "", jsonPrompt{model: "m"}, &out); err == nil || !strings.Contains(err.Error(), "Settings") {
 		t.Fatalf("missing key err = %v", err)
 	}
 	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":{"message":"API key not valid"}}`, http.StatusBadRequest)
 	})
-	err := generateJSON(context.Background(), "s3cretkey", "m", "", []geminiPart{{Text: "x"}}, nil, &out)
+	err := generateJSON(context.Background(), "s3cretkey", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out)
 	if err == nil || !strings.Contains(err.Error(), "400") || strings.Contains(err.Error(), "s3cretkey") {
 		t.Fatalf("err = %v", err)
 	}
 	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"not json"}]}}]}`))
 	})
-	if err := generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out); err == nil {
+	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err == nil {
 		t.Fatal("malformed model output should error")
 	}
 	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"candidates":[],"promptFeedback":{"blockReason":"SAFETY"}}`))
 	})
-	if err := generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out); err == nil || !strings.Contains(err.Error(), "SAFETY") {
+	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err == nil || !strings.Contains(err.Error(), "SAFETY") {
 		t.Fatalf("blocked err = %v", err)
 	}
 }
@@ -118,7 +121,7 @@ func TestGeminiRetriesBusyErrors(t *testing.T) {
 		w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{\"ok\":true}"}]}}]}`))
 	})
 	var out struct{ OK bool }
-	if err := generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out); err != nil || !out.OK || calls != 3 {
+	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err != nil || !out.OK || calls != 3 {
 		t.Fatalf("calls=%d out=%+v err=%v", calls, out, err)
 	}
 
@@ -127,7 +130,7 @@ func TestGeminiRetriesBusyErrors(t *testing.T) {
 		calls++
 		http.Error(w, "busy", http.StatusTooManyRequests)
 	})
-	if err := generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out); err == nil || calls != 3 {
+	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err == nil || calls != 3 {
 		t.Fatalf("should give up after 3 tries: calls=%d err=%v", calls, err)
 	}
 
@@ -136,7 +139,7 @@ func TestGeminiRetriesBusyErrors(t *testing.T) {
 		calls++
 		http.Error(w, "bad key", http.StatusBadRequest)
 	})
-	generateJSON(context.Background(), "k", "m", "", []geminiPart{{Text: "x"}}, nil, &out)
+	generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out)
 	if calls != 1 {
 		t.Fatalf("other errors must not be retried: calls=%d", calls)
 	}

@@ -404,12 +404,17 @@ var nudgeSchema = map[string]any{
 	"required": []string{"nudge", "kind"},
 }
 
+const nudgeInstruction = "You are a discreet interview coach. Give ONE short cue (max 12 words) about the candidate's last answer: " +
+	"either the single most useful improvement (kind: tip) or brief praise if it was strong (kind: good). No preamble."
+
 func nudgeAnswer(ctx context.Context, s Settings, question, answer string) (Nudge, error) {
 	var n Nudge
-	err := generateJSON(ctx, s.GeminiKey, s.GeminiTextModel,
-		"You are a discreet interview coach. Give ONE short cue (max 12 words) about the candidate's last answer: "+
-			"either the single most useful improvement (kind: tip) or brief praise if it was strong (kind: good). No preamble.",
-		[]geminiPart{{Text: "Interviewer asked: " + question + "\nCandidate answered: " + answer}}, nudgeSchema, &n)
+	err := generateJSON(ctx, s.GeminiKey, jsonPrompt{
+		model:  s.GeminiTextModel,
+		system: nudgeInstruction,
+		parts:  []geminiPart{{Text: "Interviewer asked: " + question + "\nCandidate answered: " + answer}},
+		schema: nudgeSchema,
+	}, &n)
 	return n, err
 }
 
@@ -445,6 +450,12 @@ func kindBriefName(id string) string {
 	}
 	return id
 }
+
+const scoringInstruction = "You are an expert interview coach reviewing a mock interview. Score each dimension 1-5 (5 = excellent): " +
+	"communication (clarity, concision), structure (STAR or similar), relevance (answers the question, fits the role), " +
+	"depth (specifics, metrics, ownership), confidence (decisive, composed). For every interviewer question give a short " +
+	"answer summary, what worked, what to improve and a stronger example answer written in the candidate's voice using " +
+	"only facts from their answers and resume. End with exactly three things to practice next. Be candid and specific."
 
 func clampScore(v int) int { return max(1, min(v, 5)) }
 
@@ -491,13 +502,12 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, orDefault(job.Description, "(not provided)"),
 		orDefault(profile.ResumeText, "(not provided)"), t.String())
 	var card Scorecard
-	err = generateJSON(ctx, s.GeminiKey, s.GeminiTextModel,
-		"You are an expert interview coach reviewing a mock interview. Score each dimension 1-5 (5 = excellent): "+
-			"communication (clarity, concision), structure (STAR or similar), relevance (answers the question, fits the role), "+
-			"depth (specifics, metrics, ownership), confidence (decisive, composed). For every interviewer question give a short "+
-			"answer summary, what worked, what to improve and a stronger example answer written in the candidate's voice using "+
-			"only facts from their answers and resume. End with exactly three things to practice next. Be candid and specific.",
-		[]geminiPart{{Text: prompt}}, scorecardSchema, &card)
+	err = generateJSON(ctx, s.GeminiKey, jsonPrompt{
+		model:  s.GeminiTextModel,
+		system: scoringInstruction,
+		parts:  []geminiPart{{Text: prompt}},
+		schema: scorecardSchema,
+	}, &card)
 	if err != nil {
 		return fail(err)
 	}
