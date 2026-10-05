@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -105,8 +106,7 @@ func (r *Repo) UpsertPostings(results []DiscoverResult, searchID string) (int, e
 	if err != nil {
 		return 0, err
 	}
-	tracked := results[:0:0]
-	tracked = append(tracked, results...)
+	tracked := slices.Clone(results) // markTracked edits in place; leave the caller's slice alone
 	markTracked(tracked, jobs)
 
 	now := ts(r.now())
