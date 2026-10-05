@@ -466,59 +466,85 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 	if err != nil {
 		return mi, err
 	}
-	fail := func(cause error) (MockInterview, error) {
-		if err := r.markFailed(id, cause); err != nil {
-			return mi, errors.Join(cause, err)
-		}
-		m, err := r.GetMockInterview(id)
-		if err != nil {
-			return mi, errors.Join(cause, err)
-		}
-		return m, cause
-	}
 	if len(mi.Transcript) == 0 {
-		return fail(errors.New("nothing was said, so there's nothing to score"))
+		return r.failScoring(mi, errors.New("nothing was said, so there's nothing to score"))
 	}
 	if err := r.markScoring(id); err != nil {
 		return mi, err
 	}
-	job, err := r.GetJob(mi.JobID)
+	card, err := requestScorecard(ctx, r, s, mi)
 	if err != nil {
-		return fail(err)
-	}
-	profile, err := r.GetProfile()
-	if err != nil {
-		return fail(err)
-	}
-	var t strings.Builder
-	for _, l := range mi.Transcript {
-		who := "Interviewer"
-		if l.Speaker == SpeakerCandidate {
-			who = "Candidate"
-		}
-		fmt.Fprintf(&t, "%s: %s\n", who, l.Text)
-	}
-	prompt := fmt.Sprintf("Role: %s at %s (%s interview, %s interviewer).\n\nJob description:\n%s\n\nCandidate's resume:\n%s\n\nTranscript:\n%s",
-		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, orDefault(job.Description, "(not provided)"),
-		orDefault(profile.ResumeText, "(not provided)"), t.String())
-	var card Scorecard
-	err = generateJSON(ctx, s.GeminiKey, jsonPrompt{
-		model:  s.GeminiTextModel,
-		system: scoringInstruction,
-		parts:  []geminiPart{{Text: prompt}},
-		schema: scorecardSchema,
-	}, &card)
-	if err != nil {
-		return fail(err)
-	}
-	o := &card.Overall
-	o.Communication, o.Structure, o.Relevance = clampScore(o.Communication), clampScore(o.Structure), clampScore(o.Relevance)
-	o.Depth, o.Confidence = clampScore(o.Depth), clampScore(o.Confidence)
-	if card.Questions == nil {
-		card.Questions = []QuestionReview{}
+		return r.failScoring(mi, err)
 	}
 	if err := r.markDone(id, card); err != nil {
 		return mi, err
 	}
 	return r.GetMockInterview(id)
+}
+
+// failScoring records why scoring failed and returns the updated session with the cause.
+func (r *Repo) failScoring(mi MockInterview, cause error) (MockInterview, error) {
+	if err := r.markFailed(mi.ID, cause); err != nil {
+		return mi, errors.Join(cause, err)
+	}
+	updated, err := r.GetMockInterview(mi.ID)
+	if err != nil {
+		return mi, errors.Join(cause, err)
+	}
+	return updated, cause
+}
+
+// requestScorecard asks the text model to review the session against the job and resume.
+func requestScorecard(ctx context.Context, r *Repo, s Settings, mi MockInterview) (Scorecard, error) {
+	var card Scorecard
+	job, err := r.GetJob(mi.JobID)
+	if err != nil {
+		return card, err
+	}
+	profile, err := r.GetProfile()
+	if err != nil {
+		return card, err
+	}
+	err = generateJSON(ctx, s.GeminiKey, jsonPrompt{
+		model:  s.GeminiTextModel,
+		system: scoringInstruction,
+		parts:  []geminiPart{{Text: scoringPrompt(job, mi, profile.ResumeText)}},
+		schema: scorecardSchema,
+	}, &card)
+	if err != nil {
+		return card, err
+	}
+	card.normalize()
+	return card, nil
+}
+
+func scoringPrompt(job Job, mi MockInterview, resume string) string {
+	return fmt.Sprintf("Role: %s at %s (%s interview, %s interviewer).\n\nJob description:\n%s\n\nCandidate's resume:\n%s\n\nTranscript:\n%s",
+		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, orDefault(job.Description, "(not provided)"),
+		orDefault(resume, "(not provided)"), transcriptText(mi.Transcript))
+}
+
+// transcriptText renders the transcript as "Interviewer: …" / "Candidate: …" lines.
+func transcriptText(lines []TranscriptLine) string {
+	var b strings.Builder
+	for _, l := range lines {
+		who := "Interviewer"
+		if l.Speaker == SpeakerCandidate {
+			who = "Candidate"
+		}
+		fmt.Fprintf(&b, "%s: %s\n", who, l.Text)
+	}
+	return b.String()
+}
+
+// normalize keeps model output inside the scorecard's contract: scores 1-5 and
+// a non-nil question list.
+func (c *Scorecard) normalize() {
+	o := &c.Overall
+	for _, score := range []*int{&o.Communication, &o.Structure, &o.Relevance, &o.Depth, &o.Confidence} {
+		*score = clampScore(*score)
+	}
+	if c.Questions == nil {
+		c.Questions = []QuestionReview{}
+	}
 }
