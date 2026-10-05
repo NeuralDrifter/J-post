@@ -21,3 +21,4 @@ export function answerStats(text: string, startMs: number, endMs: number): Answe
 
 export const PACE_RANGE = { slow: 110, fast: 170 } // comfortable interview pace in words per minute
 export const LONG_ANSWER_SECONDS = 150
+export const MANY_FILLERS = 4 // per answer; at or above this the meter warns
