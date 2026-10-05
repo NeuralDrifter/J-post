@@ -44,18 +44,125 @@ type CompPackage struct {
 	UpdatedAt             string  `json:"updatedAt"`
 }
 
-const compColumns = `id, job_id, kind, label, parent_id, base_salary, signing_bonus, signing_clawback_months,
-	target_bonus_pct, annual_raise_pct, equity_type, rsu_grant_value, option_shares, option_strike, share_value,
-	vesting, vesting_custom, k401_match_pct, k401_match_cap_pct, k401_contrib_pct, health_premium_annual,
-	stipends_annual, other_annual, pto_days, occupation_code, area_code, tax_state, local_tax_pct, notes,
-	created_at, updated_at`
+// compColumn pairs a comp_packages column with the CompPackage field it holds.
+// field is a pointer (*string, *int64, *int, *float64) or an optionalString.
+type compColumn struct {
+	name  string
+	field any
+}
 
-func (p *CompPackage) fields() []any {
-	return []any{p.ID, nullStr(p.JobID), p.Kind, p.Label, nullStr(p.ParentID), p.BaseSalary, p.SigningBonus,
-		p.SigningClawbackMonths, p.TargetBonusPct, p.AnnualRaisePct, p.EquityType, p.RSUGrantValue, p.OptionShares,
-		p.OptionStrike, p.ShareValue, p.Vesting, p.VestingCustom, p.K401MatchPct, p.K401MatchCapPct, p.K401ContribPct,
-		p.HealthPremiumAnnual, p.StipendsAnnual, p.OtherAnnual, p.PTODays, p.OccupationCode, p.AreaCode, p.TaxState,
-		p.LocalTaxPct, p.Notes, p.CreatedAt, p.UpdatedAt}
+// columns is the single source of truth for how CompPackage maps to the table;
+// SELECT, INSERT, UPDATE and scanning are all built from it.
+func (p *CompPackage) columns() []compColumn {
+	return []compColumn{
+		{"id", &p.ID},
+		{"job_id", optionalString{&p.JobID}},
+		{"kind", &p.Kind},
+		{"label", &p.Label},
+		{"parent_id", optionalString{&p.ParentID}},
+		{"base_salary", &p.BaseSalary},
+		{"signing_bonus", &p.SigningBonus},
+		{"signing_clawback_months", &p.SigningClawbackMonths},
+		{"target_bonus_pct", &p.TargetBonusPct},
+		{"annual_raise_pct", &p.AnnualRaisePct},
+		{"equity_type", &p.EquityType},
+		{"rsu_grant_value", &p.RSUGrantValue},
+		{"option_shares", &p.OptionShares},
+		{"option_strike", &p.OptionStrike},
+		{"share_value", &p.ShareValue},
+		{"vesting", &p.Vesting},
+		{"vesting_custom", &p.VestingCustom},
+		{"k401_match_pct", &p.K401MatchPct},
+		{"k401_match_cap_pct", &p.K401MatchCapPct},
+		{"k401_contrib_pct", &p.K401ContribPct},
+		{"health_premium_annual", &p.HealthPremiumAnnual},
+		{"stipends_annual", &p.StipendsAnnual},
+		{"other_annual", &p.OtherAnnual},
+		{"pto_days", &p.PTODays},
+		{"occupation_code", &p.OccupationCode},
+		{"area_code", &p.AreaCode},
+		{"tax_state", &p.TaxState},
+		{"local_tax_pct", &p.LocalTaxPct},
+		{"notes", &p.Notes},
+		{"created_at", &p.CreatedAt},
+		{"updated_at", &p.UpdatedAt},
+	}
+}
+
+// Columns an UPDATE never changes.
+var compImmutableColumns = map[string]bool{"id": true, "created_at": true}
+
+var compColumns = strings.Join(columnNames((&CompPackage{}).columns()), ", ")
+
+func columnNames(cols []compColumn) []string {
+	names := make([]string, len(cols))
+	for i, c := range cols {
+		names[i] = c.name
+	}
+	return names
+}
+
+func columnValues(cols []compColumn) []any {
+	values := make([]any, len(cols))
+	for i, c := range cols {
+		values[i] = columnValue(c.field)
+	}
+	return values
+}
+
+func columnValue(field any) any {
+	switch f := field.(type) {
+	case optionalString:
+		return nullStr(*f.s)
+	case *string:
+		return *f
+	case *int64:
+		return *f
+	case *int:
+		return *f
+	case *float64:
+		return *f
+	}
+	panic(fmt.Sprintf("unsupported column field type %T", field))
+}
+
+func columnDests(cols []compColumn) []any {
+	dests := make([]any, len(cols))
+	for i, c := range cols {
+		dests[i] = c.field
+	}
+	return dests
+}
+
+func insertCompSQL(cols []compColumn) string {
+	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(cols)), ", ")
+	return `INSERT INTO comp_packages (` + strings.Join(columnNames(cols), ", ") + `) VALUES (` + placeholders + `)`
+}
+
+// updateComp returns the UPDATE statement and its arguments for every mutable column.
+func updateComp(p *CompPackage) (string, []any) {
+	var sets []string
+	var args []any
+	for _, c := range p.columns() {
+		if compImmutableColumns[c.name] {
+			continue
+		}
+		sets = append(sets, c.name+" = ?")
+		args = append(args, columnValue(c.field))
+	}
+	return `UPDATE comp_packages SET ` + strings.Join(sets, ", ") + ` WHERE id = ?`, append(args, p.ID)
+}
+
+// optionalString stores "" as SQL NULL and reads NULL back as "".
+type optionalString struct{ s *string }
+
+func (o optionalString) Scan(src any) error {
+	var ns sql.NullString
+	if err := ns.Scan(src); err != nil {
+		return err
+	}
+	*o.s = ns.String
+	return nil
 }
 
 func nullStr(s string) any {
@@ -67,13 +174,7 @@ func nullStr(s string) any {
 
 func scanComp(s rowScanner) (CompPackage, error) {
 	var p CompPackage
-	var jobID, parentID sql.NullString
-	err := s.Scan(&p.ID, &jobID, &p.Kind, &p.Label, &parentID, &p.BaseSalary, &p.SigningBonus,
-		&p.SigningClawbackMonths, &p.TargetBonusPct, &p.AnnualRaisePct, &p.EquityType, &p.RSUGrantValue, &p.OptionShares,
-		&p.OptionStrike, &p.ShareValue, &p.Vesting, &p.VestingCustom, &p.K401MatchPct, &p.K401MatchCapPct, &p.K401ContribPct,
-		&p.HealthPremiumAnnual, &p.StipendsAnnual, &p.OtherAnnual, &p.PTODays, &p.OccupationCode, &p.AreaCode, &p.TaxState,
-		&p.LocalTaxPct, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
-	p.JobID, p.ParentID = jobID.String, parentID.String
+	err := s.Scan(columnDests(p.columns())...)
 	return p, err
 }
 
@@ -188,7 +289,8 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 	p.UpdatedAt = now
 	if p.ID == "" {
 		p.ID, p.CreatedAt = newID(), now
-		_, err := r.db.Exec(`INSERT INTO comp_packages (`+compColumns+`) VALUES (`+strings.TrimSuffix(strings.Repeat("?, ", 31), ", ")+`)`, p.fields()...)
+		cols := p.columns()
+		_, err := r.db.Exec(insertCompSQL(cols), columnValues(cols)...)
 		return p, err
 	}
 	existing, err := r.GetCompPackage(p.ID)
@@ -196,13 +298,8 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 		return p, err
 	}
 	p.CreatedAt = existing.CreatedAt
-	f := p.fields()
-	res, err := r.db.Exec(`UPDATE comp_packages SET job_id = ?, kind = ?, label = ?, parent_id = ?, base_salary = ?,
-		signing_bonus = ?, signing_clawback_months = ?, target_bonus_pct = ?, annual_raise_pct = ?, equity_type = ?,
-		rsu_grant_value = ?, option_shares = ?, option_strike = ?, share_value = ?, vesting = ?, vesting_custom = ?,
-		k401_match_pct = ?, k401_match_cap_pct = ?, k401_contrib_pct = ?, health_premium_annual = ?, stipends_annual = ?,
-		other_annual = ?, pto_days = ?, occupation_code = ?, area_code = ?, tax_state = ?, local_tax_pct = ?, notes = ?,
-		updated_at = ? WHERE id = ?`, append(append(f[1:29], f[30]), p.ID)...)
+	query, args := updateComp(&p)
+	res, err := r.db.Exec(query, args...)
 	return p, expectOneRow(res, err, "package", p.ID)
 }
 
