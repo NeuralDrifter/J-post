@@ -288,15 +288,30 @@ func (r *Repo) SetInterviewRecording(id, path string) error {
 	return expectOneRow(res, err, "mock interview", id)
 }
 
-func (r *Repo) setInterviewStatus(id, status string, card *Scorecard, errText string) error {
-	scorecard := ""
-	if card != nil {
-		raw, _ := json.Marshal(card)
-		scorecard = string(raw)
+// endedAtOnce records when the session ended the first time its status moves
+// on from live; retries and re-scoring keep that original time.
+const endedAtOnce = `ended_at = CASE WHEN ended_at = '' THEN ? ELSE ended_at END`
+
+func (r *Repo) markScoring(id string) error {
+	_, err := r.db.Exec(`UPDATE mock_interviews SET status = ?, error = '', `+endedAtOnce+` WHERE id = ?`,
+		MockScoring, ts(r.now()), id)
+	return err
+}
+
+func (r *Repo) markDone(id string, card Scorecard) error {
+	raw, err := json.Marshal(card)
+	if err != nil {
+		return err
 	}
-	_, err := r.db.Exec(`UPDATE mock_interviews SET status = ?, scorecard = CASE WHEN ? = '' THEN scorecard ELSE ? END,
-		error = ?, ended_at = CASE WHEN ended_at = '' THEN ? ELSE ended_at END WHERE id = ?`,
-		status, scorecard, scorecard, errText, ts(r.now()), id)
+	_, err = r.db.Exec(`UPDATE mock_interviews SET status = ?, scorecard = ?, error = '', `+endedAtOnce+` WHERE id = ?`,
+		MockDone, string(raw), ts(r.now()), id)
+	return err
+}
+
+// markFailed keeps any earlier scorecard, so a failed re-score loses nothing.
+func (r *Repo) markFailed(id string, cause error) error {
+	_, err := r.db.Exec(`UPDATE mock_interviews SET status = ?, error = ?, `+endedAtOnce+` WHERE id = ?`,
+		MockFailed, cause.Error(), ts(r.now()), id)
 	return err
 }
 
@@ -342,7 +357,7 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	}
 	token, err := createLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
-		_ = r.setInterviewStatus(mi.ID, MockFailed, nil, err.Error())
+		_ = r.markFailed(mi.ID, err)
 		return LiveSession{}, err
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
@@ -402,14 +417,14 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 		return mi, err
 	}
 	fail := func(err error) (MockInterview, error) {
-		_ = r.setInterviewStatus(id, MockFailed, nil, err.Error())
+		_ = r.markFailed(id, err)
 		m, _ := r.GetMockInterview(id)
 		return m, err
 	}
 	if len(mi.Transcript) == 0 {
 		return fail(errors.New("nothing was said, so there's nothing to score"))
 	}
-	if err := r.setInterviewStatus(id, MockScoring, nil, ""); err != nil {
+	if err := r.markScoring(id); err != nil {
 		return mi, err
 	}
 	job, err := r.GetJob(mi.JobID)
@@ -445,7 +460,7 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 	if card.Questions == nil {
 		card.Questions = []QuestionReview{}
 	}
-	if err := r.setInterviewStatus(id, MockDone, &card, ""); err != nil {
+	if err := r.markDone(id, card); err != nil {
 		return mi, err
 	}
 	return r.GetMockInterview(id)

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 var testSetup = InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough", Voice: "Puck", InterviewerName: "Dana Reyes", Focus: "conflict stories"}
@@ -186,5 +187,52 @@ func TestInterviewStorage(t *testing.T) {
 	r.DeleteJob(j.ID)
 	if _, err := r.GetMockInterview(other.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("job delete should cascade: %v", err)
+	}
+}
+
+func TestMockInterviewStatusTransitions(t *testing.T) {
+	r := newTestRepo(t)
+	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	get := func() MockInterview {
+		t.Helper()
+		m, err := r.GetMockInterview(mi.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+
+	if err := r.markFailed(mi.ID, errors.New("model busy")); err != nil {
+		t.Fatal(err)
+	}
+	failed := get()
+	if failed.Status != MockFailed || failed.Error != "model busy" || failed.EndedAt == "" {
+		t.Fatalf("failed = %+v", failed)
+	}
+
+	setNow(r, 2026, time.October, 2, 9)
+	if err := r.markScoring(mi.ID); err != nil {
+		t.Fatal(err)
+	}
+	scoring := get()
+	if scoring.Status != MockScoring || scoring.Error != "" || scoring.EndedAt != failed.EndedAt {
+		t.Fatalf("scoring = %+v (ended_at must not move)", scoring)
+	}
+
+	if err := r.markDone(mi.ID, Scorecard{Summary: "solid"}); err != nil {
+		t.Fatal(err)
+	}
+	if done := get(); done.Status != MockDone || done.Scorecard == nil || done.Scorecard.Summary != "solid" {
+		t.Fatalf("done = %+v", done)
+	}
+
+	if err := r.markFailed(mi.ID, errors.New("retry failed")); err != nil {
+		t.Fatal(err)
+	}
+	if again := get(); again.Scorecard == nil || again.Scorecard.Summary != "solid" {
+		t.Fatalf("a later failure must keep the earlier scorecard: %+v", again)
 	}
 }
