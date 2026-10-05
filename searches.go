@@ -193,9 +193,20 @@ func (r *Repo) DeleteSearch(id string) error {
 	return expectOneRow(res, err, "search", id)
 }
 
-// RunSearch serves a recent search from the inbox, or scrapes each board (only
-// postings newer than the last run) and stores what it finds.
-func RunSearch(ctx context.Context, r *Repo, q SearchQuery, force bool, s Settings, fetch sourceFunc) (SearchRun, error) {
+// RunSearch serves a search that ran within the cache window from the inbox;
+// otherwise it fetches like RefreshSearch.
+func RunSearch(ctx context.Context, r *Repo, q SearchQuery, s Settings, fetch sourceFunc) (SearchRun, error) {
+	return runSearch(ctx, r, q, s.DiscoverCacheHours, fetch)
+}
+
+// RefreshSearch asks each board for postings newer than the last run, even if
+// the search ran recently, and stores what it finds.
+func RefreshSearch(ctx context.Context, r *Repo, q SearchQuery, fetch sourceFunc) (SearchRun, error) {
+	return runSearch(ctx, r, q, 0, fetch)
+}
+
+// runSearch reuses results younger than cacheHours (0 = always fetch).
+func runSearch(ctx context.Context, r *Repo, q SearchQuery, cacheHours int, fetch sourceFunc) (SearchRun, error) {
 	q.Term, q.Location = strings.TrimSpace(q.Term), strings.TrimSpace(q.Location)
 	if q.Term == "" {
 		return SearchRun{}, errors.New("enter a job title or keywords to search")
@@ -210,7 +221,7 @@ func RunSearch(ctx context.Context, r *Repo, q SearchQuery, force bool, s Settin
 	}
 	now := r.now()
 	run := SearchRun{SearchID: saved.ID, Errors: map[string]string{}, LastRunAt: saved.LastRunAt}
-	if !force && cacheHit(saved, now, s.DiscoverCacheHours) {
+	if cacheHit(saved, now, cacheHours) {
 		run.Cached = true
 		return run, nil
 	}

@@ -9,13 +9,15 @@ const KIND_TITLE: Record<string, string> = { official: 'Official APIs', scraped:
 type Props = {
   query: main.SearchQuery
   onChange: (q: main.SearchQuery) => void
-  onSearch: (force: boolean) => void
+  onSearch: () => void
+  /** Search again even if this search ran recently. */
+  onRefresh: () => void
   searching: boolean
   /** Every board, with why it can't run yet (missing keys etc.). */
   sources: main.JobSource[]
 }
 
-export function SearchForm({ query, onChange, onSearch, searching, sources }: Props) {
+export function SearchForm({ query, onChange, onSearch, onRefresh, searching, sources }: Props) {
   const toggle = (source: string) =>
     onChange({
       ...query,
@@ -30,7 +32,7 @@ export function SearchForm({ query, onChange, onSearch, searching, sources }: Pr
     <form
       onSubmit={(e) => {
         e.preventDefault()
-        onSearch(false)
+        onSearch()
       }}
       className="glass space-y-3 rounded-2xl p-4"
     >
@@ -67,7 +69,7 @@ export function SearchForm({ query, onChange, onSearch, searching, sources }: Pr
           type="button"
           className="btn btn-ghost"
           disabled={searching || active.length === 0 || !query.term.trim()}
-          onClick={() => onSearch(true)}
+          onClick={onRefresh}
           title="Scrape again even if this search ran recently"
         >
           <RefreshCw size={15} /> Refresh now

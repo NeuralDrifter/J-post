@@ -276,18 +276,32 @@ func (a *App) DeleteAttachment(id string) error {
 
 // ---- Discover ----
 
-// RunSearch scrapes (or reuses recent results for) a search and files what it
-// finds into the Discover inbox.
-func (a *App) RunSearch(q SearchQuery, force bool) (SearchRun, error) {
-	if err := a.ready(); err != nil {
-		return SearchRun{}, err
-	}
-	settings, err := a.settings.Load()
+// RunSearch files a search's results into the Discover inbox, reusing them if
+// the same search ran recently.
+func (a *App) RunSearch(q SearchQuery) (SearchRun, error) {
+	settings, err := a.searchSettings()
 	if err != nil {
 		return SearchRun{}, err
 	}
 	fetcher := sourceFetcher{settings: settings, repo: a.repo}
-	return RunSearch(context.Background(), a.repo, q, force, settings, fetcher.fetch)
+	return RunSearch(context.Background(), a.repo, q, settings, fetcher.fetch)
+}
+
+// RefreshSearch fetches new postings for a search even if it ran recently.
+func (a *App) RefreshSearch(q SearchQuery) (SearchRun, error) {
+	settings, err := a.searchSettings()
+	if err != nil {
+		return SearchRun{}, err
+	}
+	fetcher := sourceFetcher{settings: settings, repo: a.repo}
+	return RefreshSearch(context.Background(), a.repo, q, fetcher.fetch)
+}
+
+func (a *App) searchSettings() (Settings, error) {
+	if err := a.ready(); err != nil {
+		return Settings{}, err
+	}
+	return a.settings.Load()
 }
 
 func (a *App) ListPostings(f PostingFilter) ([]Posting, error) {

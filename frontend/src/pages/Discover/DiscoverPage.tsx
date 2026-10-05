@@ -12,6 +12,7 @@ import {
   ListPostings,
   ListRecentSearches,
   MarkPostingSeen,
+  RefreshSearch,
   RestorePosting,
   RunSearch,
   SavePosting,
@@ -46,6 +47,9 @@ function loadQuery(): main.SearchQuery {
     return empty
   }
 }
+
+/** RunSearch (reuses recent results) or RefreshSearch (always fetches). */
+type SearchCall = (q: main.SearchQuery) => Promise<main.SearchRun>
 
 const hasSavedQuery = () => readPref(QUERY_PREF, '') !== ''
 
@@ -84,11 +88,11 @@ export default function DiscoverPage() {
 
   const selected = useMemo(() => postings?.find((p) => p.id === selectedId), [postings, selectedId])
 
-  const search = async (force: boolean, q: main.SearchQuery = query) => {
+  const search = async (call: SearchCall, q: main.SearchQuery = query) => {
     setSearching(true)
     setShowErrors(true)
     const ready = q.sources.filter((id) => sources?.some((s) => s.id === id && !s.unavailable))
-    const r = await api(RunSearch({ ...q, sources: ready }, force))
+    const r = await api(call({ ...q, sources: ready }))
     setSearching(false)
     if (!r) return
     lastRun = r
@@ -97,10 +101,10 @@ export default function DiscoverPage() {
     notifyDataChanged()
   }
 
-  const runSaved = (s: main.SavedSearch, force: boolean) => {
+  const runSaved = (s: main.SavedSearch, call: SearchCall) => {
     const q = { term: s.term, location: s.location, remoteOnly: s.remoteOnly, sources: s.sources, perSource: s.perSource }
     setQuery(q)
-    void search(force, q)
+    void search(call, q)
   }
 
   const removeSearch = async (s: main.SavedSearch) => {
@@ -164,8 +168,13 @@ export default function DiscoverPage() {
   return (
     <div className="flex h-full min-h-[520px] flex-col gap-3">
       <PageTitle title="Discover" subtitle="Every posting your searches find lands in one inbox. Deal with each once." />
-      <SearchForm query={query} onChange={setQuery} onSearch={search} searching={searching} sources={sources ?? []} />
-      <RecentSearches searches={recent ?? []} onRun={runSaved} onRemove={removeSearch} />
+      <SearchForm query={query} onChange={setQuery} onSearch={() => search(RunSearch)} onRefresh={() => search(RefreshSearch)} searching={searching} sources={sources ?? []} />
+      <RecentSearches
+        searches={recent ?? []}
+        onRun={(s) => runSaved(s, RunSearch)}
+        onRefresh={(s) => runSaved(s, RefreshSearch)}
+        onRemove={removeSearch}
+      />
 
       {run && (
         <p className="font-mono text-[11px] text-ink-3">

@@ -5,11 +5,12 @@ import { openMenu } from '../../lib/menu'
 
 type Props = {
   searches: main.SavedSearch[]
-  onRun: (s: main.SavedSearch, force: boolean) => void
+  onRun: (s: main.SavedSearch) => void
+  onRefresh: (s: main.SavedSearch) => void
   onRemove: (s: main.SavedSearch) => void
 }
 
-export function RecentSearches({ searches, onRun, onRemove }: Props) {
+export function RecentSearches({ searches, onRun, onRefresh, onRemove }: Props) {
   if (searches.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -17,11 +18,11 @@ export function RecentSearches({ searches, onRun, onRemove }: Props) {
       {searches.map((s) => (
         <button
           key={s.id}
-          onClick={() => onRun(s, false)}
+          onClick={() => onRun(s)}
           onContextMenu={(e) =>
             openMenu(e, [
-              { label: 'Run', icon: Play, onSelect: () => onRun(s, false) },
-              { label: 'Refresh now', icon: RefreshCw, onSelect: () => onRun(s, true) },
+              { label: 'Run', icon: Play, onSelect: () => onRun(s) },
+              { label: 'Refresh now', icon: RefreshCw, onSelect: () => onRefresh(s) },
               'separator',
               { label: 'Remove', icon: Trash2, danger: true, onSelect: () => onRemove(s) },
             ])

@@ -94,11 +94,13 @@ export function PrepareInterview(arg1:string,arg2:main.InterviewSetup):Promise<m
 
 export function PreviewComp(arg1:main.CompPackage):Promise<main.PackageResult>;
 
+export function RefreshSearch(arg1:main.SearchQuery):Promise<main.SearchRun>;
+
 export function RenameAttachment(arg1:string,arg2:string):Promise<void>;
 
 export function RestorePosting(arg1:string):Promise<void>;
 
-export function RunSearch(arg1:main.SearchQuery,arg2:boolean):Promise<main.SearchRun>;
+export function RunSearch(arg1:main.SearchQuery):Promise<main.SearchRun>;
 
 export function SaveCompPackage(arg1:main.CompPackage):Promise<main.CompPackage>;
 
