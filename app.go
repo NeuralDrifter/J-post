@@ -675,11 +675,11 @@ func (a *App) SaveInterviewRecording(id, base64Data string) error {
 	}
 	dir := filepath.Join(a.dataDir, "files", mi.JobID)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
+		return fmt.Errorf("the recording could not be saved: %w", err)
 	}
 	path := filepath.Join(dir, "interview-"+id+".webm")
 	if err := os.WriteFile(path, raw, 0o644); err != nil {
-		return err
+		return fmt.Errorf("the recording could not be saved: %w", err)
 	}
 	return a.repo.SetInterviewRecording(id, path)
 }

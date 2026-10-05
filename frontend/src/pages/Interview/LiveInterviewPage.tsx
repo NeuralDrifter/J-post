@@ -11,7 +11,6 @@ import { InterviewSession, type SessionStatus } from '../../lib/live/session'
 import { clock, MOCK_KIND_LABEL, peekSession, releaseSession } from '../../lib/interview'
 import { readPref, writePref } from '../../lib/prefs'
 import { DeviceCheck, type DeviceChoice } from './DeviceCheck'
-import { toast } from '../../lib/toast'
 
 type NudgeItem = { text: string; kind: string; atMs: number }
 
@@ -124,7 +123,7 @@ export default function LiveInterviewPage() {
     await apiOk(SaveInterviewTranscript(id, toTranscript(lines)))
     if (recording) {
       const bytes = new Uint8Array(await recording.arrayBuffer())
-      if (!(await apiOk(SaveInterviewRecording(id, bytesToBase64(bytes))))) toast.error('The recording could not be saved')
+      await apiOk(SaveInterviewRecording(id, bytesToBase64(bytes)))
     }
     navigate(`/interviews/${id}?score=1`, { replace: true })
   }
