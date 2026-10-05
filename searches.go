@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -125,23 +126,31 @@ const searchColumns = `id, term, location, remote_only, sources, per_source, las
 func scanSearch(s rowScanner) (SavedSearch, error) {
 	var out SavedSearch
 	var sources, perSource string
-	err := s.Scan(&out.ID, &out.Term, &out.Location, &out.RemoteOnly, &sources, &perSource, &out.LastRunAt, &out.CreatedAt)
+	if err := s.Scan(&out.ID, &out.Term, &out.Location, &out.RemoteOnly, &sources, &perSource, &out.LastRunAt, &out.CreatedAt); err != nil {
+		return out, err
+	}
 	out.Sources = splitSources(sources)
 	out.PerSource = map[string]int{}
-	_ = json.Unmarshal([]byte(perSource), &out.PerSource)
-	return out, err
+	if err := json.Unmarshal([]byte(perSource), &out.PerSource); err != nil {
+		return out, fmt.Errorf("search %s: unreadable per-board counts: %w", out.ID, err)
+	}
+	return out, nil
 }
 
 // UpsertSearch finds the saved search for this query (same term, location, remote
 // flag and sources) or creates it, storing the latest per-board counts.
 func (r *Repo) UpsertSearch(q SearchQuery) (SavedSearch, error) {
 	key := searchKey(q)
-	per, _ := json.Marshal(q.PerSource)
-	if q.PerSource == nil {
-		per = []byte("{}")
+	perSource := q.PerSource
+	if perSource == nil {
+		perSource = map[string]int{}
+	}
+	per, err := json.Marshal(perSource)
+	if err != nil {
+		return SavedSearch{}, err
 	}
 	var id string
-	err := r.db.QueryRow(`SELECT id FROM searches WHERE query_key = ?`, key).Scan(&id)
+	err = r.db.QueryRow(`SELECT id FROM searches WHERE query_key = ?`, key).Scan(&id)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		id = newID()

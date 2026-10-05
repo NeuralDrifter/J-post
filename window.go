@@ -96,7 +96,7 @@ func (a *App) domReady(ctx context.Context) {
 	if !ok {
 		return
 	}
-	settings, _ := a.settings.Load()
+	settings, _ := a.settings.Load() // unreadable settings just mean the default window size
 	p := planWindow(scr.W, scr.H, settings)
 	runtime.WindowSetMinSize(ctx, p.MinWidth, p.MinHeight)
 	runtime.WindowSetSize(ctx, p.Width, p.Height)

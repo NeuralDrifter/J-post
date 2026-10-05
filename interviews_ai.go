@@ -215,12 +215,15 @@ func scanMock(s rowScanner) (MockInterview, error) {
 		return m, err
 	}
 	m.Transcript = []TranscriptLine{}
-	_ = json.Unmarshal([]byte(transcript), &m.Transcript)
+	if err := json.Unmarshal([]byte(transcript), &m.Transcript); err != nil {
+		return m, fmt.Errorf("mock interview %s: unreadable transcript: %w", m.ID, err)
+	}
 	if scorecard != "" {
 		var sc Scorecard
-		if json.Unmarshal([]byte(scorecard), &sc) == nil {
-			m.Scorecard = &sc
+		if err := json.Unmarshal([]byte(scorecard), &sc); err != nil {
+			return m, fmt.Errorf("mock interview %s: unreadable scorecard: %w", m.ID, err)
 		}
+		m.Scorecard = &sc
 	}
 	m.HasRecording = recording != ""
 	return m, nil
@@ -268,17 +271,24 @@ func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
 	return out, rows.Err()
 }
 
-func (r *Repo) recordingPath(id string) string {
+// recordingPath is "" when the session has no recording.
+func (r *Repo) recordingPath(id string) (string, error) {
 	var p string
-	_ = r.db.QueryRow(`SELECT recording_path FROM mock_interviews WHERE id = ?`, id).Scan(&p)
-	return p
+	err := r.db.QueryRow(`SELECT recording_path FROM mock_interviews WHERE id = ?`, id).Scan(&p)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("mock interview %s: %w", id, ErrNotFound)
+	}
+	return p, err
 }
 
 func (r *Repo) SaveInterviewTranscript(id string, lines []TranscriptLine) error {
 	if lines == nil {
 		lines = []TranscriptLine{}
 	}
-	raw, _ := json.Marshal(lines)
+	raw, err := json.Marshal(lines)
+	if err != nil {
+		return err
+	}
 	res, err := r.db.Exec(`UPDATE mock_interviews SET transcript = ? WHERE id = ?`, string(raw), id)
 	return expectOneRow(res, err, "mock interview", id)
 }
@@ -316,7 +326,10 @@ func (r *Repo) markFailed(id string, cause error) error {
 }
 
 func (r *Repo) DeleteMockInterview(id string) error {
-	path := r.recordingPath(id)
+	path, err := r.recordingPath(id)
+	if err != nil {
+		return err
+	}
 	res, err := r.db.Exec(`DELETE FROM mock_interviews WHERE id = ?`, id)
 	if err := expectOneRow(res, err, "mock interview", id); err != nil {
 		return err
@@ -357,7 +370,9 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	}
 	token, err := createLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
-		_ = r.markFailed(mi.ID, err)
+		if markErr := r.markFailed(mi.ID, err); markErr != nil {
+			return LiveSession{}, errors.Join(err, markErr)
+		}
 		return LiveSession{}, err
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
@@ -416,10 +431,15 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 	if err != nil {
 		return mi, err
 	}
-	fail := func(err error) (MockInterview, error) {
-		_ = r.markFailed(id, err)
-		m, _ := r.GetMockInterview(id)
-		return m, err
+	fail := func(cause error) (MockInterview, error) {
+		if err := r.markFailed(id, cause); err != nil {
+			return mi, errors.Join(cause, err)
+		}
+		m, err := r.GetMockInterview(id)
+		if err != nil {
+			return mi, errors.Join(cause, err)
+		}
+		return m, cause
 	}
 	if len(mi.Transcript) == 0 {
 		return fail(errors.New("nothing was said, so there's nothing to score"))
@@ -431,7 +451,10 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 	if err != nil {
 		return fail(err)
 	}
-	profile, _ := r.GetProfile()
+	profile, err := r.GetProfile()
+	if err != nil {
+		return fail(err)
+	}
 	var t strings.Builder
 	for _, l := range mi.Transcript {
 		who := "Interviewer"

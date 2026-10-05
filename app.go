@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ type App struct {
 	dataDir     string
 	repo        *Repo
 	settings    *SettingsStore
+	market      *MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
 	initErr     error
 	windowShown bool
 }
@@ -27,6 +29,11 @@ type App struct {
 // is kept in initErr and shown full-screen by the frontend instead of crashing.
 func NewApp(dataDir string) *App {
 	a := &App{dataDir: dataDir, settings: NewSettingsStore(dataDir)}
+	if md, err := loadMarketData(); err != nil {
+		log.Printf("market data unavailable: %v", err)
+	} else {
+		a.market = md
+	}
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		a.initErr = err
 		return a
@@ -95,7 +102,7 @@ func (a *App) ListJobSummaries() ([]JobSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	md := a.market()
+	md := a.market
 	withOfferTotals(summaries, packages, func(p CompPackage) (PackageResult, error) {
 		return Evaluate(p, settings, md, nil)
 	})
@@ -407,20 +414,12 @@ type DataSources struct {
 	Built string     `json:"built"`
 }
 
-func (a *App) market() *MarketData {
-	md, err := loadMarketData()
-	if err != nil {
-		return nil
-	}
-	return md
-}
-
 func (a *App) evaluate(p CompPackage, current *CompPackage) (PackageResult, error) {
 	s, err := a.settings.Load()
 	if err != nil {
 		return PackageResult{}, err
 	}
-	return Evaluate(p, s, a.market(), current)
+	return Evaluate(p, s, a.market, current)
 }
 
 func (a *App) comparisonItems(list []CompPackage) ([]ComparisonItem, error) {
@@ -436,9 +435,11 @@ func (a *App) comparisonItems(list []CompPackage) ([]ComparisonItem, error) {
 		}
 		item := ComparisonItem{Package: p, Result: res, Company: "Current job"}
 		if p.JobID != "" {
-			if j, err := a.repo.GetJob(p.JobID); err == nil {
-				item.Company, item.Position, item.JobStatus = j.Company, j.Position, j.Status
+			j, err := a.repo.GetJob(p.JobID)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", p.Label, err)
 			}
+			item.Company, item.Position, item.JobStatus = j.Company, j.Position, j.Status
 		}
 		out = append(out, item)
 	}
@@ -509,7 +510,7 @@ func (a *App) NewEstimate(jobID string) (CompPackage, error) {
 		return CompPackage{}, err
 	}
 	area, state := "", ""
-	if md := a.market(); md != nil {
+	if md := a.market; md != nil {
 		area, state = md.EstimateLocation(j.Location, s.HomeAreaCode)
 	}
 	return NewEstimateForJob(j, s.DefaultOccupation, area, state), nil
@@ -528,14 +529,14 @@ func (a *App) PreviewComp(p CompPackage) (PackageResult, error) {
 }
 
 func (a *App) SearchOccupations(q string) []Option {
-	if md := a.market(); md != nil {
+	if md := a.market; md != nil {
 		return md.SearchOccupations(q)
 	}
 	return []Option{}
 }
 
 func (a *App) SearchAreas(q string) []Option {
-	if md := a.market(); md != nil {
+	if md := a.market; md != nil {
 		return md.SearchAreas(q)
 	}
 	return []Option{}
@@ -543,7 +544,7 @@ func (a *App) SearchAreas(q string) []Option {
 
 // DescribeArea and DescribeOccupation give pickers the title for a saved code.
 func (a *App) DescribeArea(code string) Option {
-	if md := a.market(); md != nil {
+	if md := a.market; md != nil {
 		if ar, ok := md.Areas[code]; ok {
 			title := ar.Title
 			if ar.Type == "national" {
@@ -556,7 +557,7 @@ func (a *App) DescribeArea(code string) Option {
 }
 
 func (a *App) DescribeOccupation(code string) Option {
-	if md := a.market(); md != nil {
+	if md := a.market; md != nil {
 		if t, ok := md.Occupations[code]; ok {
 			return Option{Code: code, Title: t}
 		}
@@ -566,7 +567,7 @@ func (a *App) DescribeOccupation(code string) Option {
 
 func (a *App) MarketSources() DataSources {
 	ds := DataSources{Tax: taxSource}
-	if md := a.market(); md != nil {
+	if md := a.market; md != nil {
 		ds.BLS, ds.BEA, ds.Built = md.Sources["bls"], md.Sources["bea"], md.Built
 	}
 	return ds
@@ -689,9 +690,9 @@ func (a *App) GetInterviewRecording(id string) (string, error) {
 	if err := a.ready(); err != nil {
 		return "", err
 	}
-	path := a.repo.recordingPath(id)
-	if path == "" {
-		return "", nil
+	path, err := a.repo.recordingPath(id)
+	if err != nil || path == "" {
+		return "", err
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {

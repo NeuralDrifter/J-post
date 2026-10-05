@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { api } from './api'
 import { MarketSources, type main } from './backend'
 
 // Every figure derived from an outside dataset carries a numbered ✦ mark.
@@ -37,12 +38,11 @@ export function useSources(): main.DataSources | undefined {
   const [sources, setSources] = useState(cache)
   useEffect(() => {
     if (cache) return
-    MarketSources()
-      .then((s) => {
-        cache = s
-        setSources(s)
-      })
-      .catch(() => {})
+    void api(MarketSources()).then((s) => {
+      if (!s) return
+      cache = s
+      setSources(s)
+    })
   }, [])
   return sources
 }

@@ -41,7 +41,7 @@ export default function InterviewReviewPage() {
   }, [mi, params])
 
   useEffect(() => {
-    if (mi?.hasRecording && !audioUrl) GetInterviewRecording(id).then(setAudioUrl, () => {})
+    if (mi?.hasRecording && !audioUrl) void api(GetInterviewRecording(id)).then((url) => url && setAudioUrl(url))
   }, [mi?.hasRecording, id, audioUrl])
 
   if (!mi) return <p className="text-sm text-ink-2">Loading…</p>

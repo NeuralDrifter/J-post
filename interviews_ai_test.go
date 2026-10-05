@@ -236,3 +236,12 @@ func TestMockInterviewStatusTransitions(t *testing.T) {
 		t.Fatalf("a later failure must keep the earlier scorecard: %+v", again)
 	}
 }
+
+func TestUnreadableTranscriptIsReported(t *testing.T) {
+	r := newTestRepo(t)
+	mi, _ := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	r.db.Exec(`UPDATE mock_interviews SET transcript = 'not json' WHERE id = ?`, mi.ID)
+	if _, err := r.GetMockInterview(mi.ID); err == nil || !strings.Contains(err.Error(), "transcript") {
+		t.Fatalf("err = %v", err)
+	}
+}

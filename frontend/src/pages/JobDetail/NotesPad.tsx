@@ -33,7 +33,7 @@ export function NotesPad({ jobId, initial }: { jobId: string; initial: string })
   // Flush anything still unsaved when the page is left.
   useEffect(
     () => () => {
-      if (latest.current !== saved.current) void UpdateJobNotes(jobId, latest.current).catch(() => {})
+      if (latest.current !== saved.current) void apiOk(UpdateJobNotes(jobId, latest.current))
     },
     [jobId],
   )

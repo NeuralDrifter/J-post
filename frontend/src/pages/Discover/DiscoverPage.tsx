@@ -109,7 +109,7 @@ export default function DiscoverPage() {
 
   const select = (p: main.Posting) => {
     setSelectedId(p.id)
-    if (p.state === 'new') void MarkPostingSeen(p.id).then(notifyDataChanged, () => {})
+    if (p.state === 'new') void apiOk(MarkPostingSeen(p.id)).then((ok) => ok && notifyDataChanged())
   }
 
   // After an action the posting usually leaves this tab, so move to the next one.

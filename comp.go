@@ -303,7 +303,11 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 	if p.Kind == PackageCurrent {
 		var existing string
 		err := r.db.QueryRow(`SELECT id FROM comp_packages WHERE kind = ?`, PackageCurrent).Scan(&existing)
-		if err == nil && existing != p.ID {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+		case err != nil:
+			return p, err
+		case existing != p.ID:
 			return p, errors.New("you already have a current job baseline; edit that one instead")
 		}
 		p.JobID = ""

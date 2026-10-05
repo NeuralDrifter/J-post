@@ -47,7 +47,8 @@ export default function LiveInterviewPage() {
     const tick = window.setInterval(() => setElapsed(sessionRef.current?.now() ?? 0), 500)
     const save = window.setInterval(() => {
       const s = sessionRef.current
-      if (s) void SaveInterviewTranscript(id, toTranscript(s.lines)).catch(() => {})
+      // A toast every 30 s would bury the interview; the final save on End still reports failures.
+      if (s) void SaveInterviewTranscript(id, toTranscript(s.lines)).catch((err) => console.warn('transcript autosave failed', err))
     }, 30_000)
     return () => {
       window.clearInterval(tick)
@@ -66,7 +67,7 @@ export default function LiveInterviewPage() {
       const s = sessionRef.current
       if (s && !s.isEnded) {
         releaseSession(id)
-        void s.end().then(({ lines }) => SaveInterviewTranscript(id, toTranscript(lines)).catch(() => {}))
+        void s.end().then(({ lines }) => apiOk(SaveInterviewTranscript(id, toTranscript(lines))))
       }
     },
     [id],
@@ -99,7 +100,7 @@ export default function LiveInterviewPage() {
         onAnswerEnded: (e) => {
           NudgeAnswer(e.question, e.answer)
             .then((n) => n.nudge && setNudges((list) => [{ text: n.nudge, kind: n.kind, atMs: e.endMs }, ...list].slice(0, 6)))
-            .catch(() => {}) // cues are optional
+            .catch((err) => console.warn('coaching cue failed', err)) // cues are optional; don't interrupt
         },
       },
     )

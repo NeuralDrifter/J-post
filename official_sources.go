@@ -93,7 +93,7 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 		}
 		if len(d.PositionRemuneration) > 0 {
 			pay := d.PositionRemuneration[0]
-			lo, _ := strconv.ParseFloat(pay.MinimumRange, 64)
+			lo, _ := strconv.ParseFloat(pay.MinimumRange, 64) // unparseable pay counts as not posted
 			hi, _ := strconv.ParseFloat(pay.MaximumRange, 64)
 			j.MinAmount, j.MaxAmount, j.Interval = floatPtr(lo), floatPtr(hi), usajobsIntervals[pay.RateIntervalCode]
 		}

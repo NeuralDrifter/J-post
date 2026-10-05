@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -122,5 +123,17 @@ func TestRunSearchFakeFetcher(t *testing.T) {
 
 	if _, err := RunSearch(context.Background(), r, SearchQuery{Term: "  "}, false, settings, f2.fn); err == nil {
 		t.Fatal("empty term should error")
+	}
+}
+
+func TestUnreadablePerSourceIsReported(t *testing.T) {
+	r := newTestRepo(t)
+	s, err := r.UpsertSearch(SearchQuery{Term: "dev", Sources: []string{"indeed"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.db.Exec(`UPDATE searches SET per_source = 'not json' WHERE id = ?`, s.ID)
+	if _, err := r.ListRecentSearches(5); err == nil || !strings.Contains(err.Error(), "per-board") {
+		t.Fatalf("err = %v", err)
 	}
 }

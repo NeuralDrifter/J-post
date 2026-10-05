@@ -82,7 +82,7 @@ export function DeviceCheck({ onChange }: { onChange: (c: DeviceChoice) => void 
 
   const testOutput = async () => {
     const ctx = new AudioContext()
-    await routeOutput(ctx, output).catch(() => {})
+    await routeOutput(ctx, output).catch(() => {}) // fall back to the default output
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     gain.gain.setValueAtTime(0.15, ctx.currentTime)
