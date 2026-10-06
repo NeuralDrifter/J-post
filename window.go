@@ -13,6 +13,7 @@ const (
 	maxStartHeight    = 1000
 	smallScreenWidth  = 1280
 	smallScreenHeight = 720
+	startScreenPct    = 85 // a fresh window fills this % of the screen in each direction
 )
 
 // windowPlan is the startup geometry for the main window, in logical pixels.
@@ -33,7 +34,7 @@ func clamp(v, lo, hi int) int {
 }
 
 // planWindow picks a window size that always fits the given screen: the saved
-// size if it still fits, otherwise 85% of the screen; small screens start maximised.
+// size if it still fits, otherwise startScreenPct of the screen; small screens start maximised.
 func planWindow(screenW, screenH int, s Settings) windowPlan {
 	p := windowPlan{MinWidth: min(minWindowWidth, screenW), MinHeight: min(minWindowHeight, screenH)}
 	if s.WindowWidth > 0 && s.WindowHeight > 0 && s.WindowWidth <= screenW && s.WindowHeight <= screenH {
@@ -42,8 +43,8 @@ func planWindow(screenW, screenH int, s Settings) windowPlan {
 		p.Maximise = s.WindowMaximised
 		return p
 	}
-	p.Width = clamp(screenW*85/100, p.MinWidth, maxStartWidth)
-	p.Height = clamp(screenH*85/100, p.MinHeight, maxStartHeight)
+	p.Width = clamp(screenW*startScreenPct/100, p.MinWidth, maxStartWidth)
+	p.Height = clamp(screenH*startScreenPct/100, p.MinHeight, maxStartHeight)
 	p.Maximise = screenW <= smallScreenWidth || screenH <= smallScreenHeight
 	return p
 }
