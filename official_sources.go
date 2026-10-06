@@ -32,13 +32,6 @@ func floatPtr(v float64) *float64 {
 	return &v
 }
 
-func firstN(s string, n int) string {
-	if len(s) > n {
-		return s[:n]
-	}
-	return s
-}
-
 // ---- USAJobs (federal jobs; free key + registered email) ----
 
 var usajobsIntervals = map[string]string{"PA": "yearly", "PH": "hourly", "PD": "daily", "PW": "weekly", "BW": "biweekly", "PM": "monthly"}
@@ -76,7 +69,7 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 		params.Set("RemoteIndicator", "True")
 	}
 	if opts.HoursOld > 0 {
-		params.Set("DatePosted", strconv.Itoa(min((opts.HoursOld+23)/24, usajobsMaxDays)))
+		params.Set("DatePosted", strconv.Itoa(min(opts.maxDaysOld(), usajobsMaxDays)))
 	}
 	var resp usajobsResponse
 	headers := map[string]string{"Host": "data.usajobs.gov", "User-Agent": email, "Authorization-Key": key}
@@ -88,7 +81,7 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 		d := item.MatchedObjectDescriptor
 		j := rawJob{
 			Title: d.PositionTitle, Company: d.OrganizationName, Location: d.PositionLocationDisplay,
-			URL: d.PositionURI, DatePosted: firstN(d.PublicationStartDate, 10), Site: "usajobs",
+			URL: d.PositionURI, DatePosted: datePart(d.PublicationStartDate), Site: "usajobs",
 			Description: htmlToText(d.UserArea.Details.JobSummary),
 		}
 		if len(d.PositionRemuneration) > 0 {
@@ -185,7 +178,7 @@ func jobicySearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]ra
 	for _, jb := range resp.Jobs {
 		j := rawJob{
 			Title: jb.JobTitle, Company: jb.CompanyName, URL: jb.URL, Location: jb.JobGeo, IsRemote: true,
-			DatePosted: firstN(jb.PubDate, 10), Description: htmlToText(jb.JobDescription), Site: "jobicy",
+			DatePosted: datePart(jb.PubDate), Description: htmlToText(jb.JobDescription), Site: "jobicy",
 		}
 		if jb.SalaryCurrency == "" || jb.SalaryCurrency == "USD" {
 			lo, hi := jb.SalaryMin, jb.SalaryMax

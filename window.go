@@ -29,10 +29,6 @@ type screenSize struct {
 	current, primary bool
 }
 
-func clamp(v, lo, hi int) int {
-	return max(lo, min(v, hi))
-}
-
 // planWindow picks a window size that always fits the given screen: the saved
 // size if it still fits, otherwise startScreenPct of the screen; small screens start maximised.
 func planWindow(screenW, screenH int, s Settings) windowPlan {

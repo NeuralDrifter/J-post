@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -120,13 +121,6 @@ func lastLine(s, fallback string) string {
 	return fallback
 }
 
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "…"
-}
-
 // parseScraperOutput reads the JSON payload from the last non-empty stdout
 // line, ignoring any log noise printed before it.
 func parseScraperOutput(out []byte) ([]rawJob, error) {
@@ -232,7 +226,7 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 		params.Set("where", q.Location)
 	}
 	if opts.HoursOld > 0 {
-		params.Set("max_days_old", strconv.Itoa((opts.HoursOld+23)/24))
+		params.Set("max_days_old", strconv.Itoa(opts.maxDaysOld()))
 	}
 	var parsed adzunaResponse
 	req := apiRequest{source: "Adzuna", url: adzunaBaseURL + "?" + params.Encode(), timeout: adzunaTimeout}
@@ -244,7 +238,7 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 		out = append(out, rawJob{
 			Title: it.Title, Company: it.Company.DisplayName, Location: it.Location.DisplayName,
 			MinAmount: it.SalaryMin, MaxAmount: it.SalaryMax, Interval: "yearly",
-			Description: it.Description, DatePosted: firstN(it.Created, 10), URL: it.RedirectURL, Site: "adzuna",
+			Description: it.Description, DatePosted: datePart(it.Created), URL: it.RedirectURL, Site: "adzuna",
 		})
 	}
 	return out, nil
@@ -316,8 +310,7 @@ func normalizeSalary(minAmount, maxAmount *float64, interval string) annualSalar
 }
 
 func dedupeKey(company, title string) string {
-	norm := func(s string) string { return strings.Join(strings.Fields(strings.ToLower(s)), " ") }
-	return norm(company) + "|" + norm(title)
+	return normalizeForMatch(company) + "|" + normalizeForMatch(title)
 }
 
 func fromRaw(r rawJob, source string) DiscoverResult {
@@ -341,7 +334,7 @@ func fromRaw(r rawJob, source string) DiscoverResult {
 
 func mergeInto(a, b DiscoverResult) DiscoverResult {
 	for _, s := range b.Sources {
-		if !contains(a.Sources, s) {
+		if !slices.Contains(a.Sources, s) {
 			a.Sources = append(a.Sources, s)
 		}
 	}
@@ -406,7 +399,7 @@ func markTracked(results []DiscoverResult, jobs []Job) {
 func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked []Job, optsFor func(source string) fetchOptions) DiscoverResponse {
 	var sources []string
 	for _, s := range q.Sources {
-		if isKnownSource(s) && !contains(sources, s) {
+		if isKnownSource(s) && !slices.Contains(sources, s) {
 			sources = append(sources, s)
 		}
 	}

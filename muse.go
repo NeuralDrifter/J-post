@@ -160,7 +160,7 @@ func museJobs(resp museResponse) []museJob {
 			levels = append(levels, l.Name)
 		}
 		jobs = append(jobs, museJob{j.ID, j.Name, j.Company.Name, strings.Join(locs, "; "), strings.Join(levels, ", "),
-			firstN(j.PublicationDate, 10), j.Refs.LandingPage, htmlToText(j.Contents)})
+			datePart(j.PublicationDate), j.Refs.LandingPage, htmlToText(j.Contents)})
 	}
 	return jobs
 }

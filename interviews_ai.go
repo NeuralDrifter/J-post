@@ -457,7 +457,7 @@ const scoringInstruction = "You are an expert interview coach reviewing a mock i
 	"answer summary, what worked, what to improve and a stronger example answer written in the candidate's voice using " +
 	"only facts from their answers and resume. End with exactly three things to practice next. Be candid and specific."
 
-func clampScore(v int) int { return max(1, min(v, 5)) }
+func clampScore(v int) int { return clamp(v, 1, 5) }
 
 // scoreInterview turns the transcript into a scorecard. Failures are recorded on
 // the session (status "failed") so the transcript is kept and scoring can be retried.

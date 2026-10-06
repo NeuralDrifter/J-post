@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -56,10 +57,13 @@ type fetchOptions struct {
 	HoursOld int // 0 = no age limit
 }
 
+// maxDaysOld is HoursOld in whole days, rounded up, for APIs that filter by day.
+func (o fetchOptions) maxDaysOld() int { return (o.HoursOld + 23) / 24 }
+
 func normalizeSources(sources []string) []string {
 	out := []string{}
 	for _, s := range sources {
-		if isKnownSource(s) && !contains(out, s) {
+		if isKnownSource(s) && !slices.Contains(out, s) {
 			out = append(out, s)
 		}
 	}
@@ -67,22 +71,12 @@ func normalizeSources(sources []string) []string {
 	return out
 }
 
-func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
-
 func searchKey(q SearchQuery) string {
-	norm := func(s string) string { return strings.Join(strings.Fields(strings.ToLower(s)), " ") }
 	remote := "0"
 	if q.RemoteOnly {
 		remote = "1"
 	}
-	return norm(q.Term) + "|" + norm(q.Location) + "|" + remote + "|" + strings.Join(normalizeSources(q.Sources), ",")
+	return normalizeForMatch(q.Term) + "|" + normalizeForMatch(q.Location) + "|" + remote + "|" + strings.Join(normalizeSources(q.Sources), ",")
 }
 
 // perSourceCount is the clamped number of results to request from one board.
