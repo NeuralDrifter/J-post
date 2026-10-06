@@ -143,6 +143,7 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 - Ground questions in the job description and in the candidate's real experience from their resume.
 - Never coach, grade or give feedback during the interview. Stay in character the whole time.
 - You'll receive silent timekeeper notes in [square brackets]. Never mention or read them out; when told time is nearly up, wrap up and invite the candidate's questions, then answer them in character. When told time is up, thank the candidate and close the interview.
+- If the candidate stops mid-sentence or trails off, they're probably pausing to think. Don't move on: wait, or briefly invite them to continue ("Take your time" / "Go on").
 - Speak naturally and concisely, like a real person on a call.
 `)
 	if s.Focus != "" {
@@ -179,10 +180,24 @@ func liveVoiceSetup(model, voice, instruction string) map[string]any {
 	}
 }
 
+// thinkingPauseMs is how long the candidate can go quiet before the Live API
+// decides their turn is over. Its default is tuned for quick chat; interview
+// answers have breaths and thinking pauses mid-sentence.
+const thinkingPauseMs = 1500
+
 // liveSetup is the interview's setup message (also locked into the session token):
-// the voice setup plus transcripts, long-session compression and resumption.
+// the voice setup plus patient turn detection, transcripts, long-session
+// compression and resumption.
 func liveSetup(model, voice, brief string) map[string]any {
 	setup := liveVoiceSetup(model, voice, brief)
+	// Only end-of-speech is relaxed; start-of-speech stays default so the
+	// candidate can still interrupt the interviewer.
+	setup["realtimeInputConfig"] = map[string]any{
+		"automaticActivityDetection": map[string]any{
+			"endOfSpeechSensitivity": "END_SENSITIVITY_LOW",
+			"silenceDurationMs":      thinkingPauseMs,
+		},
+	}
 	setup["inputAudioTranscription"] = map[string]any{}
 	setup["outputAudioTranscription"] = map[string]any{}
 	setup["contextWindowCompression"] = map[string]any{"slidingWindow": map[string]any{}}
@@ -442,7 +457,10 @@ const scoringInstruction = "You are an expert interview coach reviewing a mock i
 	"communication (clarity, concision), structure (STAR or similar), relevance (answers the question, fits the role), " +
 	"depth (specifics, metrics, ownership), confidence (decisive, composed). For every interviewer question give a short " +
 	"answer summary, what worked, what to improve and a stronger example answer written in the candidate's voice using " +
-	"only facts from their answers and resume. End with exactly three things to practice next. Be candid and specific."
+	"only facts from their answers and resume. End with exactly three things to practice next. Be candid and specific. " +
+	"The transcript comes from automatic voice detection: an answer may be split into fragments, cut off at a pause, or " +
+	"overlap the interviewer's next line. Treat those as artifacts of the call, not as the candidate talking over the " +
+	"interviewer or speaking in fragments, and judge the content of what they said."
 
 func clampScore(v int) int { return clamp(v, 1, 5) }
 
@@ -511,15 +529,27 @@ func scoringPrompt(job Job, mi MockInterview, resume string) string {
 		orDefault(resume, "(not provided)"), transcriptText(mi.Transcript))
 }
 
-// transcriptText renders the transcript as "Interviewer: …" / "Candidate: …" lines.
+// transcriptText renders the transcript as "Interviewer: …" / "Candidate: …"
+// lines, joining consecutive lines from the same speaker (an answer split by a
+// pause is still one answer).
 func transcriptText(lines []TranscriptLine) string {
 	var b strings.Builder
-	for _, l := range lines {
+	for i, l := range lines {
+		if i > 0 && lines[i-1].Speaker == l.Speaker {
+			fmt.Fprintf(&b, " %s", l.Text)
+			continue
+		}
+		if i > 0 {
+			b.WriteString("\n")
+		}
 		who := "Interviewer"
 		if l.Speaker == SpeakerCandidate {
 			who = "Candidate"
 		}
-		fmt.Fprintf(&b, "%s: %s\n", who, l.Text)
+		fmt.Fprintf(&b, "%s: %s", who, l.Text)
+	}
+	if len(lines) > 0 {
+		b.WriteString("\n")
 	}
 	return b.String()
 }

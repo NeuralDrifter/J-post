@@ -268,3 +268,39 @@ func TestLiveCuesTiming(t *testing.T) {
 		}
 	}
 }
+
+func TestLiveSetupWaitsThroughThinkingPauses(t *testing.T) {
+	setup := liveSetup("m", "Puck", "brief")
+	vad, ok := setup["realtimeInputConfig"].(map[string]any)["automaticActivityDetection"].(map[string]any)
+	if !ok {
+		t.Fatalf("setup has no automaticActivityDetection: %v", setup["realtimeInputConfig"])
+	}
+	if vad["endOfSpeechSensitivity"] != "END_SENSITIVITY_LOW" || vad["silenceDurationMs"] != thinkingPauseMs || thinkingPauseMs < 1000 {
+		t.Fatalf("vad = %v", vad)
+	}
+	if _, set := vad["startOfSpeechSensitivity"]; set {
+		t.Error("start-of-speech detection should stay default so the candidate can still interrupt")
+	}
+}
+
+func TestBriefAndScoringAllowForPauses(t *testing.T) {
+	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "", testSetup)
+	if !strings.Contains(brief, "pausing to think") {
+		t.Error("brief should tell the interviewer to wait through pauses")
+	}
+	if !strings.Contains(scoringInstruction, "talking over") {
+		t.Error("scoring should not penalise overlaps caused by turn detection")
+	}
+}
+
+func TestTranscriptTextJoinsConsecutiveTurns(t *testing.T) {
+	got := transcriptText([]TranscriptLine{
+		{Speaker: SpeakerInterviewer, Text: "Tell me about yourself."},
+		{Speaker: SpeakerCandidate, Text: "I started in recruiting,"},
+		{Speaker: SpeakerCandidate, Text: "then moved into AI leadership."},
+	})
+	want := "Interviewer: Tell me about yourself.\nCandidate: I started in recruiting, then moved into AI leadership.\n"
+	if got != want {
+		t.Fatalf("got %q", got)
+	}
+}
