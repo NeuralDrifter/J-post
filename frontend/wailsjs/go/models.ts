@@ -1169,9 +1169,6 @@ export namespace main {
 	    geminiTextModel: string;
 	    geminiLiveModel: string;
 	    discoverCacheHours: number;
-	    windowWidth: number;
-	    windowHeight: number;
-	    windowMaximised: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1193,9 +1190,6 @@ export namespace main {
 	        this.geminiTextModel = source["geminiTextModel"];
 	        this.geminiLiveModel = source["geminiLiveModel"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
-	        this.windowWidth = source["windowWidth"];
-	        this.windowHeight = source["windowHeight"];
-	        this.windowMaximised = source["windowMaximised"];
 	    }
 	}
 	

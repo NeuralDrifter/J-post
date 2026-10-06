@@ -20,6 +20,7 @@ type App struct {
 	dataDir     string
 	repo        *Repo
 	settings    *SettingsStore
+	window      *WindowStateStore
 	market      *MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
 	initErr     error
 	windowShown bool
@@ -28,7 +29,7 @@ type App struct {
 // NewApp opens (and if needed creates or migrates) the data folder. A failure
 // is kept in initErr and shown full-screen by the frontend instead of crashing.
 func NewApp(dataDir string) *App {
-	a := &App{dataDir: dataDir, settings: NewSettingsStore(dataDir)}
+	a := &App{dataDir: dataDir, settings: NewSettingsStore(dataDir), window: NewWindowStateStore(dataDir)}
 	if md, err := loadMarketData(); err != nil {
 		log.Printf("market data unavailable: %v", err)
 	} else {
@@ -382,13 +383,7 @@ func (a *App) GetSettings() (Settings, error) {
 	return a.settings.Load()
 }
 
-// SaveSettings keeps the window geometry already on disk; only the app writes those.
 func (a *App) SaveSettings(s Settings) error {
-	current, err := a.settings.Load()
-	if err != nil {
-		return err
-	}
-	s.WindowWidth, s.WindowHeight, s.WindowMaximised = current.WindowWidth, current.WindowHeight, current.WindowMaximised
 	s.PythonPath = strings.TrimSpace(s.PythonPath)
 	return a.settings.Save(s)
 }

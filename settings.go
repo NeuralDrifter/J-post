@@ -34,10 +34,7 @@ type Settings struct {
 	GeminiTextModel string `json:"geminiTextModel"`
 	GeminiLiveModel string `json:"geminiLiveModel"`
 	// DiscoverCacheHours: re-running a search within this window reuses stored results.
-	DiscoverCacheHours int  `json:"discoverCacheHours"`
-	WindowWidth        int  `json:"windowWidth"`
-	WindowHeight       int  `json:"windowHeight"`
-	WindowMaximised    bool `json:"windowMaximised"`
+	DiscoverCacheHours int `json:"discoverCacheHours"`
 }
 
 type SettingsStore struct {
@@ -104,8 +101,7 @@ func (s *SettingsStore) Load() (Settings, error) {
 	return settings, nil
 }
 
-// Save writes atomically (temp file + rename) so a crash can't leave a
-// half-written settings file. 0600 because it holds API keys.
+// Save writes atomically; 0600 because the file holds API keys.
 func (s *SettingsStore) Save(settings Settings) error {
 	applySettingsDefaults(&settings)
 	if !validFilingStatus(settings.FilingStatus) {
@@ -127,14 +123,20 @@ func (s *SettingsStore) Save(settings Settings) error {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := os.MkdirAll(filepath.Dir(s.filePath), 0o755); err != nil {
+	return writeFileAtomic(s.filePath, data, 0o600)
+}
+
+// writeFileAtomic writes via a temp file and rename, so a crash can't leave a
+// half-written file.
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	tmp := s.filePath + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, perm); err != nil {
 		return err
 	}
-	if err := os.Rename(tmp, s.filePath); err != nil {
+	if err := os.Rename(tmp, path); err != nil {
 		os.Remove(tmp)
 		return err
 	}

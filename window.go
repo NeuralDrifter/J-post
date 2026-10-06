@@ -2,6 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
+	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -15,6 +20,69 @@ const (
 	smallScreenHeight = 720
 	startScreenPct    = 85 // a fresh window fills this % of the screen in each direction
 )
+
+// WindowState is the main window's size at the end of the last session. Only
+// the app writes it, so it lives apart from the user's Settings.
+type WindowState struct {
+	Width     int  `json:"width"`
+	Height    int  `json:"height"`
+	Maximised bool `json:"maximised"`
+}
+
+type WindowStateStore struct {
+	mu         sync.Mutex
+	filePath   string
+	legacyPath string // settings.json, which held these fields before window.json existed
+}
+
+func NewWindowStateStore(dir string) *WindowStateStore {
+	return &WindowStateStore{filePath: filepath.Join(dir, "window.json"), legacyPath: filepath.Join(dir, "settings.json")}
+}
+
+// Load returns the saved state, the old copy inside settings.json if there's no
+// window.json yet, or the zero state (meaning "pick a size for this screen").
+func (s *WindowStateStore) Load() (WindowState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var w WindowState
+	data, err := os.ReadFile(s.filePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return s.loadLegacy()
+	}
+	if err != nil {
+		return w, err
+	}
+	return w, json.Unmarshal(data, &w)
+}
+
+func (s *WindowStateStore) loadLegacy() (WindowState, error) {
+	var legacy struct {
+		Width     int  `json:"windowWidth"`
+		Height    int  `json:"windowHeight"`
+		Maximised bool `json:"windowMaximised"`
+	}
+	data, err := os.ReadFile(s.legacyPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return WindowState{}, nil
+	}
+	if err != nil {
+		return WindowState{}, err
+	}
+	if err := json.Unmarshal(data, &legacy); err != nil {
+		return WindowState{}, err
+	}
+	return WindowState{Width: legacy.Width, Height: legacy.Height, Maximised: legacy.Maximised}, nil
+}
+
+func (s *WindowStateStore) Save(w WindowState) error {
+	data, err := json.MarshalIndent(w, "", "  ")
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return writeFileAtomic(s.filePath, data, 0o644)
+}
 
 // windowPlan is the startup geometry for the main window, in logical pixels.
 type windowPlan struct {
@@ -31,12 +99,12 @@ type screenSize struct {
 
 // planWindow picks a window size that always fits the given screen: the saved
 // size if it still fits, otherwise startScreenPct of the screen; small screens start maximised.
-func planWindow(screenW, screenH int, s Settings) windowPlan {
+func planWindow(screenW, screenH int, saved WindowState) windowPlan {
 	p := windowPlan{MinWidth: min(minWindowWidth, screenW), MinHeight: min(minWindowHeight, screenH)}
-	if s.WindowWidth > 0 && s.WindowHeight > 0 && s.WindowWidth <= screenW && s.WindowHeight <= screenH {
-		p.Width = max(s.WindowWidth, p.MinWidth)
-		p.Height = max(s.WindowHeight, p.MinHeight)
-		p.Maximise = s.WindowMaximised
+	if saved.Width > 0 && saved.Height > 0 && saved.Width <= screenW && saved.Height <= screenH {
+		p.Width = max(saved.Width, p.MinWidth)
+		p.Height = max(saved.Height, p.MinHeight)
+		p.Maximise = saved.Maximised
 		return p
 	}
 	p.Width = clamp(screenW*startScreenPct/100, p.MinWidth, maxStartWidth)
@@ -93,8 +161,8 @@ func (a *App) domReady(ctx context.Context) {
 	if !ok {
 		return
 	}
-	settings, _ := a.settings.Load() // unreadable settings just mean the default window size
-	p := planWindow(scr.W, scr.H, settings)
+	saved, _ := a.window.Load() // an unreadable file just means the default size
+	p := planWindow(scr.W, scr.H, saved)
 	runtime.WindowSetMinSize(ctx, p.MinWidth, p.MinHeight)
 	runtime.WindowSetSize(ctx, p.Width, p.Height)
 	runtime.WindowCenter(ctx)
@@ -108,14 +176,11 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	if runtime.WindowIsMinimised(ctx) {
 		return false
 	}
-	s, err := a.settings.Load()
-	if err != nil {
-		return false
+	w, _ := a.window.Load() // keeps the last normal size while maximised
+	w.Maximised = runtime.WindowIsMaximised(ctx)
+	if !w.Maximised {
+		w.Width, w.Height = runtime.WindowGetSize(ctx)
 	}
-	s.WindowMaximised = runtime.WindowIsMaximised(ctx)
-	if !s.WindowMaximised {
-		s.WindowWidth, s.WindowHeight = runtime.WindowGetSize(ctx)
-	}
-	_ = a.settings.Save(s)
+	_ = a.window.Save(w) // best effort: losing it only means the default size next time
 	return false
 }
