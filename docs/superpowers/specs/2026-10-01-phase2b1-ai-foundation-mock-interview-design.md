@@ -11,8 +11,7 @@
 
 **New settings:**
 - `geminiKey`, stored in settings.json (0600) like the other keys.
-- `geminiTextModel`, default `gemini-3.8-flash`.
-- `geminiLiveModel`, default `gemini-3.8-live`.
+- `geminiLiveModel`, default `gemini-3.8-live`. **Every Gemini call uses this Live model** (the interviewer, voice previews, coaching tips and scorecards); there is no separate text model. The Live model can only reply with audio, so structured results (tips, scorecards) come back as the arguments of a tool call (`submit_result`), not as spoken JSON. Tested: a full scorecard arrives in ~4 s via the tool call, while speaking it took ~55 s and was cut off. (A separate text model was tried first and dropped: its free-tier quota ran out and blocked scoring.)
 - The Settings UI shows the privacy note: on the free tier, Google may use submitted content to improve its products.
 
 **`gemini.go`** (REST, `x-goog-api-key` header; the key never appears in URLs or errors):
@@ -106,13 +105,13 @@
   - An answer timer that turns amber at 150 s.
 - **AI nudge:**
   - Sent when an answer of 8+ words ends (the interviewer starts the next turn).
-  - Calls `NudgeAnswer(sessionId, question, answer)`, which uses the text model with the schema `{nudge: string, kind: "tip"|"good"}`, at most about 12 words.
+  - Calls `NudgeAnswer(sessionId, question, answer)`, which asks the Live model for `{nudge: string, kind: "tip"|"good"}` through the tool call, at most about 12 words.
   - Shown for that answer; errors are silent (cues are optional).
 
 **Ending:**
 - **The End button,** or the interviewer's wrap-up followed by the user ending, stops the audio, uploads the recording, saves the transcript, then calls `ScoreInterview(sessionId)`:
   - Status `scoring`.
-  - The text model receives the transcript, job and resume, with the schema `{overall: {communication, structure, relevance, depth, confidence: 1-5}, summary, questions: [{question, answerSummary, worked, improve, strongerAnswer}], practiceNext: [3 strings]}`.
+  - The Live model receives the transcript, job and resume and returns, through the tool call, the schema `{overall: {communication, structure, relevance, depth, confidence: 1-5}, summary, questions: [{question, answerSummary, worked, improve, strongerAnswer}], practiceNext: [3 strings]}`.
   - Status `done`, or `failed` with the error.
 - **Retry:** `ScoreInterview` can be retried from the review page.
 - **Connection lost:** if the connection can't be resumed, the session ends and whatever transcript exists is still scored.

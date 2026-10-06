@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 var testSetup = InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough", Voice: "Puck", InterviewerName: "Dana Reyes", Focus: "conflict stories"}
@@ -123,14 +125,13 @@ func TestScoreInterview(t *testing.T) {
 	if err := r.SaveInterviewTranscript(mi.ID, sampleTranscript); err != nil {
 		t.Fatal(err)
 	}
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
-		card := `{"overall":{"communication":4,"structure":9,"relevance":4,"depth":3,"confidence":0},"summary":"Solid.",
-			"questions":[{"question":"Conflict","answerSummary":"Design review","worked":"Clear outcome","improve":"Say your role","strongerAnswer":"..."}],
-			"practiceNext":["Quantify impact","Name your role","Pause before answering"]}`
-		resp, _ := json.Marshal(map[string]any{"candidates": []any{map[string]any{"content": map[string]any{"parts": []any{map[string]any{"text": card}}}}}})
-		w.Write(resp)
-	})
-	done, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiTextModel: "m"}, mi.ID)
+	var card map[string]any
+	json.Unmarshal([]byte(`{"overall":{"communication":4,"structure":9,"relevance":4,"depth":3,"confidence":0},"summary":"Solid.",
+		"questions":[{"question":"Conflict","answerSummary":"Design review","worked":"Clear outcome","improve":"Say your role","strongerAnswer":"..."}],
+		"practiceNext":["Quantify impact","Name your role","Pause before answering"]}`), &card)
+	var prompt string
+	fakeLiveServer(t, replyWithToolCall(t, card, &prompt))
+	done, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
 	if err != nil || done.Status != "done" || done.Scorecard == nil {
 		t.Fatalf("done = %+v, %v", done, err)
 	}
@@ -140,6 +141,9 @@ func TestScoreInterview(t *testing.T) {
 	if len(done.Scorecard.Questions) != 1 || len(done.Scorecard.PracticeNext) != 3 || done.EndedAt == "" {
 		t.Fatalf("scorecard = %+v", done.Scorecard)
 	}
+	if !strings.Contains(prompt, "Transcript:") {
+		t.Fatalf("the scoring prompt should carry the transcript: %q", prompt)
+	}
 }
 
 func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
@@ -147,15 +151,15 @@ func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 	j := interviewJob(t, r)
 	mi, _ := r.CreateMockInterview(j.ID, testSetup)
 	r.SaveInterviewTranscript(mi.ID, sampleTranscript)
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
-		http.Error(w, "overloaded", http.StatusServiceUnavailable)
+	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
+		c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1011, "model overloaded"))
 	})
-	failed, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiTextModel: "m"}, mi.ID)
+	failed, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
 	if err == nil || failed.Status != "failed" || failed.Error == "" || len(failed.Transcript) != 2 {
 		t.Fatalf("failed = %+v, %v", failed, err)
 	}
 	empty, _ := r.CreateMockInterview(j.ID, testSetup)
-	if res, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiTextModel: "m"}, empty.ID); err == nil || res.Status != "failed" {
+	if res, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, empty.ID); err == nil || res.Status != "failed" {
 		t.Fatalf("an empty transcript can't be scored: %+v %v", res, err)
 	}
 }

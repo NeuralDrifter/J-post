@@ -262,15 +262,12 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
         </div>
       </Section>
 
-      <Section title="AI (Google Gemini)" hint="Powers mock interviews and, later, fit scores and writing help.">
+      <Section title="AI (Google Gemini)" hint="Powers mock interviews: the interviewer, coaching tips and scorecards all use the Live model.">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Gemini API key" wide>
             <input className="field" type="password" autoComplete="off" value={s.geminiKey} onChange={(e) => setS({ ...s, geminiKey: e.target.value })} />
           </Field>
-          <Field label="Text model">
-            <input className="field font-mono text-xs" value={s.geminiTextModel} onChange={(e) => setS({ ...s, geminiTextModel: e.target.value })} />
-          </Field>
-          <Field label="Live (voice) model">
+          <Field label="Live model" wide>
             <input className="field font-mono text-xs" value={s.geminiLiveModel} onChange={(e) => setS({ ...s, geminiLiveModel: e.target.value })} />
           </Field>
         </div>

@@ -1200,7 +1200,6 @@ export namespace main {
 	    usajobsEmail: string;
 	    museCategories: string[];
 	    geminiKey: string;
-	    geminiTextModel: string;
 	    geminiLiveModel: string;
 	    discoverCacheHours: number;
 	
@@ -1221,7 +1220,6 @@ export namespace main {
 	        this.usajobsEmail = source["usajobsEmail"];
 	        this.museCategories = source["museCategories"];
 	        this.geminiKey = source["geminiKey"];
-	        this.geminiTextModel = source["geminiTextModel"];
 	        this.geminiLiveModel = source["geminiLiveModel"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
 	    }

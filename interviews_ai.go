@@ -196,19 +196,6 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 	return b.String()
 }
 
-// liveVoiceSetup is the part of a Live API setup message every session shares:
-// the model, an audio-only reply in the given voice, and the system instruction.
-func liveVoiceSetup(model, voice, instruction string) map[string]any {
-	return map[string]any{
-		"model": "models/" + model,
-		"generationConfig": map[string]any{
-			"responseModalities": []string{"AUDIO"},
-			"speechConfig":       map[string]any{"voiceConfig": map[string]any{"prebuiltVoiceConfig": map[string]any{"voiceName": voice}}},
-		},
-		"systemInstruction": map[string]any{"parts": []map[string]any{{"text": instruction}}},
-	}
-}
-
 // thinkingPauseMs is how long the candidate can go quiet before the Live API
 // decides their turn is over. Its default is tuned for quick chat; interview
 // answers have breaths and thinking pauses mid-sentence.
@@ -440,8 +427,8 @@ const nudgeInstruction = "You are a discreet interview coach. Give ONE short cue
 
 func nudgeAnswer(ctx context.Context, s Settings, question, answer string) (Nudge, error) {
 	var n Nudge
-	err := generateJSON(ctx, s.GeminiKey, jsonPrompt{
-		model:  s.GeminiTextModel,
+	err := liveStructured(ctx, s.GeminiKey, jsonPrompt{
+		model:  s.GeminiLiveModel,
 		system: nudgeInstruction,
 		parts:  []geminiPart{{Text: "Interviewer asked: " + question + "\nCandidate answered: " + answer}},
 		schema: nudgeSchema,
@@ -541,8 +528,8 @@ func requestScorecard(ctx context.Context, r *Repo, s Settings, mi MockInterview
 	if err != nil {
 		return card, err
 	}
-	err = generateJSON(ctx, s.GeminiKey, jsonPrompt{
-		model:  s.GeminiTextModel,
+	err = liveStructured(ctx, s.GeminiKey, jsonPrompt{
+		model:  s.GeminiLiveModel,
 		system: scoringInstruction,
 		parts:  []geminiPart{{Text: scoringPrompt(job, mi, profile.ResumeText)}},
 		schema: scorecardSchema,

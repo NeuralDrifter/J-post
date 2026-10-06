@@ -12,7 +12,6 @@ import (
 const (
 	defaultFollowUpDays       = 7
 	defaultDiscoverCacheHours = 12
-	defaultGeminiTextModel    = "gemini-3.8-flash"
 	defaultGeminiLiveModel    = "gemini-3.8-live"
 )
 
@@ -31,7 +30,6 @@ type Settings struct {
 	MuseCategories []string `json:"museCategories"`
 	// AI (Google Gemini).
 	GeminiKey       string `json:"geminiKey"`
-	GeminiTextModel string `json:"geminiTextModel"`
 	GeminiLiveModel string `json:"geminiLiveModel"`
 	// DiscoverCacheHours: re-running a search within this window reuses stored results.
 	DiscoverCacheHours int `json:"discoverCacheHours"`
@@ -67,9 +65,6 @@ func applySettingsDefaults(s *Settings) {
 	}
 	if s.MuseCategories == nil {
 		s.MuseCategories = []string{}
-	}
-	if s.GeminiTextModel == "" {
-		s.GeminiTextModel = defaultGeminiTextModel
 	}
 	if s.GeminiLiveModel == "" {
 		s.GeminiLiveModel = defaultGeminiLiveModel

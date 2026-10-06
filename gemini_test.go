@@ -17,61 +17,6 @@ func withGeminiServer(t *testing.T, h http.HandlerFunc) {
 	t.Cleanup(func() { geminiBaseURL, geminiRetryDelays = oldURL, oldDelays })
 }
 
-func TestGenerateJSON(t *testing.T) {
-	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1beta/models/gemini-3.8-flash:generateContent" || r.Header.Get("x-goog-api-key") != "k3y" || r.URL.RawQuery != "" {
-			t.Errorf("request %s %s key=%q", r.URL.Path, r.URL.RawQuery, r.Header.Get("x-goog-api-key"))
-		}
-		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
-		gc := body["generationConfig"].(map[string]any)
-		sys := body["systemInstruction"].(map[string]any)["parts"].([]any)[0].(map[string]any)["text"]
-		parts := body["contents"].([]any)[0].(map[string]any)["parts"].([]any)
-		inline := parts[1].(map[string]any)["inlineData"].(map[string]any)
-		if gc["responseMimeType"] != "application/json" || gc["responseSchema"] == nil || sys != "be brief" ||
-			parts[0].(map[string]any)["text"] != "hello" || inline["mimeType"] != "application/pdf" || inline["data"] != "UERG" {
-			t.Errorf("body = %v", body)
-		}
-		w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{\"nudge\":\"Add a result\","},{"text":"\"kind\":\"tip\"}"}]}}]}`))
-	})
-	var out struct{ Nudge, Kind string }
-	err := generateJSON(context.Background(), "k3y", jsonPrompt{
-		model:  "gemini-3.8-flash",
-		system: "be brief",
-		parts:  []geminiPart{{Text: "hello"}, {InlineData: &geminiBlob{MimeType: "application/pdf", Data: "UERG"}}},
-		schema: map[string]any{"type": "OBJECT"},
-	}, &out)
-	if err != nil || out.Nudge != "Add a result" || out.Kind != "tip" {
-		t.Fatalf("out=%+v err=%v", out, err)
-	}
-}
-
-func TestGenerateJSONErrors(t *testing.T) {
-	var out map[string]any
-	if err := generateJSON(context.Background(), "", jsonPrompt{model: "m"}, &out); err == nil || !strings.Contains(err.Error(), "Settings") {
-		t.Fatalf("missing key err = %v", err)
-	}
-	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, `{"error":{"message":"API key not valid"}}`, http.StatusBadRequest)
-	})
-	err := generateJSON(context.Background(), "s3cretkey", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out)
-	if err == nil || !strings.Contains(err.Error(), "400") || strings.Contains(err.Error(), "s3cretkey") {
-		t.Fatalf("err = %v", err)
-	}
-	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"not json"}]}}]}`))
-	})
-	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err == nil {
-		t.Fatal("malformed model output should error")
-	}
-	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"candidates":[],"promptFeedback":{"blockReason":"SAFETY"}}`))
-	})
-	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err == nil || !strings.Contains(err.Error(), "SAFETY") {
-		t.Fatalf("blocked err = %v", err)
-	}
-}
-
 func TestCreateLiveToken(t *testing.T) {
 	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
 	withGeminiServer(t, func(w http.ResponseWriter, r *http.Request) {
@@ -118,10 +63,10 @@ func TestGeminiRetriesBusyErrors(t *testing.T) {
 			http.Error(w, `{"error":{"message":"This model is currently experiencing high demand."}}`, http.StatusServiceUnavailable)
 			return
 		}
-		w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{\"ok\":true}"}]}}]}`))
+		w.Write([]byte(`{"ok":true}`))
 	})
 	var out struct{ OK bool }
-	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err != nil || !out.OK || calls != 3 {
+	if err := geminiPost(context.Background(), "k", "/x", map[string]any{}, &out); err != nil || !out.OK || calls != 3 {
 		t.Fatalf("calls=%d out=%+v err=%v", calls, out, err)
 	}
 
@@ -130,7 +75,7 @@ func TestGeminiRetriesBusyErrors(t *testing.T) {
 		calls++
 		http.Error(w, "busy", http.StatusTooManyRequests)
 	})
-	if err := generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out); err == nil || calls != 3 {
+	if err := geminiPost(context.Background(), "k", "/x", map[string]any{}, &out); err == nil || calls != 3 {
 		t.Fatalf("should give up after 3 tries: calls=%d err=%v", calls, err)
 	}
 
@@ -139,7 +84,7 @@ func TestGeminiRetriesBusyErrors(t *testing.T) {
 		calls++
 		http.Error(w, "bad key", http.StatusBadRequest)
 	})
-	generateJSON(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}}, &out)
+	geminiPost(context.Background(), "k", "/x", map[string]any{}, &out)
 	if calls != 1 {
 		t.Fatalf("other errors must not be retried: calls=%d", calls)
 	}

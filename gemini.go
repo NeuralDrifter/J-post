@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -96,59 +95,6 @@ func geminiErrorText(body []byte) string {
 		return e.Error.Message
 	}
 	return strings.TrimSpace(string(body))
-}
-
-// jsonPrompt asks a text model for structured (JSON) output.
-type jsonPrompt struct {
-	model  string
-	system string // optional system instruction
-	parts  []geminiPart
-	schema map[string]any // optional response schema
-}
-
-// generateJSON sends the prompt and decodes the model's JSON answer into out.
-func generateJSON(ctx context.Context, key string, p jsonPrompt, out any) error {
-	generationConfig := map[string]any{"responseMimeType": "application/json"}
-	if p.schema != nil {
-		generationConfig["responseSchema"] = p.schema
-	}
-	body := map[string]any{
-		"contents":         []any{map[string]any{"role": "user", "parts": p.parts}},
-		"generationConfig": generationConfig,
-	}
-	if p.system != "" {
-		body["systemInstruction"] = map[string]any{"parts": []geminiPart{{Text: p.system}}}
-	}
-	var resp struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct {
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"content"`
-			FinishReason string `json:"finishReason"`
-		} `json:"candidates"`
-		PromptFeedback struct {
-			BlockReason string `json:"blockReason"`
-		} `json:"promptFeedback"`
-	}
-	if err := geminiPost(ctx, key, "/v1beta/models/"+url.PathEscape(p.model)+":generateContent", body, &resp); err != nil {
-		return err
-	}
-	if len(resp.Candidates) == 0 {
-		if resp.PromptFeedback.BlockReason != "" {
-			return fmt.Errorf("Gemini declined the request (%s)", resp.PromptFeedback.BlockReason)
-		}
-		return errors.New("Gemini returned no answer")
-	}
-	var text strings.Builder
-	for _, p := range resp.Candidates[0].Content.Parts {
-		text.WriteString(p.Text)
-	}
-	if err := json.Unmarshal([]byte(text.String()), out); err != nil {
-		return fmt.Errorf("Gemini's answer wasn't valid JSON (finish reason %s)", resp.Candidates[0].FinishReason)
-	}
-	return nil
 }
 
 // createLiveToken mints a short-lived token that locks the session's setup
