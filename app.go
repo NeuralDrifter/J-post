@@ -14,7 +14,12 @@ import (
 )
 
 // App is the thin layer bound to the frontend. Every exported method is
-// callable from JavaScript; the real work lives in Repo and discover.go.
+// callable from JavaScript; the real work lives in Repo and the domain files.
+//
+// If startup fails (initErr), the frontend asks GetStartupError first and shows
+// only the error screen, so no other method is called. That's why methods don't
+// each re-check initErr; a stray call would come back as Wails' recovered-panic
+// error, not a crash.
 type App struct {
 	ctx         context.Context
 	dataDir     string
@@ -59,16 +64,6 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
-func (a *App) ready() error {
-	if a.initErr != nil {
-		return a.initErr
-	}
-	if a.repo == nil {
-		return errors.New("database is not available")
-	}
-	return nil
-}
-
 func (a *App) followUpDays() int {
 	s, err := a.settings.Load()
 	if err != nil {
@@ -88,9 +83,6 @@ func (a *App) GetStartupError() string {
 // ---- Jobs ----
 
 func (a *App) ListJobSummaries() ([]JobSummary, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	summaries, err := a.repo.ListJobSummaries(a.followUpDays())
 	if err != nil {
 		return nil, err
@@ -111,119 +103,71 @@ func (a *App) ListJobSummaries() ([]JobSummary, error) {
 }
 
 func (a *App) GetMetrics() (Metrics, error) {
-	if err := a.ready(); err != nil {
-		return Metrics{}, err
-	}
 	return a.repo.GetMetrics(a.followUpDays())
 }
 
 func (a *App) GetJob(id string) (Job, error) {
-	if err := a.ready(); err != nil {
-		return Job{}, err
-	}
 	return a.repo.GetJob(id)
 }
 
 func (a *App) CreateJob(j Job) (Job, error) {
-	if err := a.ready(); err != nil {
-		return Job{}, err
-	}
 	return a.repo.CreateJob(j)
 }
 
 func (a *App) UpdateJob(j Job) (Job, error) {
-	if err := a.ready(); err != nil {
-		return Job{}, err
-	}
 	return a.repo.UpdateJob(j)
 }
 
 func (a *App) UpdateJobNotes(id, notes string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.UpdateJobNotes(id, notes)
 }
 
 func (a *App) ChangeStatus(id, status, reason, note string) (Job, error) {
-	if err := a.ready(); err != nil {
-		return Job{}, err
-	}
 	return a.repo.ChangeStatus(id, status, reason, note)
 }
 
 func (a *App) DeleteJob(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DeleteJob(id)
 }
 
 func (a *App) ListStageEvents(jobID string) ([]StageEvent, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.ListStageEvents(jobID)
 }
 
 // ---- Contacts & interviews ----
 
 func (a *App) ListContacts(jobID string) ([]Contact, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.ListContacts(jobID)
 }
 
 func (a *App) SaveContact(c Contact) (Contact, error) {
-	if err := a.ready(); err != nil {
-		return Contact{}, err
-	}
 	return a.repo.SaveContact(c)
 }
 
 func (a *App) DeleteContact(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DeleteContact(id)
 }
 
 func (a *App) ListInterviews(jobID string) ([]Interview, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.ListInterviews(jobID)
 }
 
 func (a *App) SaveInterview(iv Interview) (Interview, error) {
-	if err := a.ready(); err != nil {
-		return Interview{}, err
-	}
 	return a.repo.SaveInterview(iv)
 }
 
 func (a *App) DeleteInterview(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DeleteInterview(id)
 }
 
 // ---- Attachments ----
 
 func (a *App) ListAttachments(jobID string) ([]Attachment, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.ListAttachments(jobID)
 }
 
 // PickAndAttachFile shows the native file dialog; it returns nil if cancelled.
 func (a *App) PickAndAttachFile(jobID string) (*Attachment, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{Title: "Attach a file"})
 	if err != nil || path == "" {
 		return nil, err
@@ -236,9 +180,6 @@ func (a *App) PickAndAttachFile(jobID string) (*Attachment, error) {
 }
 
 func (a *App) OpenAttachment(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	att, err := a.repo.GetAttachment(id)
 	if err != nil {
 		return err
@@ -250,17 +191,11 @@ func (a *App) OpenAttachment(id string) error {
 }
 
 func (a *App) RenameAttachment(id, label string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.RenameAttachment(id, label)
 }
 
 // ShowAttachmentInFolder opens the file manager with the stored copy selected.
 func (a *App) ShowAttachmentInFolder(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	att, err := a.repo.GetAttachment(id)
 	if err != nil {
 		return err
@@ -269,9 +204,6 @@ func (a *App) ShowAttachmentInFolder(id string) error {
 }
 
 func (a *App) DeleteAttachment(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DeleteAttachment(id)
 }
 
@@ -280,7 +212,7 @@ func (a *App) DeleteAttachment(id string) error {
 // RunSearch files a search's results into the Discover inbox, reusing them if
 // the same search ran recently.
 func (a *App) RunSearch(q SearchQuery) (SearchRun, error) {
-	settings, err := a.searchSettings()
+	settings, err := a.settings.Load()
 	if err != nil {
 		return SearchRun{}, err
 	}
@@ -290,7 +222,7 @@ func (a *App) RunSearch(q SearchQuery) (SearchRun, error) {
 
 // RefreshSearch fetches new postings for a search even if it ran recently.
 func (a *App) RefreshSearch(q SearchQuery) (SearchRun, error) {
-	settings, err := a.searchSettings()
+	settings, err := a.settings.Load()
 	if err != nil {
 		return SearchRun{}, err
 	}
@@ -298,59 +230,31 @@ func (a *App) RefreshSearch(q SearchQuery) (SearchRun, error) {
 	return RefreshSearch(context.Background(), a.repo, q, fetcher.fetch)
 }
 
-func (a *App) searchSettings() (Settings, error) {
-	if err := a.ready(); err != nil {
-		return Settings{}, err
-	}
-	return a.settings.Load()
-}
-
 func (a *App) ListPostings(f PostingFilter) ([]Posting, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.ListPostings(f)
 }
 
 func (a *App) InboxCounts() (InboxCounts, error) {
-	if err := a.ready(); err != nil {
-		return InboxCounts{}, err
-	}
 	return a.repo.InboxCounts()
 }
 
 func (a *App) MarkPostingSeen(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.MarkPostingSeen(id)
 }
 
 func (a *App) DismissPosting(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DismissPosting(id)
 }
 
 func (a *App) RestorePosting(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.RestorePosting(id)
 }
 
 func (a *App) SavePosting(id string) (Job, error) {
-	if err := a.ready(); err != nil {
-		return Job{}, err
-	}
 	return a.repo.SavePosting(id)
 }
 
 func (a *App) ClearDismissed(olderThanDays int) (int, error) {
-	if err := a.ready(); err != nil {
-		return 0, err
-	}
 	return a.repo.ClearDismissed(olderThanDays)
 }
 
@@ -364,16 +268,10 @@ func (a *App) ListJobSources() ([]JobSource, error) {
 }
 
 func (a *App) ListRecentSearches() ([]SavedSearch, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.ListRecentSearches(8)
 }
 
 func (a *App) DeleteSearch(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DeleteSearch(id)
 }
 
@@ -456,9 +354,6 @@ func (a *App) comparisonItems(list []CompPackage) ([]ComparisonItem, error) {
 }
 
 func (a *App) ListComparisons() ([]ComparisonItem, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	list, err := a.repo.ListCompPackages()
 	if err != nil {
 		return nil, err
@@ -467,9 +362,6 @@ func (a *App) ListComparisons() ([]ComparisonItem, error) {
 }
 
 func (a *App) ListCompForJob(jobID string) ([]ComparisonItem, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	list, err := a.repo.ListCompPackagesForJob(jobID)
 	if err != nil {
 		return nil, err
@@ -478,38 +370,23 @@ func (a *App) ListCompForJob(jobID string) ([]ComparisonItem, error) {
 }
 
 func (a *App) GetCurrentComp() (*CompPackage, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.CurrentCompPackage()
 }
 
 func (a *App) SaveCompPackage(p CompPackage) (CompPackage, error) {
-	if err := a.ready(); err != nil {
-		return CompPackage{}, err
-	}
 	return a.repo.SaveCompPackage(p)
 }
 
 func (a *App) DeleteCompPackage(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DeleteCompPackage(id)
 }
 
 func (a *App) DraftCounter(offerID string) (CompPackage, error) {
-	if err := a.ready(); err != nil {
-		return CompPackage{}, err
-	}
 	return a.repo.DraftCounter(offerID)
 }
 
 // NewEstimate returns an unsaved estimate prefilled from the job's posted range and location.
 func (a *App) NewEstimate(jobID string) (CompPackage, error) {
-	if err := a.ready(); err != nil {
-		return CompPackage{}, err
-	}
 	j, err := a.repo.GetJob(jobID)
 	if err != nil {
 		return CompPackage{}, err
@@ -527,9 +404,6 @@ func (a *App) NewEstimate(jobID string) (CompPackage, error) {
 
 // PreviewComp evaluates an unsaved package for the editor's live preview.
 func (a *App) PreviewComp(p CompPackage) (PackageResult, error) {
-	if err := a.ready(); err != nil {
-		return PackageResult{}, err
-	}
 	current, err := a.repo.CurrentCompPackage()
 	if err != nil {
 		return PackageResult{}, err
@@ -585,25 +459,16 @@ func (a *App) MarketSources() DataSources {
 // ---- AI: resume ----
 
 func (a *App) GetProfile() (Profile, error) {
-	if err := a.ready(); err != nil {
-		return Profile{}, err
-	}
 	return a.repo.GetProfile()
 }
 
 func (a *App) UpdateResumeText(text string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.UpdateResumeText(text)
 }
 
 // UploadResume picks a resume file, keeps a copy, and extracts its text locally
 // (nothing is uploaded). Returns nil if the dialog was cancelled.
 func (a *App) UploadResume() (*Profile, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title:   "Choose your resume",
 		Filters: []runtime.FileFilter{{DisplayName: "Resume (*.pdf, *.docx, *.txt, *.md)", Pattern: "*.pdf;*.docx;*.txt;*.md"}},
@@ -633,9 +498,6 @@ func (a *App) UploadResume() (*Profile, error) {
 // ---- AI: mock interviews ----
 
 func (a *App) PrepareInterview(jobID string, setup InterviewSetup) (LiveSession, error) {
-	if err := a.ready(); err != nil {
-		return LiveSession{}, err
-	}
 	s, err := a.settings.Load()
 	if err != nil {
 		return LiveSession{}, err
@@ -653,9 +515,6 @@ func (a *App) NudgeAnswer(question, answer string) (Nudge, error) {
 }
 
 func (a *App) ScoreInterview(id string) (MockInterview, error) {
-	if err := a.ready(); err != nil {
-		return MockInterview{}, err
-	}
 	s, err := a.settings.Load()
 	if err != nil {
 		return MockInterview{}, err
@@ -664,17 +523,11 @@ func (a *App) ScoreInterview(id string) (MockInterview, error) {
 }
 
 func (a *App) SaveInterviewTranscript(id string, lines []TranscriptLine) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.SaveInterviewTranscript(id, lines)
 }
 
 // SaveInterviewRecording stores the session audio (webm/opus, base64 from the page).
 func (a *App) SaveInterviewRecording(id, base64Data string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	mi, err := a.repo.GetMockInterview(id)
 	if err != nil {
 		return err
@@ -696,9 +549,6 @@ func (a *App) SaveInterviewRecording(id, base64Data string) error {
 
 // GetInterviewRecording returns the recording as a data URL for the audio player.
 func (a *App) GetInterviewRecording(id string) (string, error) {
-	if err := a.ready(); err != nil {
-		return "", err
-	}
 	path, err := a.repo.recordingPath(id)
 	if err != nil || path == "" {
 		return "", err
@@ -711,23 +561,14 @@ func (a *App) GetInterviewRecording(id string) (string, error) {
 }
 
 func (a *App) ListMockInterviews(jobID string) ([]MockInterview, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
 	return a.repo.ListMockInterviews(jobID)
 }
 
 func (a *App) GetMockInterview(id string) (MockInterview, error) {
-	if err := a.ready(); err != nil {
-		return MockInterview{}, err
-	}
 	return a.repo.GetMockInterview(id)
 }
 
 func (a *App) DeleteMockInterview(id string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
 	return a.repo.DeleteMockInterview(id)
 }
 
