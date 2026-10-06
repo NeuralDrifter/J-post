@@ -83,15 +83,15 @@ func (a *App) GetStartupError() string {
 // ---- Jobs ----
 
 func (a *App) ListJobSummaries() ([]JobSummary, error) {
-	summaries, err := a.repo.ListJobSummaries(a.followUpDays())
+	settings, err := a.settings.Load()
+	if err != nil {
+		return nil, err
+	}
+	summaries, err := a.repo.ListJobSummaries(settings.FollowUpDays)
 	if err != nil {
 		return nil, err
 	}
 	packages, err := a.repo.ListCompPackages()
-	if err != nil {
-		return nil, err
-	}
-	settings, err := a.settings.Load()
 	if err != nil {
 		return nil, err
 	}
