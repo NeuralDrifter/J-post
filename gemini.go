@@ -25,7 +25,10 @@ const geminiLiveURL = "wss://generativelanguage.googleapis.com/ws/google.ai.gene
 
 // liveLockedFields are fixed by the token; sessionResumption stays with the
 // client so it can reconnect with a handle.
-const liveLockedFields = "model,generationConfig,systemInstruction,inputAudioTranscription,outputAudioTranscription,contextWindowCompression,realtimeInputConfig"
+var liveLockedFields = []string{
+	"model", "generationConfig", "systemInstruction", "inputAudioTranscription",
+	"outputAudioTranscription", "contextWindowCompression", "realtimeInputConfig",
+}
 
 var errNoGeminiKey = errors.New("add your Gemini API key in Settings → AI first")
 
@@ -155,7 +158,7 @@ func createLiveToken(ctx context.Context, key string, setup map[string]any, minu
 	// The locked setup may only contain fields named in fieldMask (Google returns
 	// 400 otherwise); the rest, e.g. sessionResumption, comes from the page.
 	locked := map[string]any{}
-	for _, field := range strings.Split(liveLockedFields, ",") {
+	for _, field := range liveLockedFields {
 		if v, ok := setup[field]; ok {
 			locked[field] = v
 		}
@@ -165,7 +168,7 @@ func createLiveToken(ctx context.Context, key string, setup map[string]any, minu
 		"expireTime":               expires,
 		"newSessionExpireTime":     expires,
 		"bidiGenerateContentSetup": locked,
-		"fieldMask":                liveLockedFields,
+		"fieldMask":                strings.Join(liveLockedFields, ","),
 	}
 	var resp struct {
 		Name string `json:"name"`
