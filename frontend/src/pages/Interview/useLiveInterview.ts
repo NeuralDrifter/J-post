@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { apiOk } from '../../lib/api'
-import { NudgeAnswer, SaveInterviewRecording, SaveInterviewTranscript, type main } from '../../lib/backend'
+import { main, NudgeAnswer, SaveInterviewRecording, SaveInterviewTranscript } from '../../lib/backend'
 import { releaseSession } from '../../lib/interview'
 import { bytesToBase64 } from '../../lib/live/audio'
 import type { Line, Speaker } from '../../lib/live/reducer'
@@ -110,5 +110,12 @@ export function useLiveInterview(id: string, live: main.LiveSession | undefined)
 }
 
 function toTranscript(lines: Line[]): main.TranscriptLine[] {
-  return lines.map((l) => ({ speaker: l.speaker, text: l.text, atMs: Math.round(l.atMs) }))
+  return lines.map((l) =>
+    main.TranscriptLine.createFrom({
+      speaker: l.speaker,
+      text: l.text,
+      atMs: Math.round(l.atMs),
+      cutOff: l.cutOff && { spokeMs: Math.round(l.cutOff.spokeMs), gapMs: Math.round(l.cutOff.gapMs) },
+    }),
+  )
 }

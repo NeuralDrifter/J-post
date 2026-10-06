@@ -358,6 +358,20 @@ export namespace main {
 	        this.notes = source["notes"];
 	    }
 	}
+	export class CutOff {
+	    spokeMs: number;
+	    gapMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CutOff(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.spokeMs = source["spokeMs"];
+	        this.gapMs = source["gapMs"];
+	    }
+	}
 	export class SourceInfo {
 	    name: string;
 	    release: string;
@@ -886,6 +900,7 @@ export namespace main {
 	    speaker: string;
 	    text: string;
 	    atMs: number;
+	    cutOff?: CutOff;
 	
 	    static createFrom(source: any = {}) {
 	        return new TranscriptLine(source);
@@ -896,7 +911,26 @@ export namespace main {
 	        this.speaker = source["speaker"];
 	        this.text = source["text"];
 	        this.atMs = source["atMs"];
+	        this.cutOff = this.convertValues(source["cutOff"], CutOff);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class MockInterview {
 	    id: string;

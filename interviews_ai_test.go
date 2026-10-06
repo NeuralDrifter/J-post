@@ -288,8 +288,10 @@ func TestBriefAndScoringAllowForPauses(t *testing.T) {
 	if !strings.Contains(brief, "pausing to think") {
 		t.Error("brief should tell the interviewer to wait through pauses")
 	}
-	if !strings.Contains(scoringInstruction, "talking over") {
-		t.Error("scoring should not penalise overlaps caused by turn detection")
+	for _, want := range []string{"[cut in while the candidate paused]", "[interrupted by the candidate]", "fair to critique"} {
+		if !strings.Contains(scoringInstruction, want) {
+			t.Errorf("scoring instruction should explain %q", want)
+		}
 	}
 }
 
@@ -302,5 +304,28 @@ func TestTranscriptTextJoinsConsecutiveTurns(t *testing.T) {
 	want := "Interviewer: Tell me about yourself.\nCandidate: I started in recruiting, then moved into AI leadership.\n"
 	if got != want {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestTranscriptTextLabelsCutOffs(t *testing.T) {
+	pauseCutIn := &CutOff{SpokeMs: 1200, GapMs: 1600}       // jumped in right after a pause, cut off at once
+	realInterruption := &CutOff{SpokeMs: 6000, GapMs: 1600} // well into its question
+	openingCutOff := &CutOff{SpokeMs: 1000, GapMs: -1}      // no earlier candidate words to have paused in
+	got := transcriptText([]TranscriptLine{
+		{Speaker: SpeakerCandidate, Text: "I started in recruiting"},
+		{Speaker: SpeakerInterviewer, Text: "Great, and", CutOff: pauseCutIn},
+		{Speaker: SpeakerCandidate, Text: "then moved into AI leadership."},
+		{Speaker: SpeakerInterviewer, Text: "Let me ask about", CutOff: realInterruption},
+		{Speaker: SpeakerCandidate, Text: "Sorry, one more thing."},
+		{Speaker: SpeakerInterviewer, Text: "Hi, I'm", CutOff: openingCutOff},
+	})
+	for _, want := range []string{
+		"Interviewer: Great, and [cut in while the candidate paused]",
+		"Interviewer: Let me ask about [interrupted by the candidate]",
+		"Interviewer: Hi, I'm [interrupted by the candidate]",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in: %s", want, got)
+		}
 	}
 }

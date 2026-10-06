@@ -30,9 +30,38 @@ const (
 )
 
 type TranscriptLine struct {
-	Speaker string `json:"speaker"` // a Speaker* constant
-	Text    string `json:"text"`
-	AtMs    int64  `json:"atMs"`
+	Speaker string  `json:"speaker"` // a Speaker* constant
+	Text    string  `json:"text"`
+	AtMs    int64   `json:"atMs"`
+	CutOff  *CutOff `json:"cutOff,omitempty"` // set on an interviewer line the candidate's speech stopped
+}
+
+// CutOff records, for an interviewer line the candidate's speech stopped, how
+// long the interviewer had been talking and how soon after the candidate's
+// previous words it had started (-1 when it didn't follow the candidate).
+type CutOff struct {
+	SpokeMs int64 `json:"spokeMs"`
+	GapMs   int64 `json:"gapMs"`
+}
+
+// A cut-off counts as the interviewer jumping into a thinking pause, rather than
+// the candidate interrupting, when the interviewer started right after the
+// candidate's words and the candidate carried on almost at once.
+const (
+	pauseCutInMaxGapMs   = thinkingPauseMs + 2500 // the turn-detection wait plus reply latency
+	pauseCutInMaxSpokeMs = 3000
+)
+
+func (c CutOff) duringPause() bool {
+	return c.GapMs >= 0 && c.GapMs <= pauseCutInMaxGapMs && c.SpokeMs <= pauseCutInMaxSpokeMs
+}
+
+// label is how the scoring transcript marks this cut-off.
+func (c CutOff) label() string {
+	if c.duringPause() {
+		return "[cut in while the candidate paused]"
+	}
+	return "[interrupted by the candidate]"
 }
 
 type ScoreSet struct {
@@ -458,9 +487,11 @@ const scoringInstruction = "You are an expert interview coach reviewing a mock i
 	"depth (specifics, metrics, ownership), confidence (decisive, composed). For every interviewer question give a short " +
 	"answer summary, what worked, what to improve and a stronger example answer written in the candidate's voice using " +
 	"only facts from their answers and resume. End with exactly three things to practice next. Be candid and specific. " +
-	"The transcript comes from automatic voice detection: an answer may be split into fragments, cut off at a pause, or " +
-	"overlap the interviewer's next line. Treat those as artifacts of the call, not as the candidate talking over the " +
-	"interviewer or speaking in fragments, and judge the content of what they said."
+	"The transcript comes from a voice call with automatic turn detection. An interviewer line marked " +
+	"[cut in while the candidate paused] means the interviewer started talking during a pause mid-answer and the " +
+	"candidate carried on: treat the candidate's words before and after it as one answer, and don't count it as " +
+	"interrupting or as speaking in fragments. A line marked [interrupted by the candidate] is a real interruption " +
+	"and fair to critique. Fragmented or rambling speech within an answer is the candidate's own and also fair to critique."
 
 func clampScore(v int) int { return clamp(v, 1, 5) }
 
@@ -547,6 +578,9 @@ func transcriptText(lines []TranscriptLine) string {
 			who = "Candidate"
 		}
 		fmt.Fprintf(&b, "%s: %s", who, l.Text)
+		if l.CutOff != nil {
+			fmt.Fprintf(&b, " %s", l.CutOff.label())
+		}
 	}
 	if len(lines) > 0 {
 		b.WriteString("\n")
