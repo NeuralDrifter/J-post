@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CLOSE_REASON_LABEL, STATUS_DOT, STATUS_LABEL } from '../lib/format'
+import { CLOSE_REASON_LABEL, labelFor, lookup, STATUS_DOT, STATUS_LABEL } from '../lib/format'
 
 const TONES = {
   neutral: 'border-white/10 bg-white/5 text-ink-2',
@@ -26,9 +26,9 @@ export function Chip({ tone = 'neutral', children, title }: { tone?: ChipTone; c
 export function StatusChip({ status, closeReason }: { status: string; closeReason?: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-2">
-      <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status] ?? 'bg-ink-3'}`} />
-      {STATUS_LABEL[status] ?? status}
-      {status === 'closed' && closeReason && <span className="text-ink-3">· {CLOSE_REASON_LABEL[closeReason]}</span>}
+      <span className={`h-2 w-2 rounded-full ${lookup(STATUS_DOT, status, 'bg-ink-3')}`} />
+      {labelFor(STATUS_LABEL, status)}
+      {status === 'closed' && closeReason && <span className="text-ink-3">· {labelFor(CLOSE_REASON_LABEL, closeReason)}</span>}
     </span>
   )
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'
 import { copyText } from '../../components/ContextMenu'
 import { BrowserOpenURL, type main } from '../../lib/backend'
-import { formatDate, formatSalary, STATUS_LABEL, timeAgo } from '../../lib/format'
+import { formatDate, formatSalary, labelFor, STATUS_LABEL, timeAgo } from '../../lib/format'
 import { sourceLabel, useJobSources } from '../../lib/jobSources'
 import { openMenu, type MenuEntry } from '../../lib/menu'
 
@@ -65,7 +65,7 @@ export function PostingList({ postings, selectedId, onSelect, actions }: Props) 
                   <p className={`text-sm leading-snug ${p.state === 'new' ? 'font-bold' : 'font-semibold'}`}>{p.title}</p>
                 </div>
                 {p.state === 'new' && <Chip tone="info">New</Chip>}
-                {p.state === 'saved' && <Chip tone="accent">{p.jobStatus ? STATUS_LABEL[p.jobStatus] : 'Job deleted'}</Chip>}
+                {p.state === 'saved' && <Chip tone="accent">{p.jobStatus ? labelFor(STATUS_LABEL, p.jobStatus) : 'Job deleted'}</Chip>}
                 {p.state === 'dismissed' && <Chip>{timeAgo(p.dismissedAt)}</Chip>}
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">

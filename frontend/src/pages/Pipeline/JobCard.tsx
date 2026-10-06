@@ -1,22 +1,13 @@
 import { BellRing, CalendarClock } from 'lucide-react'
 import { Chip } from '../../components/Chip'
 import type { main } from '../../lib/backend'
-import {
-  CLOSE_REASON_LABEL,
-  daysLabel,
-  formatDateTime,
-  formatMoney,
-  formatSalary,
-  initials,
-  INTERVIEW_KIND_LABEL,
-  WORK_MODE_LABEL,
-} from '../../lib/format'
+import { CLOSE_REASON_LABEL, daysLabel, formatDateTime, formatMoney, formatSalary, initials, INTERVIEW_KIND_LABEL, labelFor, WORK_MODE_LABEL } from '../../lib/format'
 
 export function JobCard({ summary, overlay = false }: { summary: main.JobSummary; overlay?: boolean }) {
   const { job } = summary
   // A modeled offer beats the posted range.
   const salary = summary.offerYear1Total ? `${formatMoney(summary.offerYear1Total)} yr-1 total` : formatSalary(job.salaryMin, job.salaryMax)
-  const mode = WORK_MODE_LABEL[job.workMode]
+  const mode = labelFor(WORK_MODE_LABEL, job.workMode)
   // Skip the work mode when the location already says it (e.g. "Remote · Remote").
   const place = [job.location, mode && mode.toLowerCase() !== job.location.trim().toLowerCase() ? mode : '']
     .filter(Boolean)
@@ -43,7 +34,7 @@ export function JobCard({ summary, overlay = false }: { summary: main.JobSummary
         <div className="mt-3 flex flex-wrap gap-1.5">
           {salary && <Chip tone="success">{salary}</Chip>}
           {place && <Chip title={place}>{place}</Chip>}
-          {closed && job.closeReason && <Chip>{CLOSE_REASON_LABEL[job.closeReason]}</Chip>}
+          {closed && job.closeReason && <Chip>{labelFor(CLOSE_REASON_LABEL, job.closeReason)}</Chip>}
         </div>
       )}
 
@@ -51,7 +42,7 @@ export function JobCard({ summary, overlay = false }: { summary: main.JobSummary
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-info/30 bg-info/10 px-2 py-1.5 text-xs text-cyan-200">
           <CalendarClock size={14} className="shrink-0" />
           <span className="truncate">
-            {INTERVIEW_KIND_LABEL[summary.nextInterview.kind]} · {formatDateTime(summary.nextInterview.scheduledAt)}
+            {labelFor(INTERVIEW_KIND_LABEL, summary.nextInterview.kind)} · {formatDateTime(summary.nextInterview.scheduledAt)}
           </span>
         </div>
       )}

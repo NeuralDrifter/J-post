@@ -1,7 +1,7 @@
 import { CalendarClock, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import type { main } from '../../lib/backend'
-import { formatDateTime, INTERVIEW_KIND_LABEL } from '../../lib/format'
+import { formatDateTime, INTERVIEW_KIND_LABEL, labelFor } from '../../lib/format'
 
 export function NextUpBanner({ nextUp }: { nextUp?: main.NextUp }) {
   const navigate = useNavigate()
@@ -18,7 +18,7 @@ export function NextUpBanner({ nextUp }: { nextUp?: main.NextUp }) {
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[11px] tracking-wider text-info uppercase">Next up · {formatDateTime(iv.scheduledAt)}</p>
         <p className="truncate text-sm font-semibold">
-          {INTERVIEW_KIND_LABEL[iv.kind]} — {nextUp.position} at {nextUp.company}
+          {labelFor(INTERVIEW_KIND_LABEL, iv.kind)} — {nextUp.position} at {nextUp.company}
         </p>
       </div>
       {iv.locationOrLink && (

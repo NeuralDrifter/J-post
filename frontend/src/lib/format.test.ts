@@ -6,8 +6,12 @@ import {
   formatSalary,
   fromLocalInputValue,
   initials,
+  labelFor,
+  lookup,
   parseSalaryInput,
   percent,
+  STATUS_DOT,
+  STATUS_LABEL,
   toLocalInputValue,
 } from './format'
 
@@ -87,5 +91,13 @@ describe('timeAgo', () => {
     expect(timeAgo('2026-10-01T10:00:00.000Z', now)).toBe('2h ago')
     expect(timeAgo('2026-09-28T12:00:00.000Z', now)).toBe('3 days ago')
     expect(timeAgo('', now)).toBe('')
+  })
+})
+
+describe('labelFor and lookup', () => {
+  it('finds known backend values and falls back for unknown ones', () => {
+    expect(labelFor(STATUS_LABEL, 'applied')).toBe('Applied')
+    expect(labelFor(STATUS_LABEL, 'archived')).toBe('archived')
+    expect(lookup(STATUS_DOT, 'archived', 'bg-ink-3')).toBe('bg-ink-3')
   })
 })

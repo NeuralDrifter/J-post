@@ -10,7 +10,7 @@ import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
 import { BrowserOpenURL, DeleteInterview, ListInterviews, SaveInterview, type main } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
-import { formatDateTime, fromLocalInputValue, INTERVIEW_KINDS, INTERVIEW_KIND_LABEL, toLocalInputValue } from '../../lib/format'
+import { formatDateTime, fromLocalInputValue, INTERVIEW_KIND_LABEL, INTERVIEW_KINDS, labelFor, toLocalInputValue } from '../../lib/format'
 import { useLoad } from '../../lib/useLoad'
 
 const blankInterview = (jobId: string): main.Interview => ({
@@ -35,7 +35,7 @@ export function InterviewsPanel({ jobId }: { jobId: string }) {
   const remove = async (iv: main.Interview) => {
     const ok = await confirmDialog({
       title: 'Delete interview?',
-      message: `Delete the ${INTERVIEW_KIND_LABEL[iv.kind].toLowerCase()} on ${formatDateTime(iv.scheduledAt)}?`,
+      message: `Delete the ${labelFor(INTERVIEW_KIND_LABEL, iv.kind).toLowerCase()} on ${formatDateTime(iv.scheduledAt)}?`,
       confirmLabel: 'Delete',
       danger: true,
     })
@@ -80,7 +80,7 @@ export function InterviewsPanel({ jobId }: { jobId: string }) {
                   {iv.completed ? <CircleCheck size={16} /> : <Circle size={16} />}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-semibold ${iv.completed ? 'line-through' : ''}`}>{INTERVIEW_KIND_LABEL[iv.kind]}</p>
+                  <p className={`text-sm font-semibold ${iv.completed ? 'line-through' : ''}`}>{labelFor(INTERVIEW_KIND_LABEL, iv.kind)}</p>
                   <p className="font-mono text-[11px] text-cyan-300">
                     {formatDateTime(iv.scheduledAt)}
                     {iv.durationMin > 0 && ` · ${iv.durationMin} min`}
