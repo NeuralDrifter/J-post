@@ -1,26 +1,15 @@
-import { useEffect, useState } from 'react'
-import { api } from './api'
 import { ListJobSources, type main } from './backend'
+import { useStaticData } from './staticData'
 
-// Job boards come from the backend registry (sources.go). Labels never change
-// while the app runs, so this copy is cached; readiness can change in Settings,
-// so the Discover page loads its own fresh list.
+// Job boards come from the backend registry (sources.go). Their labels never
+// change while the app runs; readiness can change in Settings, so the Discover
+// page loads its own fresh list instead of using this one.
 
 const MANUAL_SOURCE = { id: 'manual', label: 'Manual' }
-
-let cache: main.JobSource[] | undefined
+const NO_SOURCES: main.JobSource[] = []
 
 export function useJobSources(): main.JobSource[] {
-  const [sources, setSources] = useState(cache ?? [])
-  useEffect(() => {
-    if (cache) return
-    void api(ListJobSources()).then((list) => {
-      if (!list) return
-      cache = list
-      setSources(list)
-    })
-  }, [])
-  return sources
+  return useStaticData('jobSources', ListJobSources) ?? NO_SOURCES
 }
 
 export function sourceLabel(sources: main.JobSource[], id: string): string {

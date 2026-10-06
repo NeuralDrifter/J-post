@@ -21,7 +21,7 @@ import {
 import { notifyDataChanged } from '../../lib/events'
 import { timeAgo } from '../../lib/format'
 import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
-import { readPref, writePref } from '../../lib/prefs'
+import { readPref, readSessionValue, writePref, writeSessionValue } from '../../lib/prefs'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { PostingList, type PostingActions } from './PostingList'
@@ -53,8 +53,8 @@ type SearchCall = (q: main.SearchQuery) => Promise<main.SearchRun>
 
 const hasSavedQuery = () => readPref(QUERY_PREF, '') !== ''
 
-// The last search outcome survives navigating away and back.
-let lastRun: main.SearchRun | undefined
+// The last search outcome survives navigating away and back (not a restart).
+const LAST_RUN_KEY = 'discoverLastRun'
 
 const isWide = () => window.innerWidth >= 1100
 
@@ -64,7 +64,7 @@ export default function DiscoverPage() {
   const [firstVisit] = useState(() => !hasSavedQuery())
   const [tab, setTab] = useState<Tab>('inbox')
   const [filter, setFilter] = useState({ query: '', source: '', onlyNew: false })
-  const [run, setRun] = useState(lastRun)
+  const [run, setRun] = useState(() => readSessionValue<main.SearchRun>(LAST_RUN_KEY))
   const [showErrors, setShowErrors] = useState(true)
   const [searching, setSearching] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -95,7 +95,7 @@ export default function DiscoverPage() {
     const r = await api(call({ ...q, sources: ready }))
     setSearching(false)
     if (!r) return
-    lastRun = r
+    writeSessionValue(LAST_RUN_KEY, r)
     setRun(r)
     setTab('inbox')
     notifyDataChanged()
