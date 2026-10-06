@@ -45,7 +45,14 @@ export default function LiveInterviewPage() {
       />
 
       {interview.status === 'error' && interview.detail && (
-        <p className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-rose-200">{interview.detail}</p>
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-rose-200">
+          <span className="min-w-0 flex-1">{interview.detail}</span>
+          {interview.started && (
+            <button className="btn btn-ghost py-1" onClick={interview.reconnect}>
+              Reconnect
+            </button>
+          )}
+        </div>
       )}
 
       {interview.started ? (

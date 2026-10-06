@@ -333,3 +333,10 @@ func TestTranscriptTextLabelsCutOffs(t *testing.T) {
 		}
 	}
 }
+
+func TestLiveCuesRejoinNote(t *testing.T) {
+	rejoin := liveCues(25).Rejoin
+	if !strings.HasPrefix(rejoin, "(") || !strings.Contains(rejoin, "without greeting") {
+		t.Fatalf("rejoin = %q", rejoin)
+	}
+}

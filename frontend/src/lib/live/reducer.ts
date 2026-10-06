@@ -64,6 +64,12 @@ function markCutOff(state: LiveState, atMs: number): Line[] {
   return [...lines.slice(0, -1), { ...last, cutOff }]
 }
 
+/** The conversation so far, for seeding a fresh session after a dropped call. */
+export function rejoinPrompt(note: string, lines: Line[]): string {
+  const history = lines.map((l) => `${l.speaker === 'you' ? 'Candidate' : 'Interviewer'}: ${l.text}`).join('\n')
+  return `${note}\n\n${history}`
+}
+
 export function applyServerMessage(state: LiveState, raw: unknown, atMs: number): { state: LiveState; effects: LiveEffect[] } {
   const msg = raw as ServerMessage
   const effects: LiveEffect[] = []

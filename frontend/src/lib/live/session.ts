@@ -7,7 +7,7 @@ import type { AudioChunk } from './audio'
 import { routeOutput } from './devices'
 import { MicCapture, openMicrophone } from './mic'
 import { Playback } from './playback'
-import { applyServerMessage, initialLiveState, type LiveEffect, type LiveState, type Line } from './reducer'
+import { applyServerMessage, initialLiveState, rejoinPrompt, type LiveEffect, type LiveState, type Line } from './reducer'
 import { SessionRecorder } from './recorder'
 
 export type SessionStatus = 'connecting' | 'live' | 'reconnecting' | 'ended' | 'error'
@@ -30,7 +30,11 @@ export type SessionCallbacks = {
   onMicLevel?: (level: number) => void
 }
 
-const MAX_RECONNECTS = 3
+// When the connection drops, first resume the same server session (keeps the
+// model's memory; fixes network blips). If Google's side is what broke, resuming
+// fails the same way, so then start fresh sessions seeded with the transcript.
+const MAX_RESUMES = 2
+const MAX_FRESH_STARTS = 2
 const decoder = new TextDecoder()
 
 export class InterviewSession {
@@ -43,7 +47,9 @@ export class InterviewSession {
   private t0 = 0
   private ended = false
   private started = false
-  private reconnects = 0
+  private resumes = 0
+  private freshStarts = 0
+  private seedOnSetup = false // the next setupComplete starts a fresh session: replay the conversation
   private timers: number[] = []
 
   constructor(
@@ -123,6 +129,11 @@ export class InterviewSession {
       } catch {
         return
       }
+      if ((msg as { serverContent?: unknown }).serverContent) {
+        // The model is talking again, so the connection really recovered.
+        this.resumes = 0
+        this.freshStarts = 0
+      }
       const { state, effects } = applyServerMessage(this.state, msg, this.now())
       const linesChanged = state.lines !== this.state.lines
       this.state = state
@@ -137,16 +148,33 @@ export class InterviewSession {
     }
     ws.onclose = (ev) => {
       if (this.ws !== ws || this.ended) return
-      if (this.state.handle && this.reconnects < MAX_RECONNECTS) {
+      if (this.state.handle && this.resumes < MAX_RESUMES) {
+        this.resumes++
         this.reconnect()
+      } else if (this.freshStarts < MAX_FRESH_STARTS) {
+        this.freshStarts++
+        this.startFresh()
       } else {
         this.cb.onStatus('error', `Connection closed${ev.reason ? `: ${ev.reason}` : ` (code ${ev.code})`}`)
       }
     }
   }
 
+  /** Manual retry from the page after automatic recovery gave up. */
+  rejoin() {
+    if (this.ended) return
+    this.resumes = MAX_RESUMES
+    this.freshStarts = 0
+    this.startFresh()
+  }
+
+  private startFresh() {
+    this.state = { ...this.state, handle: undefined }
+    this.seedOnSetup = true
+    this.reconnect()
+  }
+
   private reconnect() {
-    this.reconnects++
     this.cb.onStatus('reconnecting')
     const old = this.ws
     this.ws = undefined
@@ -161,9 +189,11 @@ export class InterviewSession {
   private handle(e: LiveEffect) {
     switch (e.type) {
       case 'setupComplete':
-        this.reconnects = 0
         this.cb.onStatus('live')
-        if (!this.started) {
+        if (this.seedOnSetup) {
+          this.seedOnSetup = false
+          this.sendText(rejoinPrompt(this.config.cues.rejoin, this.state.lines), true)
+        } else if (!this.started) {
           this.started = true
           this.sendText(this.config.cues.start, true)
         }

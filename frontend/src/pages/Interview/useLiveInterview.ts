@@ -101,12 +101,14 @@ export function useLiveInterview(id: string, live: main.LiveSession | undefined)
     navigate(`/interviews/${id}?score=1`, { replace: true })
   }
 
+  const reconnect = () => sessionRef.current?.rejoin()
+
   const toggleMute = () => {
     sessionRef.current?.setMuted(!muted)
     setMuted(!muted)
   }
 
-  return { started, status, detail, lines, speaking, muted, nudges, elapsed, ending, micLevel, begin, finish, toggleMute }
+  return { started, status, detail, lines, speaking, muted, nudges, elapsed, ending, micLevel, begin, finish, reconnect, toggleMute }
 }
 
 function toTranscript(lines: Line[]): main.TranscriptLine[] {

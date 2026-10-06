@@ -230,6 +230,9 @@ type LiveCues struct {
 	WrapUpAtMs int64  `json:"wrapUpAtMs"` // since the session started
 	TimeUp     string `json:"timeUp"`
 	TimeUpAtMs int64  `json:"timeUpAtMs"`
+	// Rejoin starts a fresh session after the old one couldn't be resumed; the
+	// page follows it with the conversation so far.
+	Rejoin string `json:"rejoin"`
 }
 
 func liveCues(minutes int) LiveCues {
@@ -244,6 +247,8 @@ func liveCues(minutes int) LiveCues {
 		WrapUpAtMs: int64(minutes-warnMinutes) * msPerMinute,
 		TimeUp:     "[Timekeeper: time is up. Thank the candidate and close the interview now.]",
 		TimeUpAtMs: int64(minutes) * msPerMinute,
+		Rejoin: "(The call dropped and the candidate has reconnected. Below is the conversation so far. Continue the " +
+			"interview from where it left off, without greeting again or repeating questions already asked.)",
 	}
 }
 

@@ -678,6 +678,7 @@ export namespace main {
 	    wrapUpAtMs: number;
 	    timeUp: string;
 	    timeUpAtMs: number;
+	    rejoin: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new LiveCues(source);
@@ -690,6 +691,7 @@ export namespace main {
 	        this.wrapUpAtMs = source["wrapUpAtMs"];
 	        this.timeUp = source["timeUp"];
 	        this.timeUpAtMs = source["timeUpAtMs"];
+	        this.rejoin = source["rejoin"];
 	    }
 	}
 	export class LiveSession {
