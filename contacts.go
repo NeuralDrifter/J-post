@@ -17,21 +17,14 @@ type Contact struct {
 }
 
 func (r *Repo) ListContacts(jobID string) ([]Contact, error) {
-	rows, err := r.db.Query(`SELECT id, job_id, name, role, email, phone, linkedin_url, notes
+	return queryAll(r.db, scanContact, `SELECT id, job_id, name, role, email, phone, linkedin_url, notes
 		FROM contacts WHERE job_id = ? ORDER BY name COLLATE NOCASE`, jobID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Contact{}
-	for rows.Next() {
-		var c Contact
-		if err := rows.Scan(&c.ID, &c.JobID, &c.Name, &c.Role, &c.Email, &c.Phone, &c.LinkedInURL, &c.Notes); err != nil {
-			return nil, err
-		}
-		out = append(out, c)
-	}
-	return out, rows.Err()
+}
+
+func scanContact(s rowScanner) (Contact, error) {
+	var c Contact
+	err := s.Scan(&c.ID, &c.JobID, &c.Name, &c.Role, &c.Email, &c.Phone, &c.LinkedInURL, &c.Notes)
+	return c, err
 }
 
 func (r *Repo) SaveContact(c Contact) (Contact, error) {

@@ -195,20 +195,7 @@ func getJob(q querier, id string) (Job, error) {
 func (r *Repo) GetJob(id string) (Job, error) { return getJob(r.db, id) }
 
 func (r *Repo) ListJobs() ([]Job, error) {
-	rows, err := r.db.Query(`SELECT ` + jobColumns + ` FROM jobs ORDER BY updated_at DESC`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Job{}
-	for rows.Next() {
-		j, err := scanJob(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, j)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanJob, `SELECT `+jobColumns+` FROM jobs ORDER BY updated_at DESC`)
 }
 
 // UpdateJob saves the editable fields. Status changes go through ChangeStatus
@@ -279,21 +266,14 @@ func (r *Repo) DeleteJob(id string) error {
 }
 
 func (r *Repo) ListStageEvents(jobID string) ([]StageEvent, error) {
-	rows, err := r.db.Query(`SELECT id, job_id, from_status, to_status, close_reason, at, note
+	return queryAll(r.db, scanStageEvent, `SELECT id, job_id, from_status, to_status, close_reason, at, note
 		FROM stage_events WHERE job_id = ? ORDER BY at, rowid`, jobID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []StageEvent{}
-	for rows.Next() {
-		var e StageEvent
-		var from sql.NullString
-		if err := rows.Scan(&e.ID, &e.JobID, &from, &e.ToStatus, &e.CloseReason, &e.At, &e.Note); err != nil {
-			return nil, err
-		}
-		e.FromStatus = from.String
-		out = append(out, e)
-	}
-	return out, rows.Err()
+}
+
+func scanStageEvent(s rowScanner) (StageEvent, error) {
+	var e StageEvent
+	var from sql.NullString
+	err := s.Scan(&e.ID, &e.JobID, &from, &e.ToStatus, &e.CloseReason, &e.At, &e.Note)
+	e.FromStatus = from.String
+	return e, err
 }

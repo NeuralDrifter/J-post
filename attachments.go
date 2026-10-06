@@ -79,20 +79,7 @@ func copyFile(src, dst string) error {
 }
 
 func (r *Repo) ListAttachments(jobID string) ([]Attachment, error) {
-	rows, err := r.db.Query(`SELECT `+attachmentColumns+` FROM attachments WHERE job_id = ? ORDER BY added_at, rowid`, jobID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Attachment{}
-	for rows.Next() {
-		a, err := scanAttachment(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, a)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanAttachment, `SELECT `+attachmentColumns+` FROM attachments WHERE job_id = ? ORDER BY added_at, rowid`, jobID)
 }
 
 func (r *Repo) GetAttachment(id string) (Attachment, error) {

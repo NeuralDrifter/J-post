@@ -181,20 +181,7 @@ func (r *Repo) ListPostings(f PostingFilter) ([]Posting, error) {
 		where = append(where, "(',' || p.sources || ',') LIKE ?")
 		args = append(args, "%,"+f.Source+",%")
 	}
-	rows, err := r.db.Query(`SELECT `+postingColumns+postingFrom+`WHERE `+strings.Join(where, " AND ")+` ORDER BY `+order, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Posting{}
-	for rows.Next() {
-		p, err := scanPosting(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanPosting, `SELECT `+postingColumns+postingFrom+`WHERE `+strings.Join(where, " AND ")+` ORDER BY `+order, args...)
 }
 
 func (r *Repo) GetPosting(id string) (Posting, error) {
@@ -207,17 +194,12 @@ func (r *Repo) GetPosting(id string) (Posting, error) {
 
 func (r *Repo) InboxCounts() (InboxCounts, error) {
 	var c InboxCounts
-	rows, err := r.db.Query(`SELECT state, COUNT(*) FROM postings GROUP BY state`)
+	perState, err := queryAll(r.db, scanKeyValue[int], `SELECT state, COUNT(*) FROM postings GROUP BY state`)
 	if err != nil {
 		return c, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var state string
-		var n int
-		if err := rows.Scan(&state, &n); err != nil {
-			return c, err
-		}
+	for _, kv := range perState {
+		state, n := kv.key, kv.value
 		switch state {
 		case PostingNew:
 			c.New, c.Inbox = n, c.Inbox+n
@@ -229,7 +211,7 @@ func (r *Repo) InboxCounts() (InboxCounts, error) {
 			c.Dismissed = n
 		}
 	}
-	return c, rows.Err()
+	return c, nil
 }
 
 func (r *Repo) MarkPostingSeen(id string) error {

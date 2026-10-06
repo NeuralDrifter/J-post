@@ -269,21 +269,8 @@ func (r *Repo) GetMockInterview(id string) (MockInterview, error) {
 }
 
 func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
-	rows, err := r.db.Query(`SELECT `+mockColumns+` FROM mock_interviews m JOIN jobs j ON j.id = m.job_id
+	return queryAll(r.db, scanMock, `SELECT `+mockColumns+` FROM mock_interviews m JOIN jobs j ON j.id = m.job_id
 		WHERE m.job_id = ? ORDER BY m.started_at DESC`, jobID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []MockInterview{}
-	for rows.Next() {
-		m, err := scanMock(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, m)
-	}
-	return out, rows.Err()
 }
 
 // recordingPath is "" when the session has no recording.

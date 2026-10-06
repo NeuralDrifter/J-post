@@ -339,20 +339,7 @@ func (r *Repo) GetCompPackage(id string) (CompPackage, error) {
 }
 
 func (r *Repo) listComp(where string, args ...any) ([]CompPackage, error) {
-	rows, err := r.db.Query(`SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = ? DESC, created_at, rowid`, append(args, PackageCurrent)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []CompPackage{}
-	for rows.Next() {
-		p, err := scanComp(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanComp, `SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = ? DESC, created_at, rowid`, append(args, PackageCurrent)...)
 }
 
 func (r *Repo) ListCompPackages() ([]CompPackage, error) { return r.listComp("") }

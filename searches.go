@@ -166,20 +166,7 @@ func (r *Repo) markSearchRun(id string, at time.Time) error {
 }
 
 func (r *Repo) ListRecentSearches(limit int) ([]SavedSearch, error) {
-	rows, err := r.db.Query(`SELECT `+searchColumns+` FROM searches ORDER BY last_run_at DESC, created_at DESC LIMIT ?`, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []SavedSearch{}
-	for rows.Next() {
-		s, err := scanSearch(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, s)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanSearch, `SELECT `+searchColumns+` FROM searches ORDER BY last_run_at DESC, created_at DESC LIMIT ?`, limit)
 }
 
 func (r *Repo) DeleteSearch(id string) error {

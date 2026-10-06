@@ -222,23 +222,15 @@ func (r *Repo) museSearch(ctx context.Context, q DiscoverQuery, opts fetchOption
 		args = append(args, r.now().Add(-time.Duration(opts.HoursOld)*time.Hour).Format(dateLayout))
 	}
 	limit := max(opts.Results, 1)
-	rows, err := r.db.Query(`SELECT title, company, locations, publication_date, url, MAX(description) FROM muse_jobs
+	return queryAll(r.db, scanMuseJob, `SELECT title, company, locations, publication_date, url, MAX(description) FROM muse_jobs
 		WHERE `+strings.Join(where, " AND ")+` GROUP BY muse_id ORDER BY publication_date DESC, muse_id DESC LIMIT ?`, append(args, limit)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []rawJob{}
-	for rows.Next() {
-		var j rawJob
-		if err := rows.Scan(&j.Title, &j.Company, &j.Location, &j.DatePosted, &j.URL, &j.Description); err != nil {
-			return nil, err
-		}
-		j.Site = "themuse"
-		j.IsRemote = strings.Contains(j.Location, museRemote)
-		out = append(out, j)
-	}
-	return out, rows.Err()
+}
+
+func scanMuseJob(s rowScanner) (rawJob, error) {
+	j := rawJob{Site: "themuse"}
+	err := s.Scan(&j.Title, &j.Company, &j.Location, &j.DatePosted, &j.URL, &j.Description)
+	j.IsRemote = strings.Contains(j.Location, museRemote)
+	return j, err
 }
 
 // takeSourceSlot enforces "at most one call per interval" for rate-limited
