@@ -115,8 +115,8 @@ func TestRunDiscoverPartialFailure(t *testing.T) {
 		return nil, nil
 	}
 	q := DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin", "indeed", "myspace"}}
-	resp := runDiscover(context.Background(), q, fetch, []Job{{ID: "j1", Company: "Acme", Position: "Dev", Status: StatusOffer}}, func(string) fetchOptions { return fetchOptions{} })
-	if len(resp.Results) != 1 || resp.Results[0].TrackedStatus != StatusOffer {
+	resp := runDiscover(context.Background(), q, fetch, func(string) fetchOptions { return fetchOptions{} })
+	if len(resp.Results) != 1 || resp.Results[0].Company != "Acme" {
 		t.Fatalf("results = %+v", resp.Results)
 	}
 	if resp.Errors["linkedin"] != "blocked" || len(resp.Errors) != 1 {

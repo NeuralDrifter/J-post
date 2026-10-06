@@ -222,7 +222,7 @@ func runSearch(ctx context.Context, r *Repo, q SearchQuery, cacheHours int, fetc
 
 	age := hoursOld(saved.LastRunAt, now)
 	dq := DiscoverQuery{Term: q.Term, Location: q.Location, RemoteOnly: q.RemoteOnly, Sources: q.Sources}
-	resp := runDiscover(ctx, dq, fetch, nil, func(source string) fetchOptions {
+	resp := runDiscover(ctx, dq, fetch, func(source string) fetchOptions {
 		return fetchOptions{Results: perSourceCount(q, source), HoursOld: age}
 	})
 	run.Errors, run.Fetched = resp.Errors, len(resp.Results)

@@ -396,7 +396,7 @@ func markTracked(results []DiscoverResult, jobs []Job) {
 
 // runDiscover queries every requested source concurrently; one failing source
 // only adds an entry to Errors.
-func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked []Job, optsFor func(source string) fetchOptions) DiscoverResponse {
+func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor func(source string) fetchOptions) DiscoverResponse {
 	var sources []string
 	for _, s := range q.Sources {
 		if isKnownSource(s) && !slices.Contains(sources, s) {
@@ -435,6 +435,5 @@ func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked
 		lists = append(lists, perSource[s])
 	}
 	resp.Results = mergeResults(lists...)
-	markTracked(resp.Results, tracked)
 	return resp
 }
