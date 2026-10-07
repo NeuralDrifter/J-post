@@ -16,11 +16,7 @@
 
 **`gemini.go`** (REST, `x-goog-api-key` header; the key never appears in URLs or errors):
 
-`generateJSON(ctx, model, system, parts, schema, out)`:
-- Calls `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`.
-- Sends `generationConfig.responseMimeType = "application/json"` and `responseSchema` (OpenAPI-style types: OBJECT, STRING, INTEGER, ARRAY).
-- Parses `candidates[0].content.parts[*].text` as JSON into `out`.
-- Parts can be text or `inlineData` (for PDFs).
+`liveStructured(ctx, key, prompt, out)` (live.go): opens a short Live session with one tool, `submit_result`, whose parameters are the result schema, and decodes the tool call's arguments. Used for coaching tips and scorecards. (This replaced an earlier `generateJSON` REST call to a text model; see the note under New settings. Later, the 2026-10-07 AI providers spec adds Anthropic API and Claude Code as user-selectable providers for these tasks.)
 
 `createLiveToken(ctx, setup, minutes)`:
 - Calls `POST https://generativelanguage.googleapis.com/v1beta/auth_tokens` with the body:
