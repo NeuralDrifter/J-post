@@ -18,8 +18,8 @@ import (
 type anthropicProvider struct{}
 
 var (
-	anthropicBaseURL    = ""  // "" = the SDK default; tests point it at a fake server
-	anthropicMaxRetries = 1   // one retry for transient errors; a long rate-limit wait is reported instead
+	anthropicBaseURL    = "" // "" = the SDK default; tests point it at a fake server
+	anthropicMaxRetries = 1  // one retry for transient errors; a long rate-limit wait is reported instead
 	anthropicMaxTokens  = map[aiRole]int64{roleGrading: 16000, roleTips: 1024}
 )
 
