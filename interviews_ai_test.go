@@ -121,7 +121,7 @@ var sampleTranscript = []TranscriptLine{
 func TestScoreInterview(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	mi, _ := r.CreateMockInterview(j.ID, testSetup)
+	mi, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	if err := r.SaveInterviewTranscript(mi.ID, sampleTranscript); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestScoreInterview(t *testing.T) {
 func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	mi, _ := r.CreateMockInterview(j.ID, testSetup)
+	mi, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	r.SaveInterviewTranscript(mi.ID, sampleTranscript)
 	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
 		c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1011, "model overloaded"))
@@ -158,7 +158,7 @@ func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 	if err == nil || failed.Status != "failed" || failed.Error == "" || len(failed.Transcript) != 2 {
 		t.Fatalf("failed = %+v, %v", failed, err)
 	}
-	empty, _ := r.CreateMockInterview(j.ID, testSetup)
+	empty, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	if res, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, empty.ID); err == nil || res.Status != "failed" {
 		t.Fatalf("an empty transcript can't be scored: %+v %v", res, err)
 	}
@@ -167,7 +167,7 @@ func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 func TestInterviewStorage(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	mi, err := r.CreateMockInterview(j.ID, testSetup)
+	mi, err := r.CreateMockInterview(j.ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestInterviewStorage(t *testing.T) {
 	if _, err := os.Stat(rec); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("deleting the session should remove its recording")
 	}
-	other, _ := r.CreateMockInterview(j.ID, testSetup)
+	other, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	r.DeleteJob(j.ID)
 	if _, err := r.GetMockInterview(other.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("job delete should cascade: %v", err)
@@ -196,7 +196,7 @@ func TestInterviewStorage(t *testing.T) {
 
 func TestMockInterviewStatusTransitions(t *testing.T) {
 	r := newTestRepo(t)
-	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestMockInterviewStatusTransitions(t *testing.T) {
 
 func TestUnreadableTranscriptIsReported(t *testing.T) {
 	r := newTestRepo(t)
-	mi, _ := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	mi, _ := r.CreateMockInterview(interviewJob(t, r).ID, testSetup, "")
 	r.db.Exec(`UPDATE mock_interviews SET transcript = 'not json' WHERE id = ?`, mi.ID)
 	if _, err := r.GetMockInterview(mi.ID); err == nil || !strings.Contains(err.Error(), "transcript") {
 		t.Fatalf("err = %v", err)
@@ -344,7 +344,7 @@ func TestLiveCuesRejoinNote(t *testing.T) {
 // scoredInterview returns an interview with a transcript, ready to grade.
 func scoredInterviewSetup(t *testing.T, r *Repo) MockInterview {
 	t.Helper()
-	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}

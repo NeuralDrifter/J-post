@@ -15,7 +15,7 @@ func card(summary string, communication int) Scorecard {
 
 func newMock(t *testing.T, r *Repo) MockInterview {
 	t.Helper()
-	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestListAllMockInterviews(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := r.CreateMockInterview(other.ID, testSetup)
+	second, err := r.CreateMockInterview(other.ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}

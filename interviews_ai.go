@@ -117,6 +117,13 @@ type MockInterview struct {
 	Tips            []InterviewTip    `json:"tips"`                // coaching tips, in answer order
 	HasRecording    bool              `json:"hasRecording"`
 	Error           string            `json:"error"`
+	// The question plan ("" / nil when the interview had none) and the attempts
+	// sharing it, oldest first. Attempt is 1-based; 0 without a plan.
+	PlanID    string               `json:"planId"`
+	Plan      *InterviewPlanRecord `json:"plan,omitempty"`
+	PlanError string               `json:"planError"` // set when the stored plan can't be read
+	Attempt   int                  `json:"attempt"`
+	Attempts  []AttemptSummary     `json:"attempts"`
 }
 
 // LiveSession is what the page needs to open the voice connection.
@@ -259,13 +266,13 @@ func liveCues(minutes int) LiveCues {
 // ---- storage ----
 
 const mockColumns = `m.id, m.job_id, j.company, j.position, m.kind, m.minutes, m.persona, m.voice, m.interviewer_name, m.focus, m.status,
-	m.started_at, m.ended_at, m.transcript, m.recording_path, m.error`
+	m.started_at, m.ended_at, m.transcript, m.recording_path, m.error, m.plan_id`
 
 func scanMock(s rowScanner) (MockInterview, error) {
 	var m MockInterview
 	var transcript, recording string
 	err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona, &m.Voice, &m.InterviewerName, &m.Focus, &m.Status,
-		&m.StartedAt, &m.EndedAt, &transcript, &recording, &m.Error)
+		&m.StartedAt, &m.EndedAt, &transcript, &recording, &m.Error, &m.PlanID)
 	if err != nil {
 		return m, err
 	}
@@ -277,7 +284,8 @@ func scanMock(s rowScanner) (MockInterview, error) {
 	return m, nil
 }
 
-func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup) (MockInterview, error) {
+// CreateMockInterview starts a session record; planID is "" when there is no question plan.
+func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup, planID string) (MockInterview, error) {
 	if err := validateInterviewSetup(&s); err != nil {
 		return MockInterview{}, err
 	}
@@ -285,8 +293,8 @@ func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup) (MockIntervie
 		return MockInterview{}, err
 	}
 	id := newID()
-	_, err := r.db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, voice, interviewer_name, focus, status, started_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.InterviewerName, s.Focus, MockLive, ts(r.now()))
+	_, err := r.db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, voice, interviewer_name, focus, status, started_at, plan_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.InterviewerName, s.Focus, MockLive, ts(r.now()), planID)
 	if err != nil {
 		return MockInterview{}, err
 	}
@@ -301,7 +309,10 @@ func (r *Repo) GetMockInterview(id string) (MockInterview, error) {
 	if err != nil {
 		return m, err
 	}
-	return m, r.loadReviewData(&m)
+	if err := r.loadReviewData(&m); err != nil {
+		return m, err
+	}
+	return m, r.loadPlanData(&m)
 }
 
 func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
@@ -312,6 +323,9 @@ func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
 	}
 	for i := range list {
 		if err := r.loadReviewData(&list[i]); err != nil {
+			return nil, err
+		}
+		if err := r.loadPlanData(&list[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -377,11 +391,11 @@ func (r *Repo) DeleteMockInterview(id string) error {
 	if err != nil {
 		return err
 	}
-	res, err := r.db.Exec(`DELETE FROM mock_interviews WHERE id = ?`, id)
-	if err := expectOneRow(res, err, "mock interview", id); err != nil {
+	if err := r.deleteMockAndOrphanPlan(id); err != nil {
 		return err
 	}
 	if path != "" {
+
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
@@ -411,7 +425,7 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 		return LiveSession{}, err
 	}
 	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup))
-	mi, err := r.CreateMockInterview(jobID, setup)
+	mi, err := r.CreateMockInterview(jobID, setup, "")
 	if err != nil {
 		return LiveSession{}, err
 	}
