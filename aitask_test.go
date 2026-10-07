@@ -87,6 +87,10 @@ func TestRunAITaskReturnsModel(t *testing.T) {
 }
 
 func TestListAIProvidersReadiness(t *testing.T) {
+	// Hide any real Claude Code install so "nothing configured" really means nothing.
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("USERPROFILE", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
 	list := ListAIProviders(Settings{})
 	var ids []string
 	for _, p := range list {
@@ -95,7 +99,7 @@ func TestListAIProvidersReadiness(t *testing.T) {
 			t.Errorf("%s: label %q, unavailable %q (unconfigured providers need a reason)", p.ID, p.Label, p.Unavailable)
 		}
 	}
-	if got := strings.Join(ids, ","); got != "gemini-live,anthropic" {
+	if got := strings.Join(ids, ","); got != "gemini-live,anthropic,claude-code" {
 		t.Fatalf("ids = %s", got)
 	}
 	if ListAIProviders(Settings{GeminiKey: "k"})[0].Unavailable != "" {

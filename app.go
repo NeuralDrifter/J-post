@@ -581,6 +581,16 @@ func (a *App) ListAIProviders() ([]AIProvider, error) {
 	return ListAIProviders(s), nil
 }
 
+// TestClaudeCode reports the installed Claude Code version (Settings "Test" button).
+func (a *App) TestClaudeCode(path string) (string, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return "", err
+	}
+	s.ClaudeCodePath = strings.TrimSpace(path)
+	return claudeCodeVersion(context.Background(), s)
+}
+
 // ListInterviewOptions returns the interview types, interviewer styles and lengths.
 func (a *App) ListInterviewOptions() InterviewOptions { return interviewOptions }
 

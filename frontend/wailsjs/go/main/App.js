@@ -250,6 +250,10 @@ export function ShowAttachmentInFolder(arg1) {
   return window['go']['main']['App']['ShowAttachmentInFolder'](arg1);
 }
 
+export function TestClaudeCode(arg1) {
+  return window['go']['main']['App']['TestClaudeCode'](arg1);
+}
+
 export function TestPython(arg1) {
   return window['go']['main']['App']['TestPython'](arg1);
 }

@@ -48,7 +48,7 @@ type aiProvider interface {
 
 // aiProviders lists every provider in display order.
 func aiProviders() []aiProvider {
-	return []aiProvider{geminiProvider{}, anthropicProvider{}}
+	return []aiProvider{geminiProvider{}, anthropicProvider{}, claudeCodeProvider{}}
 }
 
 // AIProvider is a provider as Settings and the review page see it.

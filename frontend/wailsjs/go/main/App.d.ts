@@ -126,6 +126,8 @@ export function SearchOccupations(arg1:string):Promise<Array<main.Option>>;
 
 export function ShowAttachmentInFolder(arg1:string):Promise<void>;
 
+export function TestClaudeCode(arg1:string):Promise<string>;
+
 export function TestPython(arg1:string):Promise<string>;
 
 export function UpdateJob(arg1:main.Job):Promise<main.Job>;
