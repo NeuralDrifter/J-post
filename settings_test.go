@@ -17,7 +17,7 @@ func TestSettingsDefaults(t *testing.T) {
 func TestSettingsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := NewSettingsStore(dir)
-	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2"}
+	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: providerGeminiLive, TipsProvider: providerGeminiLive, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet"}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
 	}
@@ -49,5 +49,33 @@ func TestSettingsRejectsHugeFollowUp(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "settings.json")); !os.IsNotExist(err) {
 		t.Fatal("invalid settings should not be written")
+	}
+}
+
+func TestSettingsAIDefaults(t *testing.T) {
+	dir := t.TempDir()
+	// An older settings file without any of the AI provider fields.
+	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"followUpDays": 7, "geminiKey": "g"}`), 0o600)
+	s, err := NewSettingsStore(dir).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.GradingProvider != providerGeminiLive || s.TipsProvider != providerGeminiLive || s.AnthropicModel != "claude-opus-5-5" ||
+		s.AnthropicGradingEffort != "high" || s.AnthropicTipsEffort != "low" || s.ClaudeCodePath != "" || s.ClaudeCodeModel != "" {
+		t.Fatalf("s = %+v", s)
+	}
+}
+
+func TestSettingsRejectsBadAIValues(t *testing.T) {
+	store := NewSettingsStore(t.TempDir())
+	for name, s := range map[string]Settings{
+		"unknown grading provider": {GradingProvider: "skynet"},
+		"unknown tips provider":    {TipsProvider: "skynet"},
+		"unknown grading effort":   {AnthropicGradingEffort: "extreme"},
+		"unknown tips effort":      {AnthropicTipsEffort: "tiny"},
+	} {
+		if err := store.Save(s); err == nil {
+			t.Errorf("%s should be rejected", name)
+		}
 	}
 }

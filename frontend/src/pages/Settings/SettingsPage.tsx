@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent } from 'react'
 import { ExternalLink, FolderOpen, LoaderCircle } from 'lucide-react'
 import { CodePicker } from '../../components/comp/CodePicker'
 import { PackageEditor } from '../../components/comp/PackageEditor'
@@ -26,6 +26,8 @@ import { blankPackage, FILING_LABEL, formatMoneyFull } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import { AIProvidersSection } from './AIProvidersSection'
+import { Section } from './Section'
 
 // Category names exactly as The Muse's API documents them.
 const MUSE_CATEGORIES = [
@@ -45,16 +47,6 @@ export default function SettingsPage() {
       <PageTitle title="Settings" subtitle="Stored only on this computer." />
       {settings ? <SettingsForm initial={settings} dataDir={dataDir ?? ''} /> : <p className="text-sm text-ink-2">Loading…</p>}
     </div>
-  )
-}
-
-function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
-  return (
-    <section className="glass rounded-2xl p-5">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      <p className="mb-4 text-xs text-ink-3">{hint}</p>
-      {children}
-    </section>
   )
 }
 
@@ -262,22 +254,7 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
         </div>
       </Section>
 
-      <Section title="AI (Google Gemini)" hint="Powers mock interviews: the interviewer, coaching tips and scorecards all use the Live model.">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Gemini API key" wide>
-            <input className="field" type="password" autoComplete="off" value={s.geminiKey} onChange={(e) => setS({ ...s, geminiKey: e.target.value })} />
-          </Field>
-          <Field label="Live model" wide>
-            <input className="field font-mono text-xs" value={s.geminiLiveModel} onChange={(e) => setS({ ...s, geminiLiveModel: e.target.value })} />
-          </Field>
-        </div>
-        <button type="button" className="mt-3 flex items-center gap-1 text-xs text-indigo-300 hover:underline" onClick={() => BrowserOpenURL('https://aistudio.google.com/apikey')}>
-          <ExternalLink size={12} /> Get a Gemini API key
-        </button>
-        <p className="mt-3 rounded-xl border border-warn/30 bg-warn/5 px-3 py-2 text-[11px] leading-relaxed text-amber-200/90">
-          Privacy: on Google's free tier, what you send (your resume, interview audio and transcripts) may be used by Google to improve its products. The paid tier doesn't.
-        </p>
-      </Section>
+      <AIProvidersSection s={s} setS={setS} />
 
       <ResumeSection />
 

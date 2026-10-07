@@ -1,10 +1,13 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -13,6 +16,9 @@ const (
 	defaultFollowUpDays       = 7
 	defaultDiscoverCacheHours = 12
 	defaultGeminiLiveModel    = "gemini-3.8-live"
+	defaultAnthropicModel     = "claude-opus-5-5"
+	defaultGradingEffort      = "high"
+	defaultTipsEffort         = "low"
 )
 
 type Settings struct {
@@ -31,9 +37,23 @@ type Settings struct {
 	// AI (Google Gemini).
 	GeminiKey       string `json:"geminiKey"`
 	GeminiLiveModel string `json:"geminiLiveModel"`
+	// Which AI provider grades interviews and gives coaching tips (an aiProvider id).
+	GradingProvider string `json:"gradingProvider"`
+	TipsProvider    string `json:"tipsProvider"`
+	// Anthropic API.
+	AnthropicKey           string `json:"anthropicKey"`
+	AnthropicModel         string `json:"anthropicModel"`
+	AnthropicGradingEffort string `json:"anthropicGradingEffort"`
+	AnthropicTipsEffort    string `json:"anthropicTipsEffort"`
+	// Claude Code (headless). Empty path = find `claude` automatically; empty model = the plan's default.
+	ClaudeCodePath  string `json:"claudeCodePath"`
+	ClaudeCodeModel string `json:"claudeCodeModel"`
 	// DiscoverCacheHours: re-running a search within this window reuses stored results.
 	DiscoverCacheHours int `json:"discoverCacheHours"`
 }
+
+// anthropicEfforts are the effort levels the Anthropic API accepts.
+var anthropicEfforts = []string{"low", "medium", "high", "xhigh", "max"}
 
 type SettingsStore struct {
 	mu       sync.Mutex
@@ -72,6 +92,13 @@ func applySettingsDefaults(s *Settings) {
 	if s.DiscoverCacheHours <= 0 {
 		s.DiscoverCacheHours = defaultDiscoverCacheHours
 	}
+	s.GradingProvider = cmp.Or(s.GradingProvider, providerGeminiLive)
+	s.TipsProvider = cmp.Or(s.TipsProvider, providerGeminiLive)
+	s.AnthropicModel = cmp.Or(strings.TrimSpace(s.AnthropicModel), defaultAnthropicModel)
+	s.AnthropicGradingEffort = cmp.Or(s.AnthropicGradingEffort, defaultGradingEffort)
+	s.AnthropicTipsEffort = cmp.Or(s.AnthropicTipsEffort, defaultTipsEffort)
+	s.ClaudeCodePath = strings.TrimSpace(s.ClaudeCodePath)
+	s.ClaudeCodeModel = strings.TrimSpace(s.ClaudeCodeModel)
 }
 
 func NewSettingsStore(dir string) *SettingsStore {
@@ -110,6 +137,16 @@ func (s *SettingsStore) Save(settings Settings) error {
 	}
 	if settings.FollowUpDays > 365 {
 		return errors.New("follow-up threshold must be between 1 and 365 days")
+	}
+	for _, id := range []string{settings.GradingProvider, settings.TipsProvider} {
+		if _, ok := providerByID(id); !ok {
+			return fmt.Errorf("unknown AI provider %q", id)
+		}
+	}
+	for _, effort := range []string{settings.AnthropicGradingEffort, settings.AnthropicTipsEffort} {
+		if !slices.Contains(anthropicEfforts, effort) {
+			return fmt.Errorf("effort must be one of %s", strings.Join(anthropicEfforts, ", "))
+		}
 	}
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {

@@ -1,6 +1,12 @@
 # AI Providers — Claude Code (headless + temporary MCP) and Anthropic API — Design Spec
 
-**Date:** 2026-10-07 · **Status:** Approved in chat, awaiting spec review · **Builds on:** Phase 2b-1 (mock interviews on Gemini Live)
+**Date:** 2026-10-07 · **Status:** Implemented (branch feature/ai-providers) · **Builds on:** Phase 2b-1 (mock interviews on Gemini Live)
+
+**Deviations found while building:**
+- Claude Code runs **without `--bare`**: bare mode never reads the OAuth login, so it couldn't use the user's Claude subscription. Isolation comes from `--setting-sources ""`, `--strict-mcp-config`, `--tools ""`, `--disable-slash-commands` and a temp working directory (section 3).
+- The Anthropic provider uses the **beta** Messages endpoint, the only one the Go SDK exposes the refusal `fallbacks` parameter on.
+- `claudeCodeMCPExecutable` lets end-to-end checks point the per-run MCP server at the built app (under `go test` the executable is the test binary).
+- Verified end to end (2026-10-07) on a copy of real data: Gemini Live graded in ~7 s and Claude Code (claude-opus-5-5, subscription) in ~57 s, both with tips saved; the Anthropic API was not exercised against the live service (no key configured) — its tests run against a fake server.
 
 ## Goal
 
@@ -59,11 +65,15 @@ The MCP server exists **only for the one headless run**. It is never added to th
 1. Create a temp folder holding:
    - `task.json`: instruction, input, schema, and the output file path.
    - `mcp.json`: `{"mcpServers": {"jobtrack": {"command": <this executable>, "args": ["--ai-task-mcp", <task.json>]}}}`.
-2. Run `claude -p "<short prompt: call get_input, then submit_result once>"` with:
-   - `--bare --strict-mcp-config --mcp-config <mcp.json>`: only our server; no user hooks, plugins or CLAUDE.md.
-   - No built-in tools (the exact `--tools` form is confirmed in the risk-check task below), and `--allowedTools` limited to `mcp__jobtrack__get_input` and `mcp__jobtrack__submit_result`, so it never pauses for approval and can't touch files or run commands.
+2. Run `claude -p "<short prompt: call get_input, then submit_result once>"` from the temp folder as its working directory (so no project CLAUDE.md applies), with stdin closed, and these flags (confirmed against Claude Code 2.1.292):
+   - `--setting-sources ""`: loads none of the user, project or local settings files, so none of the user's hooks or plugin settings run, and the user's CLAUDE.md is not loaded (verified).
+   - `--strict-mcp-config --mcp-config <mcp.json>`: only our server.
+   - `--tools ""` (all built-in tools disabled) and `--disable-slash-commands` (no skills).
+   - `--allowedTools mcp__jobtrack__get_input mcp__jobtrack__submit_result`, so it never pauses for approval. Verified: the run sees exactly these two tools.
    - `--system-prompt <task instruction>`, `--no-session-persistence`, `--output-format json`, `--model` when set.
+   - **Not `--bare`:** bare mode only accepts `ANTHROPIC_API_KEY` and never reads the OAuth login, so it would not use the user's Claude subscription.
    - No console window (`hideConsole`), a timeout (5 minutes for grading, 60 s for tips), cancelled with the app's context.
+   - The model used comes from the JSON result's `modelUsage` keys.
 3. Read the output file. Missing → error built from Claude Code's JSON result (`is_error`, `result`), e.g. "Claude Code isn't logged in".
 4. Delete the temp folder.
 
@@ -72,7 +82,7 @@ The MCP server exists **only for the one headless run**. It is never added to th
 - `submit_result`: input schema = the task's result schema; validates, writes the JSON to the output path, replies "Saved."
 - It never opens the database or any file other than `task.json` and the output path.
 
-**First implementation task (risk check):** prove that the Wails GUI build on Windows works as a stdio MCP server when launched by `claude -p`, and confirm the exact flags that leave Claude Code with only our two tools. If it doesn't, fall back to a tiny separate `jobtrack-mcp.exe` built from the same package — decided before building on it.
+**Risk check (done, 2026-10-07):** the Wails GUI build on Windows works as a stdio MCP server when launched by `claude -p`: a real run called `get_input` then `submit_result`, wrote a schema-valid result, and reported `claude-opus-5-5`. No separate helper executable is needed.
 
 ## 4. Anthropic API provider
 

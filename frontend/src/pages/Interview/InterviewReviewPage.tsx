@@ -1,17 +1,27 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { ChevronLeft, LoaderCircle, RefreshCw, Trash2 } from 'lucide-react'
-import { Chip } from '../../components/Chip'
 import { confirmDialog } from '../../components/ConfirmDialog'
 import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
-import { DeleteMockInterview, GetInterviewRecording, GetMockInterview, ScoreInterview, type main } from '../../lib/backend'
+import {
+  DeleteInterviewRecording,
+  DeleteMockInterview,
+  DeleteScorecard,
+  GetInterviewRecording,
+  GetMockInterview,
+  ListAIProviders,
+  RegradeInterview,
+  ScoreInterview,
+} from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
-import { averageScore, clock, SCORE_DIMENSIONS } from '../../lib/interview'
+import { averageScore, gradeActions } from '../../lib/interview'
 import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
+import { openMenu } from '../../lib/menu'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import { cardLabel, ScorecardTabs, ScorecardView, TranscriptWithTips } from './ReviewParts'
 
 export default function InterviewReviewPage() {
   const { id = '' } = useParams()
@@ -19,7 +29,10 @@ export default function InterviewReviewPage() {
   const navigate = useNavigate()
   const options = useInterviewOptions()
   const { data: mi, setData } = useLoad(() => api(GetMockInterview(id)), [id])
+  const { data: providers } = useLoad(() => api(ListAIProviders()), [])
   const [scoring, setScoring] = useState(false)
+  const [regrading, setRegrading] = useState('')
+  const [selected, setSelected] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const audio = useRef<HTMLAudioElement>(null)
   const scoredOnce = useRef(false)
@@ -28,7 +41,10 @@ export default function InterviewReviewPage() {
     setScoring(true)
     const result = await api(ScoreInterview(id))
     setScoring(false)
-    if (result) setData(result)
+    if (result) {
+      setData(result)
+      setSelected(result.scorecards[0]?.provider ?? '')
+    }
     notifyDataChanged()
   }
 
@@ -43,13 +59,55 @@ export default function InterviewReviewPage() {
   }, [mi, params])
 
   useEffect(() => {
-    if (mi?.hasRecording && !audioUrl) void api(GetInterviewRecording(id)).then((url) => url && setAudioUrl(url))
+    // An empty answer means the file was gone; the backend cleared it, so refresh.
+    if (mi?.hasRecording && !audioUrl) void api(GetInterviewRecording(id)).then((url) => (url ? setAudioUrl(url) : url === '' && notifyDataChanged()))
   }, [mi?.hasRecording, id, audioUrl])
 
   if (!mi) return <p className="text-sm text-ink-2">Loading…</p>
 
+  const shown = mi.scorecards.find((c) => c.provider === selected) ?? mi.scorecards[0]
+  const avg = averageScore(shown?.scorecard.overall)
+  const actions = gradeActions(mi.status)
+
+  const regrade = async (provider: string) => {
+    setRegrading(provider)
+    const result = await api(RegradeInterview(id, provider))
+    setRegrading('')
+    if (!result) return
+    setData(result)
+    setSelected(provider)
+    notifyDataChanged()
+    toast.success('Re-graded')
+  }
+
+  const openRegradeMenu = (e: MouseEvent) =>
+    openMenu(
+      e,
+      (providers ?? []).map((p) => ({
+        label: p.unavailable ? `${p.label} — ${p.unavailable}` : p.label,
+        disabled: !!p.unavailable,
+        onSelect: () => void regrade(p.id),
+      })),
+    )
+
+  const deleteCard = async (provider: string) => {
+    const card = mi.scorecards.find((c) => c.provider === provider)
+    if (!card) return
+    const ok = await confirmDialog({ title: 'Delete this scorecard?', message: `The ${cardLabel(card, providers)} scorecard will be deleted.`, confirmLabel: 'Delete', danger: true })
+    if (!ok || !(await apiOk(DeleteScorecard(id, provider)))) return
+    setSelected('')
+    notifyDataChanged()
+  }
+
+  const deleteRecording = async () => {
+    const ok = await confirmDialog({ title: 'Delete the recording?', message: 'The audio will be deleted. The transcript, tips and scorecards stay.', confirmLabel: 'Delete', danger: true })
+    if (!ok || !(await apiOk(DeleteInterviewRecording(id)))) return
+    setAudioUrl('')
+    notifyDataChanged()
+  }
+
   const remove = async () => {
-    const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, scorecard and recording will be deleted.', confirmLabel: 'Delete', danger: true })
+    const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, tips, scorecards and recording will be deleted.', confirmLabel: 'Delete', danger: true })
     if (!ok || !(await apiOk(DeleteMockInterview(id)))) return
     navigate(`/jobs/${mi.jobId}`)
     notifyDataChanged()
@@ -61,9 +119,6 @@ export default function InterviewReviewPage() {
     audio.current.currentTime = ms / 1000
     void audio.current.play()
   }
-
-  const card = mi.scorecard
-  const avg = averageScore(card?.overall)
 
   return (
     <div className="space-y-4">
@@ -79,106 +134,66 @@ export default function InterviewReviewPage() {
               {mi.interviewerName && ` · with ${mi.interviewerName} (${mi.voice})`} · {formatDateTime(mi.startedAt)}
             </p>
           </div>
-          {avg !== undefined && <div className="font-mono text-3xl font-bold text-indigo-200">{avg}<span className="text-base text-ink-3"> / 5</span></div>}
+          {avg !== undefined && (
+            <div className="font-mono text-3xl font-bold text-indigo-200">
+              {avg}
+              <span className="text-base text-ink-3"> / 5</span>
+            </div>
+          )}
           <div className="flex gap-2">
-            {(mi.status === 'failed' || mi.status === 'live' || mi.status === 'done') && (
-              <button className="btn btn-ghost" onClick={score} disabled={scoring}>
-                <RefreshCw size={15} /> {mi.status === 'done' ? 'Re-score' : 'Score now'}
+            {actions.gradeNow && (
+              <button className="btn btn-ghost" onClick={score} disabled={scoring || !!regrading}>
+                <RefreshCw size={15} /> Grade now
               </button>
             )}
-            <button className="btn btn-danger" onClick={remove} aria-label="Delete" title="Delete">
+            {actions.gradeWith && (
+              <button className="btn btn-ghost" onClick={openRegradeMenu} disabled={scoring || !!regrading}>
+                {regrading ? <LoaderCircle size={15} className="animate-spin" /> : <RefreshCw size={15} />} {actions.gradeNow ? 'Grade with…' : 'Re-grade with…'}
+              </button>
+            )}
+            <button className="btn btn-danger" onClick={remove} aria-label="Delete interview" title="Delete interview">
               <Trash2 size={15} />
             </button>
           </div>
         </div>
-        {audioUrl && <audio ref={audio} src={audioUrl} controls className="mt-4 w-full" />}
+        {audioUrl && (
+          <div className="mt-4 flex items-center gap-2">
+            <audio ref={audio} src={audioUrl} controls className="w-full" />
+            <button className="shrink-0 text-xs text-ink-3 hover:text-danger" onClick={deleteRecording} title="Delete the recording only">
+              Delete recording
+            </button>
+          </div>
+        )}
       </section>
 
       {scoring || mi.status === 'scoring' ? (
         <p className="flex items-center gap-2 text-sm text-ink-2">
-          <LoaderCircle size={16} className="animate-spin" /> Scoring the interview… this takes a few seconds.
+          <LoaderCircle size={16} className="animate-spin" /> Grading the interview… this can take a little while.
         </p>
       ) : mi.status === 'failed' ? (
-        <p className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-rose-200">Scoring failed: {mi.error}</p>
+        <p className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-2 text-sm text-rose-200">Grading failed: {mi.error}</p>
+      ) : mi.status === 'unscored' ? (
+        <p className="text-sm text-ink-2">Not scored yet. Use Grade now to score it with your grading provider.</p>
       ) : null}
+      {regrading && (
+        <p className="flex items-center gap-2 text-sm text-ink-2">
+          <LoaderCircle size={16} className="animate-spin" /> Re-grading with {providers?.find((p) => p.id === regrading)?.label ?? regrading}…
+        </p>
+      )}
 
       <div className="grid items-start gap-4 min-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-4">
-          {card && (
+          {shown && (
             <>
-              <Panel title="Scores">
-                <div className="space-y-2.5">
-                  {SCORE_DIMENSIONS.map(([key, label]) => (
-                    <div key={key} className="flex items-center gap-3">
-                      <span className="w-28 shrink-0 text-sm text-ink-2">{label}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
-                        <div className="h-full rounded-full bg-linear-to-r from-accent to-info" style={{ width: `${(card.overall[key] / 5) * 100}%` }} />
-                      </div>
-                      <span className="w-6 text-right font-mono text-sm">{card.overall[key]}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-4 text-sm leading-relaxed text-ink-2">{card.summary}</p>
-              </Panel>
-              <Panel title="Practice next">
-                <ol className="list-decimal space-y-1.5 pl-5 text-sm">
-                  {card.practiceNext.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ol>
-              </Panel>
-              {card.questions.map((q, i) => (
-                <QuestionCard key={i} q={q} n={i + 1} />
-              ))}
+              <ScorecardTabs cards={mi.scorecards} selected={shown.provider} providers={providers} onSelect={setSelected} onDelete={deleteCard} />
+              <ScorecardView card={shown.scorecard} />
             </>
           )}
         </div>
         <Panel title="Transcript" className="min-[1200px]:sticky min-[1200px]:top-0">
-          {mi.transcript.length === 0 ? (
-            <p className="text-xs text-ink-3">Nothing was recorded.</p>
-          ) : (
-            <ol className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
-              {mi.transcript.map((l, i) => (
-                <li key={i}>
-                  <button
-                    onClick={() => seek(l.atMs)}
-                    disabled={!audioUrl}
-                    className="flex w-full gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-white/5 disabled:hover:bg-transparent"
-                    title={audioUrl ? 'Play from here' : undefined}
-                  >
-                    <span className="mt-0.5 w-10 shrink-0 font-mono text-[10px] text-ink-3">{clock(l.atMs)}</span>
-                    <span className={`text-sm ${l.speaker === 'you' ? 'text-ink' : 'text-ink-2'}`}>
-                      <strong className={l.speaker === 'you' ? 'text-indigo-200' : 'text-ink-3'}>{l.speaker === 'you' ? 'You' : 'Interviewer'}:</strong> {l.text}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
+          <TranscriptWithTips lines={mi.transcript} tips={mi.tips} canPlay={!!audioUrl} onSeek={seek} />
         </Panel>
       </div>
     </div>
-  )
-}
-
-function QuestionCard({ q, n }: { q: main.QuestionReview; n: number }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <Panel title={`Question ${n}`}>
-      <p className="text-sm font-semibold">{q.question}</p>
-      <p className="mt-1 text-xs text-ink-3">{q.answerSummary}</p>
-      <div className="mt-3 space-y-2 text-sm">
-        <p>
-          <Chip tone="success">Worked</Chip> <span className="text-ink-2">{q.worked}</span>
-        </p>
-        <p>
-          <Chip tone="warn">Improve</Chip> <span className="text-ink-2">{q.improve}</span>
-        </p>
-      </div>
-      <button className="mt-3 text-xs text-indigo-300 hover:underline" onClick={() => setOpen((o) => !o)}>
-        {open ? 'Hide stronger answer' : 'Show a stronger answer'}
-      </button>
-      {open && <p className="mt-2 rounded-xl border border-line bg-white/[0.03] p-3 text-sm leading-relaxed text-ink-2 italic">{q.strongerAnswer}</p>}
-    </Panel>
   )
 }

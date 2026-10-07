@@ -21,7 +21,7 @@ export function MockInterviewsPanel({ job }: { job: main.Job }) {
   const [setup, setSetup] = useState(false)
 
   const remove = async (m: main.MockInterview) => {
-    const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, scorecard and recording will be deleted.', confirmLabel: 'Delete', danger: true })
+    const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, tips, scorecards and recording will be deleted.', confirmLabel: 'Delete', danger: true })
     if (ok && (await apiOk(DeleteMockInterview(m.id)))) notifyDataChanged()
   }
 

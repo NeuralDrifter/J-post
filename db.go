@@ -304,6 +304,33 @@ var migrations = []string{
 	CREATE INDEX idx_mock_interviews_job ON mock_interviews(job_id, started_at);`,
 	// 7: the interviewer's name (matched to the voice).
 	`ALTER TABLE mock_interviews ADD COLUMN interviewer_name TEXT NOT NULL DEFAULT '';`,
+	// 8: one scorecard per grading provider, and saved coaching tips. Existing
+	// scorecards came from Gemini Live.
+	`CREATE TABLE scorecards (
+		id TEXT PRIMARY KEY,
+		mock_interview_id TEXT NOT NULL REFERENCES mock_interviews(id) ON DELETE CASCADE,
+		provider TEXT NOT NULL,
+		model TEXT NOT NULL DEFAULT '',
+		scorecard TEXT NOT NULL,
+		created_at TEXT NOT NULL,
+		UNIQUE (mock_interview_id, provider)
+	);
+	CREATE TABLE interview_tips (
+		id TEXT PRIMARY KEY,
+		mock_interview_id TEXT NOT NULL REFERENCES mock_interviews(id) ON DELETE CASCADE,
+		answer_at_ms INTEGER NOT NULL,
+		kind TEXT NOT NULL,
+		text TEXT NOT NULL,
+		provider TEXT NOT NULL,
+		model TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL
+	);
+	CREATE INDEX idx_interview_tips_interview ON interview_tips(mock_interview_id, answer_at_ms);
+	INSERT INTO scorecards (id, mock_interview_id, provider, model, scorecard, created_at)
+		SELECT lower(hex(randomblob(8))), id, 'gemini-live', '', scorecard,
+			CASE WHEN ended_at != '' THEN ended_at ELSE started_at END
+		FROM mock_interviews WHERE scorecard != '';
+	ALTER TABLE mock_interviews DROP COLUMN scorecard;`,
 }
 
 func openDB(path string) (*sql.DB, error) {

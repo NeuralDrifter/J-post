@@ -34,12 +34,20 @@ export function DeleteInterview(arg1) {
   return window['go']['main']['App']['DeleteInterview'](arg1);
 }
 
+export function DeleteInterviewRecording(arg1) {
+  return window['go']['main']['App']['DeleteInterviewRecording'](arg1);
+}
+
 export function DeleteJob(arg1) {
   return window['go']['main']['App']['DeleteJob'](arg1);
 }
 
 export function DeleteMockInterview(arg1) {
   return window['go']['main']['App']['DeleteMockInterview'](arg1);
+}
+
+export function DeleteScorecard(arg1, arg2) {
+  return window['go']['main']['App']['DeleteScorecard'](arg1, arg2);
 }
 
 export function DeleteSearch(arg1) {
@@ -96,6 +104,14 @@ export function GetStartupError() {
 
 export function InboxCounts() {
   return window['go']['main']['App']['InboxCounts']();
+}
+
+export function ListAIProviders() {
+  return window['go']['main']['App']['ListAIProviders']();
+}
+
+export function ListAllMockInterviews() {
+  return window['go']['main']['App']['ListAllMockInterviews']();
 }
 
 export function ListAttachments(arg1) {
@@ -162,8 +178,8 @@ export function NewEstimate(arg1) {
   return window['go']['main']['App']['NewEstimate'](arg1);
 }
 
-export function NudgeAnswer(arg1, arg2) {
-  return window['go']['main']['App']['NudgeAnswer'](arg1, arg2);
+export function NudgeAnswer(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['NudgeAnswer'](arg1, arg2, arg3, arg4);
 }
 
 export function OpenAttachment(arg1) {
@@ -188,6 +204,10 @@ export function PreviewComp(arg1) {
 
 export function RefreshSearch(arg1) {
   return window['go']['main']['App']['RefreshSearch'](arg1);
+}
+
+export function RegradeInterview(arg1, arg2) {
+  return window['go']['main']['App']['RegradeInterview'](arg1, arg2);
 }
 
 export function RenameAttachment(arg1, arg2) {
@@ -244,6 +264,10 @@ export function SearchOccupations(arg1) {
 
 export function ShowAttachmentInFolder(arg1) {
   return window['go']['main']['App']['ShowAttachmentInFolder'](arg1);
+}
+
+export function TestClaudeCode(arg1) {
+  return window['go']['main']['App']['TestClaudeCode'](arg1);
 }
 
 export function TestPython(arg1) {
