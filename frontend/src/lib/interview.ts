@@ -60,3 +60,12 @@ export function gradeActions(status: string): { gradeNow: boolean; gradeWith: bo
   if (status === 'done') return { gradeNow: false, gradeWith: true }
   return { gradeNow: true, gradeWith: true }
 }
+
+/**
+ * Interviews for one job. A filter whose job has no interviews left (its last
+ * one was just deleted) shows everything instead of an empty list.
+ */
+export function filterByJob<T extends { jobId: string }>(list: T[], jobId: string): T[] {
+  if (!jobId || !list.some((m) => m.jobId === jobId)) return list
+  return list.filter((m) => m.jobId === jobId)
+}

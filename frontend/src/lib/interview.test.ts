@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { main } from './backend'
-import { attachTips, gradeActions, holdSession, peekSession, releaseSession } from './interview'
+import { attachTips, filterByJob, gradeActions, holdSession, peekSession, releaseSession } from './interview'
 
 describe('pending live sessions', () => {
   it('can be read repeatedly (React may run state setup twice) until released', () => {
@@ -43,5 +43,16 @@ describe('gradeActions', () => {
     expect(gradeActions('live')).toEqual({ gradeNow: true, gradeWith: true })
     expect(gradeActions('done')).toEqual({ gradeNow: false, gradeWith: true })
     expect(gradeActions('scoring')).toEqual({ gradeNow: false, gradeWith: false })
+  })
+})
+
+describe('filterByJob', () => {
+  const list = [{ id: '1', jobId: 'a' }, { id: '2', jobId: 'b' }, { id: '3', jobId: 'a' }]
+  it('keeps the chosen job', () => {
+    expect(filterByJob(list, 'a').map((m) => m.id)).toEqual(['1', '3'])
+    expect(filterByJob(list, '').map((m) => m.id)).toEqual(['1', '2', '3'])
+  })
+  it('shows everything when the chosen job has no interviews left', () => {
+    expect(filterByJob(list, 'deleted-job').map((m) => m.id)).toEqual(['1', '2', '3'])
   })
 })

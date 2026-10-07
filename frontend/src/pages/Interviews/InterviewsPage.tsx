@@ -8,7 +8,7 @@ import { api, apiOk } from '../../lib/api'
 import { DeleteMockInterview, ListAIProviders, ListAllMockInterviews, type main } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
-import { averageScore } from '../../lib/interview'
+import { averageScore, filterByJob } from '../../lib/interview'
 import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { openMenu } from '../../lib/menu'
 import { useLoad } from '../../lib/useLoad'
@@ -33,7 +33,7 @@ export default function InterviewsPage() {
     for (const m of interviews ?? []) seen.set(m.jobId, `${m.position} · ${m.company}`)
     return [...seen.entries()]
   }, [interviews])
-  const shown = (interviews ?? []).filter((m) => !jobFilter || m.jobId === jobFilter)
+  const shown = filterByJob(interviews ?? [], jobFilter)
   const providerLabel = (id: string) => providers?.find((p) => p.id === id)?.label ?? id
 
   const remove = async (m: main.MockInterviewSummary) => {
