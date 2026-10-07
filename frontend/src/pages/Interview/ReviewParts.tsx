@@ -121,10 +121,11 @@ export function TranscriptWithTips({
   canPlay: boolean
   onSeek: (ms: number) => void
 }) {
-  if (lines.length === 0) return <p className="text-xs text-ink-3">Nothing was recorded.</p>
+  // With no transcript (e.g. the app closed before the first autosave), every tip is "other".
   const { byLine, unmatched } = attachTips(lines, tips)
   return (
     <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
+      {lines.length === 0 && <p className="text-xs text-ink-3">Nothing was recorded.</p>}
       <ol className="space-y-2">
         {lines.map((l, i) => (
           <li key={i}>
