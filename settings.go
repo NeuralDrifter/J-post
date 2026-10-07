@@ -40,6 +40,7 @@ type Settings struct {
 	// Which AI provider grades interviews and gives coaching tips (an aiProvider id).
 	GradingProvider string `json:"gradingProvider"`
 	TipsProvider    string `json:"tipsProvider"`
+	PlanProvider    string `json:"planProvider"` // writes the question plan before a mock interview
 	// Anthropic API.
 	AnthropicKey           string `json:"anthropicKey"`
 	AnthropicModel         string `json:"anthropicModel"`
@@ -94,6 +95,7 @@ func applySettingsDefaults(s *Settings) {
 	}
 	s.GradingProvider = cmp.Or(s.GradingProvider, providerGeminiLive)
 	s.TipsProvider = cmp.Or(s.TipsProvider, providerGeminiLive)
+	s.PlanProvider = cmp.Or(s.PlanProvider, providerGeminiLive)
 	s.AnthropicModel = cmp.Or(strings.TrimSpace(s.AnthropicModel), defaultAnthropicModel)
 	s.AnthropicGradingEffort = cmp.Or(s.AnthropicGradingEffort, defaultGradingEffort)
 	s.AnthropicTipsEffort = cmp.Or(s.AnthropicTipsEffort, defaultTipsEffort)
@@ -138,7 +140,7 @@ func (s *SettingsStore) Save(settings Settings) error {
 	if settings.FollowUpDays > 365 {
 		return errors.New("follow-up threshold must be between 1 and 365 days")
 	}
-	for _, id := range []string{settings.GradingProvider, settings.TipsProvider} {
+	for _, id := range []string{settings.GradingProvider, settings.TipsProvider, settings.PlanProvider} {
 		if _, ok := providerByID(id); !ok {
 			return fmt.Errorf("unknown AI provider %q", id)
 		}
