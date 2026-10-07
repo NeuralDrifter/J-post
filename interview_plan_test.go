@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -185,5 +186,217 @@ func TestWrapUpCueMentionsPlan(t *testing.T) {
 	}
 	if !strings.HasSuffix(liveCues(25, true).WrapUp, "]") {
 		t.Error("the note must stay in square brackets")
+	}
+}
+
+// tokenServer fakes the Live token endpoint, recording each locked brief.
+func tokenServer(t *testing.T) *[]string {
+	t.Helper()
+	briefs := &[]string{}
+	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+		var body map[string]any
+		json.NewDecoder(req.Body).Decode(&body)
+		setup := body["bidiGenerateContentSetup"].(map[string]any)
+		*briefs = append(*briefs, setup["systemInstruction"].(map[string]any)["parts"].([]any)[0].(map[string]any)["text"].(string))
+		w.Write([]byte(`{"name":"auth_tokens/t1"}`))
+	})
+	return briefs
+}
+
+// noLivePlanning fails the test if a Live socket is opened.
+func noLivePlanning(t *testing.T) {
+	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
+		t.Error("no Live planning call expected")
+	})
+}
+
+// anthropicPlanner fakes the Anthropic API answering with body (status 200) or failing with status.
+func anthropicPlanner(t *testing.T, status int, body string) *int {
+	calls := new(int)
+	fakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
+		*calls++
+		w.Header().Set("Content-Type", "application/json")
+		if status != http.StatusOK {
+			w.WriteHeader(status)
+			w.Write([]byte(`{"type":"error","error":{"type":"api_error","message":"boom"}}`))
+			return
+		}
+		w.Write(anthropicReply("claude-opus-5-5", body, "end_turn"))
+	})
+	return calls
+}
+
+func planSettings() Settings {
+	s := anthropicSettings
+	s.GeminiKey, s.GeminiLiveModel = "k", "gemini-3.8-live"
+	return s
+}
+
+func TestPrepareInterviewMakesPlanWithSettingProvider(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	briefs := tokenServer(t)
+	noLivePlanning(t)
+	anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mi, err := r.GetMockInterview(live.SessionID)
+	if err != nil || mi.Plan == nil || mi.Plan.Provider != providerAnthropic || mi.Plan.Model != "claude-opus-5-5" || mi.Attempt != 1 {
+		t.Fatalf("mi = %+v, err = %v", mi, err)
+	}
+	if len(*briefs) != 1 || !strings.Contains((*briefs)[0], "Question 1?") || live.Cues != liveCues(25, true) {
+		t.Fatalf("briefs = %d, cues = %+v", len(*briefs), live.Cues)
+	}
+}
+
+func TestPrepareInterviewPlanProviderOverride(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	tokenServer(t)
+	noLivePlanning(t)
+	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	s := planSettings()
+	s.PlanProvider = providerGeminiLive
+	setup := testSetup
+	setup.PlanProvider = providerAnthropic
+	if _, err := prepareInterview(context.Background(), r, s, j.ID, setup); err != nil || *calls != 1 {
+		t.Fatalf("err = %v, anthropic calls = %d", err, *calls)
+	}
+}
+
+func TestPrepareInterviewPlanFailureCreatesNothing(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	briefs := tokenServer(t)
+	anthropicPlanner(t, http.StatusInternalServerError, "")
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
+		t.Fatal("expected the planning error")
+	}
+	if list, _ := r.ListAllMockInterviews(); len(list) != 0 || countRows(t, r, "interview_plans") != 0 || len(*briefs) != 0 {
+		t.Fatalf("left behind: %d interviews, %d plans, %d tokens", len(list), countRows(t, r, "interview_plans"), len(*briefs))
+	}
+}
+
+func TestPrepareInterviewInvalidPlanFails(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	tokenServer(t)
+	anthropicPlanner(t, http.StatusOK, samplePlanJSON(1))
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	_, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
+	if err == nil || !strings.Contains(err.Error(), "expected about 5") {
+		t.Fatalf("err = %v", err)
+	}
+	if list, _ := r.ListAllMockInterviews(); len(list) != 0 {
+		t.Fatalf("no interview should be created: %d", len(list))
+	}
+}
+
+func TestPrepareInterviewTokenFailureCreatesNothing(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) { w.WriteHeader(http.StatusBadRequest) })
+	anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
+		t.Fatal("expected the token error")
+	}
+	if list, _ := r.ListAllMockInterviews(); len(list) != 0 || countRows(t, r, "interview_plans") != 0 {
+		t.Fatalf("left behind: %d interviews, %d plans", len(list), countRows(t, r, "interview_plans"))
+	}
+}
+
+func TestPrepareInterviewWithoutPlan(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	briefs := tokenServer(t)
+	noLivePlanning(t)
+	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	setup := testSetup
+	setup.PlanProvider = planNone
+	live, err := prepareInterview(context.Background(), r, s, j.ID, setup)
+	if err != nil || *calls != 0 {
+		t.Fatalf("err = %v, calls = %d", err, *calls)
+	}
+	mi, _ := r.GetMockInterview(live.SessionID)
+	if mi.Plan != nil || strings.Contains((*briefs)[0], "Your interview plan") || live.Cues != liveCues(25, false) {
+		t.Fatalf("mi = %+v", mi)
+	}
+}
+
+// plannedOriginal starts an interview planned by the Anthropic fake (which is
+// then gone) and returns it.
+func plannedOriginal(t *testing.T, r *Repo, j Job) MockInterview {
+	t.Helper()
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mi, _ := r.GetMockInterview(live.SessionID)
+	return mi
+}
+
+func TestRetryReusesPlanAndOriginalShape(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	briefs := tokenServer(t)
+	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	original := plannedOriginal(t, r, j)
+	noLivePlanning(t)
+	setNow(r, 2026, time.October, 2, 12)
+	retry := InterviewSetup{RetryOf: original.ID, Kind: "technical", Minutes: 45, Persona: "friendly", Voice: "Puck", PlanProvider: providerGeminiLive}
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	live, err := prepareInterview(context.Background(), r, s, j.ID, retry)
+	if err != nil || *calls != 1 {
+		t.Fatalf("err = %v, planning calls = %d (want only the original's)", err, *calls)
+	}
+	mi, _ := r.GetMockInterview(live.SessionID)
+	if mi.PlanID != original.PlanID || mi.Kind != "behavioral" || mi.Minutes != 25 || mi.Persona != "friendly" || mi.Attempt != 2 {
+		t.Fatalf("retry = %+v", mi)
+	}
+	if !strings.Contains((*briefs)[1], "Question 1?") || live.Cues != liveCues(25, true) {
+		t.Fatalf("the retry's brief should carry the same plan; cues = %+v", live.Cues)
+	}
+}
+
+func TestRetryWithoutPlanIsRefused(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	tokenServer(t)
+	setup := testSetup
+	setup.PlanProvider = planNone
+	live, err := prepareInterview(context.Background(), r, planSettings(), j.ID, setup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = prepareInterview(context.Background(), r, planSettings(), j.ID, InterviewSetup{RetryOf: live.SessionID, Persona: "neutral"})
+	if !errors.Is(err, errNoPlanToRetry) {
+		t.Fatalf("err = %v", err)
+	}
+	if list, _ := r.ListAllMockInterviews(); len(list) != 1 {
+		t.Fatalf("the refused retry created an interview: %d", len(list))
+	}
+}
+
+func TestRetryOfMissingInterview(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	tokenServer(t)
+	_, err := prepareInterview(context.Background(), r, planSettings(), j.ID, InterviewSetup{RetryOf: "nope", Persona: "neutral"})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v", err)
 	}
 }

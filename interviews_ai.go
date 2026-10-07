@@ -21,6 +21,11 @@ type InterviewSetup struct {
 	Voice           string `json:"voice"`           // "" = surprise me (random)
 	InterviewerName string `json:"interviewerName"` // "" = random name matching the voice
 	Focus           string `json:"focus"`
+	// PlanProvider overrides the plan provider setting for this interview: an
+	// aiProvider id, planNone, or "" for the setting.
+	PlanProvider string `json:"planProvider"`
+	// RetryOf reuses that interview's question plan, type and length.
+	RetryOf string `json:"retryOf"`
 }
 
 // Transcript speakers.
@@ -410,7 +415,6 @@ func (r *Repo) DeleteMockInterview(id string) error {
 		return err
 	}
 	if path != "" {
-
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
@@ -420,9 +424,26 @@ func (r *Repo) DeleteMockInterview(id string) error {
 
 // ---- AI calls ----
 
+// prepareInterview gets everything ready for a live session: the question plan
+// (made by the plan provider, reused for a retry, or none), the brief and the
+// Live token. Nothing is stored until the token succeeds, so a failure at any
+// step leaves no interview or plan behind.
 func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, setup InterviewSetup) (LiveSession, error) {
+	applySettingsDefaults(&s)
 	if s.GeminiKey == "" {
 		return LiveSession{}, errNoGeminiKey
+	}
+	var reused *InterviewPlanRecord
+	if setup.RetryOf != "" {
+		original, err := r.GetMockInterview(setup.RetryOf)
+		if err != nil {
+			return LiveSession{}, err
+		}
+		if original.Plan == nil || original.JobID != jobID {
+			return LiveSession{}, errNoPlanToRetry
+		}
+		setup.Kind, setup.Minutes = original.Kind, original.Minutes
+		reused = original.Plan
 	}
 	if err := validateInterviewSetup(&setup); err != nil {
 		return LiveSession{}, err
@@ -439,22 +460,26 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	if err != nil {
 		return LiveSession{}, err
 	}
-	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup, nil))
-	mi, err := r.CreateMockInterview(jobID, setup, "")
+	plan, err := interviewPlanFor(ctx, s, job, profile.ResumeText, setup, reused)
 	if err != nil {
 		return LiveSession{}, err
 	}
+	var brief *InterviewPlan
+	if plan != nil {
+		brief = &plan.Plan
+	}
+	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup, brief))
 	token, err := createLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
-		if markErr := r.markFailed(mi.ID, err); markErr != nil {
-			return LiveSession{}, errors.Join(err, markErr)
-		}
+		return LiveSession{}, err
+	}
+	mi, err := r.createPlannedInterview(jobID, setup, plan)
+	if err != nil {
 		return LiveSession{}, err
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
 		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName,
-		Cues: liveCues(setup.Minutes, false)}, nil
-
+		Cues: liveCues(setup.Minutes, plan != nil)}, nil
 }
 
 // nudgeAnswer asks the tips provider for one coaching cue about the answer that

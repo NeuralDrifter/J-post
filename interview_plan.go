@@ -1,6 +1,9 @@
 package main
 
 import (
+	"cmp"
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -132,4 +135,31 @@ func (p InterviewPlan) briefSection() string {
 		}
 	}
 	return b.String()
+}
+
+// planNone as InterviewSetup.PlanProvider starts the interview without a plan.
+const planNone = "none"
+
+var errNoPlanToRetry = errors.New("This interview has no question plan to retry.")
+
+// interviewPlanFor returns the plan for a new interview: reused when retrying,
+// nil for planNone, otherwise written by the chosen provider (the setup's
+// override, else the setting) and checked. A new plan has no ID yet.
+func interviewPlanFor(ctx context.Context, s Settings, job Job, resume string, setup InterviewSetup, reused *InterviewPlanRecord) (*InterviewPlanRecord, error) {
+	if reused != nil {
+		return reused, nil
+	}
+	provider := cmp.Or(setup.PlanProvider, s.PlanProvider)
+	if provider == planNone {
+		return nil, nil
+	}
+	var p InterviewPlan
+	model, err := runAITask(ctx, s, provider, planTask(job, resume, setup), &p)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't prepare the questions: %w", err)
+	}
+	if err := p.validate(setup.Minutes); err != nil {
+		return nil, fmt.Errorf("couldn't prepare the questions: %w", err)
+	}
+	return &InterviewPlanRecord{Provider: provider, Model: model, Plan: p}, nil
 }

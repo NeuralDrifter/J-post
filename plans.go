@@ -157,3 +157,26 @@ func (r *Repo) deleteMockAndOrphanPlan(id string) error {
 	}
 	return tx.Commit()
 }
+
+// createPlannedInterview stores a new plan (one without an ID) and the
+// interview that uses it; a reused plan is just linked.
+func (r *Repo) createPlannedInterview(jobID string, s InterviewSetup, plan *InterviewPlanRecord) (MockInterview, error) {
+	planID := ""
+	if plan != nil {
+		planID = plan.ID
+	}
+	if plan != nil && planID == "" {
+		id, err := r.savePlan(jobID, s, plan.Provider, plan.Model, plan.Plan)
+		if err != nil {
+			return MockInterview{}, err
+		}
+		planID = id
+		mi, err := r.CreateMockInterview(jobID, s, planID)
+		if err != nil {
+			_, delErr := r.db.Exec(`DELETE FROM interview_plans WHERE id = ?`, planID)
+			return MockInterview{}, errors.Join(err, delErr)
+		}
+		return mi, nil
+	}
+	return r.CreateMockInterview(jobID, s, planID)
+}
