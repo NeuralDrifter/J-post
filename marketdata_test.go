@@ -139,3 +139,22 @@ func TestRealMarketDataLoads(t *testing.T) {
 		t.Fatalf("sources = %+v", md.Sources)
 	}
 }
+
+func TestEstimateLocation(t *testing.T) {
+	md := testMarket()
+	cases := []struct {
+		jobLocation, homeArea, wantArea, wantState string
+	}{
+		{"Denver, CO", "US", "19740", "CO"},
+		{"", "19740", "19740", "CO"},    // unknown location: fall back to home
+		{"Remote", "19740", "US", "CO"}, // national pay, taxed where the user lives
+		{"Remote", "US", "US", ""},      // no home state known: no state tax guess
+		{"Atlantis", "US", "US", ""},    // unmatched: home is national
+	}
+	for _, c := range cases {
+		area, state := md.EstimateLocation(c.jobLocation, c.homeArea)
+		if area != c.wantArea || state != c.wantState {
+			t.Errorf("EstimateLocation(%q, %q) = %q, %q; want %q, %q", c.jobLocation, c.homeArea, area, state, c.wantArea, c.wantState)
+		}
+	}
+}

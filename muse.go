@@ -3,11 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -75,111 +72,126 @@ func museSliceKey(category, location string) string { return category + "|" + lo
 func fetchMusePage(ctx context.Context, category, location string, page int) (museResponse, int, error) {
 	var out museResponse
 	params := url.Values{"page": {strconv.Itoa(page)}, "category": {category}, "location": {location}}
-	ctx, cancel := context.WithTimeout(ctx, apiTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, museBaseURL+"?"+params.Encode(), nil)
+	header, err := getJSON(ctx, apiRequest{source: "The Muse", url: museBaseURL + "?" + params.Encode()}, &out)
 	if err != nil {
-		return out, 0, errors.New("could not build The Muse request")
-	}
-	req.Header.Set("User-Agent", apiUserAgent)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return out, 0, fmt.Errorf("could not reach The Muse: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return out, 0, errors.New(httpErrorMessage("The Muse", resp.StatusCode, body))
+		return out, 0, err
 	}
 	remaining := -1
-	if v, err := strconv.Atoi(resp.Header.Get("X-RateLimit-Remaining")); err == nil {
+	if v, err := strconv.Atoi(header.Get("X-RateLimit-Remaining")); err == nil {
 		remaining = v
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return out, remaining, fmt.Errorf("unexpected The Muse response: %v", err)
-	}
 	return out, remaining, nil
+}
+
+// museJob is one listing in the local copy of a slice.
+type museJob struct {
+	id                                                        int64
+	title, company, locations, levels, date, url, description string
 }
 
 // syncMuseSlice refreshes one category × location copy if it's older than a day.
 // It returns the slice's job count.
 func (r *Repo) syncMuseSlice(ctx context.Context, category, location string) (int, error) {
 	key := museSliceKey(category, location)
-	var syncedAt string
-	var total int
-	err := r.db.QueryRow(`SELECT synced_at, total FROM muse_slices WHERE slice_key = ?`, key).Scan(&syncedAt, &total)
-	if err == nil {
-		if t, perr := time.Parse(time.RFC3339, syncedAt); perr == nil && r.now().Sub(t) < museSliceTTL {
-			return total, nil
-		}
-	} else if !errors.Is(err, sql.ErrNoRows) {
+	total, fresh, err := r.freshMuseSlice(key)
+	if err != nil || fresh {
+		return total, err
+	}
+	jobs, err := fetchMuseSlice(ctx, category, location)
+	if err != nil {
 		return 0, err
 	}
-
-	type row struct {
-		id                                                        int64
-		title, company, locations, levels, date, url, description string
+	if err := r.replaceMuseSlice(key, category, location, jobs); err != nil {
+		return 0, err
 	}
-	var rows []row
+	return len(jobs), nil
+}
+
+// freshMuseSlice reports whether the stored slice was synced within museSliceTTL, and its size.
+func (r *Repo) freshMuseSlice(key string) (total int, fresh bool, err error) {
+	var syncedAt string
+	err = r.db.QueryRow(`SELECT synced_at, total FROM muse_slices WHERE slice_key = ?`, key).Scan(&syncedAt, &total)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+	t, err := time.Parse(time.RFC3339, syncedAt)
+	return total, err == nil && r.now().Sub(t) < museSliceTTL, nil
+}
+
+// fetchMuseSlice pages through The Muse for one slice, pausing between pages and
+// stopping early when the hourly allowance runs low. A failure after the first
+// page keeps the pages already fetched.
+func fetchMuseSlice(ctx context.Context, category, location string) ([]museJob, error) {
+	var jobs []museJob
 	for page := 0; page < museMaxPages; page++ {
 		if page > 0 && musePageDelay > 0 {
 			select {
 			case <-ctx.Done():
-				return 0, ctx.Err()
+				return nil, ctx.Err()
 			case <-time.After(musePageDelay):
 			}
 		}
 		resp, remaining, err := fetchMusePage(ctx, category, location, page)
 		if err != nil {
-			if len(rows) > 0 {
-				break // keep the pages we have
+			if len(jobs) > 0 {
+				break
 			}
-			return 0, err
+			return nil, err
 		}
-		for _, j := range resp.Results {
-			var locs, levels []string
-			for _, l := range j.Locations {
-				locs = append(locs, l.Name)
-			}
-			for _, l := range j.Levels {
-				levels = append(levels, l.Name)
-			}
-			rows = append(rows, row{j.ID, j.Name, j.Company.Name, strings.Join(locs, "; "), strings.Join(levels, ", "),
-				firstN(j.PublicationDate, 10), j.Refs.LandingPage, htmlToText(j.Contents)})
-		}
+		jobs = append(jobs, museJobs(resp)...)
 		if page+1 >= resp.PageCount || (remaining >= 0 && remaining < museMinRemaining) {
 			break
 		}
 	}
+	return jobs, nil
+}
 
+func museJobs(resp museResponse) []museJob {
+	jobs := make([]museJob, 0, len(resp.Results))
+	for _, j := range resp.Results {
+		var locs, levels []string
+		for _, l := range j.Locations {
+			locs = append(locs, l.Name)
+		}
+		for _, l := range j.Levels {
+			levels = append(levels, l.Name)
+		}
+		jobs = append(jobs, museJob{j.ID, j.Name, j.Company.Name, strings.Join(locs, "; "), strings.Join(levels, ", "),
+			datePart(j.PublicationDate), j.Refs.LandingPage, htmlToText(j.Contents)})
+	}
+	return jobs
+}
+
+// replaceMuseSlice swaps the stored copy of a slice for jobs and stamps the sync time.
+func (r *Repo) replaceMuseSlice(key, category, location string, jobs []museJob) error {
 	tx, err := r.db.Begin()
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer tx.Rollback()
 	if _, err := tx.Exec(`DELETE FROM muse_jobs WHERE slice_key = ?`, key); err != nil {
-		return 0, err
+		return err
 	}
-	for _, j := range rows {
+	for _, j := range jobs {
 		if _, err := tx.Exec(`INSERT OR REPLACE INTO muse_jobs (muse_id, slice_key, title, company, locations, levels, publication_date, url, description)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, j.id, key, j.title, j.company, j.locations, j.levels, j.date, j.url, j.description); err != nil {
-			return 0, err
+			return err
 		}
 	}
 	if _, err := tx.Exec(`INSERT INTO muse_slices (slice_key, category, location, synced_at, total) VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(slice_key) DO UPDATE SET synced_at = excluded.synced_at, total = excluded.total`,
-		key, category, location, ts(r.now()), len(rows)); err != nil {
-		return 0, err
+		key, category, location, ts(r.now()), len(jobs)); err != nil {
+		return err
 	}
-	return len(rows), tx.Commit()
+	return tx.Commit()
 }
 
 // museSearch syncs the needed slices, then keyword-searches the local copy:
 // every word must appear in the title, company or description.
 func (r *Repo) museSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions, categories []string) ([]rawJob, error) {
-	if len(categories) == 0 {
-		return nil, errors.New("pick The Muse categories in Settings first")
-	}
 	location := museLocation(q)
 	keys := []string{}
 	found := 0
@@ -210,23 +222,15 @@ func (r *Repo) museSearch(ctx context.Context, q DiscoverQuery, opts fetchOption
 		args = append(args, r.now().Add(-time.Duration(opts.HoursOld)*time.Hour).Format(dateLayout))
 	}
 	limit := max(opts.Results, 1)
-	rows, err := r.db.Query(`SELECT title, company, locations, publication_date, url, MAX(description) FROM muse_jobs
+	return queryAll(r.db, scanMuseJob, `SELECT title, company, locations, publication_date, url, MAX(description) FROM muse_jobs
 		WHERE `+strings.Join(where, " AND ")+` GROUP BY muse_id ORDER BY publication_date DESC, muse_id DESC LIMIT ?`, append(args, limit)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []rawJob{}
-	for rows.Next() {
-		var j rawJob
-		if err := rows.Scan(&j.Title, &j.Company, &j.Location, &j.DatePosted, &j.URL, &j.Description); err != nil {
-			return nil, err
-		}
-		j.Site = "themuse"
-		j.IsRemote = strings.Contains(j.Location, museRemote)
-		out = append(out, j)
-	}
-	return out, rows.Err()
+}
+
+func scanMuseJob(s rowScanner) (rawJob, error) {
+	j := rawJob{Site: "themuse"}
+	err := s.Scan(&j.Title, &j.Company, &j.Location, &j.DatePosted, &j.URL, &j.Description)
+	j.IsRemote = strings.Contains(j.Location, museRemote)
+	return j, err
 }
 
 // takeSourceSlot enforces "at most one call per interval" for rate-limited

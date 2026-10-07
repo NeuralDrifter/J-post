@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { labelFor, lookup } from '../../lib/format'
 import { useNavigate } from 'react-router'
 import { ArrowRight, Copy, Pencil, Trash2 } from 'lucide-react'
 import { confirmDialog } from '../../components/ConfirmDialog'
@@ -69,8 +70,8 @@ export function CompPanel({ jobId }: { jobId: string }) {
                 onClick={() => setEditing(it.package)}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-semibold">{it.package.label || KIND_LABEL[it.package.kind]}</span>
-                  <Chip tone={KIND_TONE[it.package.kind]}>{KIND_LABEL[it.package.kind]}</Chip>
+                  <span className="truncate text-sm font-semibold">{it.package.label || labelFor(KIND_LABEL, it.package.kind)}</span>
+                  <Chip tone={lookup(KIND_TONE, it.package.kind, 'neutral')}>{labelFor(KIND_LABEL, it.package.kind)}</Chip>
                 </div>
                 <p className="mt-1 font-mono text-xs text-ink-2">
                   {formatMoneyFull(it.result.year1Total)} yr-1 · {formatMoneyFull(it.result.year1TakeHome)} take-home

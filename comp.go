@@ -8,12 +8,35 @@ import (
 	"strings"
 )
 
+// Package kinds.
+const (
+	PackageOffer    = "offer"
+	PackageEstimate = "estimate" // an expected offer
+	PackageCounter  = "counter"  // "what if they meet my counter"
+	PackageCurrent  = "current"  // the user's current job (baseline); at most one
+)
+
+// Equity types.
+const (
+	EquityNone    = "none"
+	EquityRSU     = "rsu"
+	EquityOptions = "options"
+)
+
+// Vesting schedules.
+const (
+	VestingStandard   = "standard"
+	VestingBackloaded = "backloaded"
+	VestingMonthly    = "monthly"
+	VestingCustom     = "custom"
+)
+
 // CompPackage is one compensation scenario: a real offer, an expected offer
 // (estimate), a counter-offer draft, or the user's current job (baseline).
 type CompPackage struct {
 	ID                    string  `json:"id"`
 	JobID                 string  `json:"jobId"`
-	Kind                  string  `json:"kind"` // offer, estimate, counter, current
+	Kind                  string  `json:"kind"` // a Package* constant
 	Label                 string  `json:"label"`
 	ParentID              string  `json:"parentId"`
 	BaseSalary            int64   `json:"baseSalary"`
@@ -21,12 +44,12 @@ type CompPackage struct {
 	SigningClawbackMonths int     `json:"signingClawbackMonths"`
 	TargetBonusPct        float64 `json:"targetBonusPct"`
 	AnnualRaisePct        float64 `json:"annualRaisePct"`
-	EquityType            string  `json:"equityType"` // none, rsu, options
+	EquityType            string  `json:"equityType"` // an Equity* constant
 	RSUGrantValue         int64   `json:"rsuGrantValue"`
 	OptionShares          int64   `json:"optionShares"`
 	OptionStrike          float64 `json:"optionStrike"`
 	ShareValue            float64 `json:"shareValue"`
-	Vesting               string  `json:"vesting"` // standard, backloaded, monthly, custom
+	Vesting               string  `json:"vesting"` // a Vesting* constant
 	VestingCustom         string  `json:"vestingCustom"`
 	K401MatchPct          float64 `json:"k401MatchPct"`
 	K401MatchCapPct       float64 `json:"k401MatchCapPct"`
@@ -44,18 +67,125 @@ type CompPackage struct {
 	UpdatedAt             string  `json:"updatedAt"`
 }
 
-const compColumns = `id, job_id, kind, label, parent_id, base_salary, signing_bonus, signing_clawback_months,
-	target_bonus_pct, annual_raise_pct, equity_type, rsu_grant_value, option_shares, option_strike, share_value,
-	vesting, vesting_custom, k401_match_pct, k401_match_cap_pct, k401_contrib_pct, health_premium_annual,
-	stipends_annual, other_annual, pto_days, occupation_code, area_code, tax_state, local_tax_pct, notes,
-	created_at, updated_at`
+// compColumn pairs a comp_packages column with the CompPackage field it holds.
+// field is a pointer (*string, *int64, *int, *float64) or an optionalString.
+type compColumn struct {
+	name  string
+	field any
+}
 
-func (p *CompPackage) fields() []any {
-	return []any{p.ID, nullStr(p.JobID), p.Kind, p.Label, nullStr(p.ParentID), p.BaseSalary, p.SigningBonus,
-		p.SigningClawbackMonths, p.TargetBonusPct, p.AnnualRaisePct, p.EquityType, p.RSUGrantValue, p.OptionShares,
-		p.OptionStrike, p.ShareValue, p.Vesting, p.VestingCustom, p.K401MatchPct, p.K401MatchCapPct, p.K401ContribPct,
-		p.HealthPremiumAnnual, p.StipendsAnnual, p.OtherAnnual, p.PTODays, p.OccupationCode, p.AreaCode, p.TaxState,
-		p.LocalTaxPct, p.Notes, p.CreatedAt, p.UpdatedAt}
+// columns is the single source of truth for how CompPackage maps to the table;
+// SELECT, INSERT, UPDATE and scanning are all built from it.
+func (p *CompPackage) columns() []compColumn {
+	return []compColumn{
+		{"id", &p.ID},
+		{"job_id", optionalString{&p.JobID}},
+		{"kind", &p.Kind},
+		{"label", &p.Label},
+		{"parent_id", optionalString{&p.ParentID}},
+		{"base_salary", &p.BaseSalary},
+		{"signing_bonus", &p.SigningBonus},
+		{"signing_clawback_months", &p.SigningClawbackMonths},
+		{"target_bonus_pct", &p.TargetBonusPct},
+		{"annual_raise_pct", &p.AnnualRaisePct},
+		{"equity_type", &p.EquityType},
+		{"rsu_grant_value", &p.RSUGrantValue},
+		{"option_shares", &p.OptionShares},
+		{"option_strike", &p.OptionStrike},
+		{"share_value", &p.ShareValue},
+		{"vesting", &p.Vesting},
+		{"vesting_custom", &p.VestingCustom},
+		{"k401_match_pct", &p.K401MatchPct},
+		{"k401_match_cap_pct", &p.K401MatchCapPct},
+		{"k401_contrib_pct", &p.K401ContribPct},
+		{"health_premium_annual", &p.HealthPremiumAnnual},
+		{"stipends_annual", &p.StipendsAnnual},
+		{"other_annual", &p.OtherAnnual},
+		{"pto_days", &p.PTODays},
+		{"occupation_code", &p.OccupationCode},
+		{"area_code", &p.AreaCode},
+		{"tax_state", &p.TaxState},
+		{"local_tax_pct", &p.LocalTaxPct},
+		{"notes", &p.Notes},
+		{"created_at", &p.CreatedAt},
+		{"updated_at", &p.UpdatedAt},
+	}
+}
+
+// Columns an UPDATE never changes.
+var compImmutableColumns = map[string]bool{"id": true, "created_at": true}
+
+var compColumns = strings.Join(columnNames((&CompPackage{}).columns()), ", ")
+
+func columnNames(cols []compColumn) []string {
+	names := make([]string, len(cols))
+	for i, c := range cols {
+		names[i] = c.name
+	}
+	return names
+}
+
+func columnValues(cols []compColumn) []any {
+	values := make([]any, len(cols))
+	for i, c := range cols {
+		values[i] = columnValue(c.field)
+	}
+	return values
+}
+
+func columnValue(field any) any {
+	switch f := field.(type) {
+	case optionalString:
+		return nullStr(*f.s)
+	case *string:
+		return *f
+	case *int64:
+		return *f
+	case *int:
+		return *f
+	case *float64:
+		return *f
+	}
+	panic(fmt.Sprintf("unsupported column field type %T", field))
+}
+
+func columnDests(cols []compColumn) []any {
+	dests := make([]any, len(cols))
+	for i, c := range cols {
+		dests[i] = c.field
+	}
+	return dests
+}
+
+func insertCompSQL(cols []compColumn) string {
+	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(cols)), ", ")
+	return `INSERT INTO comp_packages (` + strings.Join(columnNames(cols), ", ") + `) VALUES (` + placeholders + `)`
+}
+
+// updateComp returns the UPDATE statement and its arguments for every mutable column.
+func updateComp(p *CompPackage) (string, []any) {
+	var sets []string
+	var args []any
+	for _, c := range p.columns() {
+		if compImmutableColumns[c.name] {
+			continue
+		}
+		sets = append(sets, c.name+" = ?")
+		args = append(args, columnValue(c.field))
+	}
+	return `UPDATE comp_packages SET ` + strings.Join(sets, ", ") + ` WHERE id = ?`, append(args, p.ID)
+}
+
+// optionalString stores "" as SQL NULL and reads NULL back as "".
+type optionalString struct{ s *string }
+
+func (o optionalString) Scan(src any) error {
+	var ns sql.NullString
+	if err := ns.Scan(src); err != nil {
+		return err
+	}
+	*o.s = ns.String
+	return nil
 }
 
 func nullStr(s string) any {
@@ -67,39 +197,33 @@ func nullStr(s string) any {
 
 func scanComp(s rowScanner) (CompPackage, error) {
 	var p CompPackage
-	var jobID, parentID sql.NullString
-	err := s.Scan(&p.ID, &jobID, &p.Kind, &p.Label, &parentID, &p.BaseSalary, &p.SigningBonus,
-		&p.SigningClawbackMonths, &p.TargetBonusPct, &p.AnnualRaisePct, &p.EquityType, &p.RSUGrantValue, &p.OptionShares,
-		&p.OptionStrike, &p.ShareValue, &p.Vesting, &p.VestingCustom, &p.K401MatchPct, &p.K401MatchCapPct, &p.K401ContribPct,
-		&p.HealthPremiumAnnual, &p.StipendsAnnual, &p.OtherAnnual, &p.PTODays, &p.OccupationCode, &p.AreaCode, &p.TaxState,
-		&p.LocalTaxPct, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
-	p.JobID, p.ParentID = jobID.String, parentID.String
+	err := s.Scan(columnDests(p.columns())...)
 	return p, err
 }
 
 var (
-	validKinds      = map[string]bool{"offer": true, "estimate": true, "counter": true, "current": true}
-	validEquity     = map[string]bool{"none": true, "rsu": true, "options": true}
-	validVesting    = map[string]bool{"standard": true, "backloaded": true, "monthly": true, "custom": true}
-	vestingSchedule = map[string][4]float64{
-		"standard":   {25, 25, 25, 25},
-		"monthly":    {25, 25, 25, 25},
-		"backloaded": {5, 15, 40, 40},
+	validKinds      = map[string]bool{PackageOffer: true, PackageEstimate: true, PackageCounter: true, PackageCurrent: true}
+	validEquity     = map[string]bool{EquityNone: true, EquityRSU: true, EquityOptions: true}
+	validVesting    = map[string]bool{VestingStandard: true, VestingBackloaded: true, VestingMonthly: true, VestingCustom: true}
+	vestingSchedule = map[string][compYears]float64{
+		VestingStandard:   {25, 25, 25, 25},
+		VestingMonthly:    {25, 25, 25, 25},
+		VestingBackloaded: {5, 15, 40, 40},
 	}
 )
 
 // vestingPercents returns the % of the grant vesting in each of years 1-4.
-func vestingPercents(p CompPackage) ([4]float64, error) {
-	if p.Vesting != "custom" {
+func vestingPercents(p CompPackage) ([compYears]float64, error) {
+	if p.Vesting != VestingCustom {
 		s, ok := vestingSchedule[p.Vesting]
 		if !ok {
 			return s, fmt.Errorf("unknown vesting schedule %q", p.Vesting)
 		}
 		return s, nil
 	}
-	var out [4]float64
+	var out [compYears]float64
 	parts := strings.Split(p.VestingCustom, ",")
-	if len(parts) != 4 {
+	if len(parts) != compYears {
 		return out, errors.New("custom vesting needs four yearly percentages, e.g. 10,20,30,40")
 	}
 	sum := 0.0
@@ -122,10 +246,10 @@ func ValidateCompPackage(p CompPackage) error {
 	if !validKinds[p.Kind] {
 		return fmt.Errorf("invalid package kind %q", p.Kind)
 	}
-	if p.Kind != "current" && p.JobID == "" {
+	if p.Kind != PackageCurrent && p.JobID == "" {
 		return errors.New("this package must belong to a job")
 	}
-	if p.Kind == "counter" && p.ParentID == "" {
+	if p.Kind == PackageCounter && p.ParentID == "" {
 		return errors.New("a counter must be based on an offer")
 	}
 	if !validEquity[p.EquityType] {
@@ -162,10 +286,10 @@ func ValidateCompPackage(p CompPackage) error {
 
 func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 	if p.EquityType == "" {
-		p.EquityType = "none"
+		p.EquityType = EquityNone
 	}
 	if p.Vesting == "" {
-		p.Vesting = "standard"
+		p.Vesting = VestingStandard
 	}
 	p.Label = strings.TrimSpace(p.Label)
 	if err := ValidateCompPackage(p); err != nil {
@@ -176,10 +300,14 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 			return p, err
 		}
 	}
-	if p.Kind == "current" {
+	if p.Kind == PackageCurrent {
 		var existing string
-		err := r.db.QueryRow(`SELECT id FROM comp_packages WHERE kind = 'current'`).Scan(&existing)
-		if err == nil && existing != p.ID {
+		err := r.db.QueryRow(`SELECT id FROM comp_packages WHERE kind = ?`, PackageCurrent).Scan(&existing)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+		case err != nil:
+			return p, err
+		case existing != p.ID:
 			return p, errors.New("you already have a current job baseline; edit that one instead")
 		}
 		p.JobID = ""
@@ -188,7 +316,8 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 	p.UpdatedAt = now
 	if p.ID == "" {
 		p.ID, p.CreatedAt = newID(), now
-		_, err := r.db.Exec(`INSERT INTO comp_packages (`+compColumns+`) VALUES (`+strings.TrimSuffix(strings.Repeat("?, ", 31), ", ")+`)`, p.fields()...)
+		cols := p.columns()
+		_, err := r.db.Exec(insertCompSQL(cols), columnValues(cols)...)
 		return p, err
 	}
 	existing, err := r.GetCompPackage(p.ID)
@@ -196,13 +325,8 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 		return p, err
 	}
 	p.CreatedAt = existing.CreatedAt
-	f := p.fields()
-	res, err := r.db.Exec(`UPDATE comp_packages SET job_id = ?, kind = ?, label = ?, parent_id = ?, base_salary = ?,
-		signing_bonus = ?, signing_clawback_months = ?, target_bonus_pct = ?, annual_raise_pct = ?, equity_type = ?,
-		rsu_grant_value = ?, option_shares = ?, option_strike = ?, share_value = ?, vesting = ?, vesting_custom = ?,
-		k401_match_pct = ?, k401_match_cap_pct = ?, k401_contrib_pct = ?, health_premium_annual = ?, stipends_annual = ?,
-		other_annual = ?, pto_days = ?, occupation_code = ?, area_code = ?, tax_state = ?, local_tax_pct = ?, notes = ?,
-		updated_at = ? WHERE id = ?`, append(append(f[1:29], f[30]), p.ID)...)
+	query, args := updateComp(&p)
+	res, err := r.db.Exec(query, args...)
 	return p, expectOneRow(res, err, "package", p.ID)
 }
 
@@ -215,20 +339,7 @@ func (r *Repo) GetCompPackage(id string) (CompPackage, error) {
 }
 
 func (r *Repo) listComp(where string, args ...any) ([]CompPackage, error) {
-	rows, err := r.db.Query(`SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = 'current' DESC, created_at, rowid`, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []CompPackage{}
-	for rows.Next() {
-		p, err := scanComp(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanComp, `SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = ? DESC, created_at, rowid`, append(args, PackageCurrent)...)
 }
 
 func (r *Repo) ListCompPackages() ([]CompPackage, error) { return r.listComp("") }
@@ -238,7 +349,7 @@ func (r *Repo) ListCompPackagesForJob(jobID string) ([]CompPackage, error) {
 }
 
 func (r *Repo) CurrentCompPackage() (*CompPackage, error) {
-	list, err := r.listComp("WHERE kind = 'current'")
+	list, err := r.listComp("WHERE kind = ?", PackageCurrent)
 	if err != nil || len(list) == 0 {
 		return nil, err
 	}
@@ -250,17 +361,38 @@ func (r *Repo) DeleteCompPackage(id string) error {
 	return expectOneRow(res, err, "package", id)
 }
 
+// withOfferTotals sets each summary's year-1 value from the job's latest offer
+// (packages are in creation order). Offers that can't be evaluated are skipped.
+func withOfferTotals(summaries []JobSummary, packages []CompPackage, evaluate func(CompPackage) (PackageResult, error)) {
+	latestOffer := map[string]CompPackage{}
+	for _, p := range packages {
+		if p.Kind == PackageOffer {
+			latestOffer[p.JobID] = p
+		}
+	}
+	for i := range summaries {
+		offer, ok := latestOffer[summaries[i].Job.ID]
+		if !ok {
+			continue
+		}
+		if res, err := evaluate(offer); err == nil {
+			total := res.Year1Total
+			summaries[i].OfferYear1Total = &total
+		}
+	}
+}
+
 // DraftCounter copies an offer (or estimate) as a "what if they meet my counter" package.
 func (r *Repo) DraftCounter(offerID string) (CompPackage, error) {
 	src, err := r.GetCompPackage(offerID)
 	if err != nil {
 		return CompPackage{}, err
 	}
-	if src.Kind != "offer" && src.Kind != "estimate" {
+	if src.Kind != PackageOffer && src.Kind != PackageEstimate {
 		return CompPackage{}, errors.New("only offers and estimates can be countered")
 	}
 	c := src
-	c.ID, c.Kind, c.ParentID = "", "counter", src.ID
+	c.ID, c.Kind, c.ParentID = "", PackageCounter, src.ID
 	label := src.Label
 	if label == "" {
 		label = "Offer"
@@ -272,7 +404,7 @@ func (r *Repo) DraftCounter(offerID string) (CompPackage, error) {
 // NewEstimateForJob prefills (but doesn't save) an expected-offer package from a job's posted range.
 func NewEstimateForJob(j Job, occ, area, state string) CompPackage {
 	p := CompPackage{
-		JobID: j.ID, Kind: "estimate", Label: "Estimate", EquityType: "none", Vesting: "standard",
+		JobID: j.ID, Kind: PackageEstimate, Label: "Estimate", EquityType: EquityNone, Vesting: VestingStandard,
 		OccupationCode: occ, AreaCode: area, TaxState: state,
 	}
 	switch {

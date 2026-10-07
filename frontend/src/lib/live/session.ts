@@ -1,8 +1,14 @@
-// Runs one voice interview against the Gemini Live API: microphone capture,
-// interviewer playback, recording, transcript, timekeeping and reconnection.
-import { decodeModelAudio, encodeMicChunk, micLevel, OUTPUT_RATE } from './audio'
+// Runs one voice interview against the Gemini Live API. This class owns the
+// connection (setup, reconnection, timekeeping) and wires together the
+// microphone (mic.ts), the interviewer's voice (playback.ts) and the recording
+// (recorder.ts).
+import type { main } from '../backend'
+import type { AudioChunk } from './audio'
 import { routeOutput } from './devices'
-import { applyServerMessage, initialLiveState, type LiveEffect, type LiveState, type Line } from './reducer'
+import { MicCapture, openMicrophone } from './mic'
+import { Playback } from './playback'
+import { applyServerMessage, initialLiveState, rejoinPrompt, type LiveEffect, type LiveState, type Line } from './reducer'
+import { SessionRecorder } from './recorder'
 
 export type SessionStatus = 'connecting' | 'live' | 'reconnecting' | 'ended' | 'error'
 
@@ -10,7 +16,8 @@ export type LiveConfig = {
   token: string
   wsUrl: string
   setup: Record<string, unknown>
-  minutes: number
+  /** What to tell the interviewer, and when (written by the backend next to the brief). */
+  cues: main.LiveCues
   micDeviceId?: string
   outputDeviceId?: string
 }
@@ -23,34 +30,26 @@ export type SessionCallbacks = {
   onMicLevel?: (level: number) => void
 }
 
-const MAX_RECONNECTS = 3
-const CHUNK_SECONDS = 0.1
-const PLAYBACK_CUSHION = 0.15 // seconds of buffer when speech (re)starts, absorbs network jitter
+// When the connection drops, first resume the same server session (keeps the
+// model's memory; fixes network blips). If Google's side is what broke, resuming
+// fails the same way, so then start fresh sessions seeded with the transcript.
+const MAX_RESUMES = 2
+const MAX_FRESH_STARTS = 2
 const decoder = new TextDecoder()
-
-// Inline AudioWorklet: copies microphone frames to the main thread.
-const WORKLET = `class MicCapture extends AudioWorkletProcessor {
-  process(inputs) { const ch = inputs[0] && inputs[0][0]; if (ch) this.port.postMessage(ch.slice(0)); return true }
-}
-registerProcessor('mic-capture', MicCapture)`
 
 export class InterviewSession {
   private ws?: WebSocket
   private ctx?: AudioContext
-  private mic?: MediaStream
-  private recDest?: MediaStreamAudioDestinationNode
-  private recorder?: MediaRecorder
-  private chunks: Blob[] = []
+  private mic?: MicCapture
+  private playback?: Playback
+  private recorder?: SessionRecorder
   private state: LiveState = initialLiveState()
-  private sources = new Set<AudioBufferSourceNode>()
-  private playHead = 0
-  private pending: Float32Array[] = []
-  private pendingLength = 0
   private t0 = 0
-  private muted = false
   private ended = false
   private started = false
-  private reconnects = 0
+  private resumes = 0
+  private freshStarts = 0
+  private seedOnSetup = false // the next setupComplete starts a fresh session: replay the conversation
   private timers: number[] = []
 
   constructor(
@@ -73,42 +72,22 @@ export class InterviewSession {
 
   async start(): Promise<void> {
     this.cb.onStatus('connecting')
-    try {
-      this.mic = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: this.config.micDeviceId ? { exact: this.config.micDeviceId } : undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      })
-    } catch (err) {
-      throw new Error(
-        `Microphone unavailable (${(err as Error).name}). Check Windows Settings → Privacy & security → Microphone → "Let desktop apps access your microphone".`,
-      )
-    }
+    const stream = await openMicrophone(this.config.micDeviceId)
     const ctx = new AudioContext()
     this.ctx = ctx
     await routeOutput(ctx, this.config.outputDeviceId ?? '').catch(() => {}) // fall back to the default output
-    const workletUrl = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }))
-    await ctx.audioWorklet.addModule(workletUrl)
-    URL.revokeObjectURL(workletUrl)
+    this.mic = await MicCapture.attach(ctx, stream, {
+      accepting: () => this.ws?.readyState === WebSocket.OPEN,
+      onChunk: (chunk, level) => this.sendAudio(chunk, level),
+    })
 
-    const micSource = ctx.createMediaStreamSource(this.mic)
-    const capture = new AudioWorkletNode(ctx, 'mic-capture')
-    const silent = ctx.createGain()
-    silent.gain.value = 0
-    micSource.connect(capture).connect(silent).connect(ctx.destination)
-    capture.port.onmessage = (e: MessageEvent<Float32Array>) => this.onMicFrames(e.data)
-
-    // Recording mixes your microphone and the interviewer's voice.
-    this.recDest = ctx.createMediaStreamDestination()
-    micSource.connect(this.recDest)
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : ''
-    this.recorder = new MediaRecorder(this.recDest.stream, mime ? { mimeType: mime } : undefined)
-    this.recorder.ondataavailable = (e) => e.data.size > 0 && this.chunks.push(e.data)
-    this.recorder.start(1000)
+    // The recording mixes your microphone and the interviewer's voice.
+    this.recorder = new SessionRecorder(ctx)
+    this.mic.source.connect(this.recorder.input)
+    this.playback = new Playback(ctx, [ctx.destination, this.recorder.input], (speaking) =>
+      this.cb.onSpeaking(speaking ? 'interviewer' : null),
+    )
+    this.recorder.start()
 
     this.t0 = performance.now()
     this.connect()
@@ -116,7 +95,7 @@ export class InterviewSession {
   }
 
   setMuted(muted: boolean) {
-    this.muted = muted
+    if (this.mic) this.mic.muted = muted
   }
 
   /** Stops everything and returns the transcript and recording. */
@@ -124,14 +103,9 @@ export class InterviewSession {
     this.ended = true
     this.timers.forEach((t) => window.clearTimeout(t))
     this.ws?.close(1000, 'interview ended')
-    this.stopPlayback()
-    this.mic?.getTracks().forEach((t) => t.stop())
-    const recording = await new Promise<Blob | null>((resolve) => {
-      const rec = this.recorder
-      if (!rec || rec.state === 'inactive') return resolve(this.chunks.length ? new Blob(this.chunks, { type: 'audio/webm' }) : null)
-      rec.onstop = () => resolve(this.chunks.length ? new Blob(this.chunks, { type: 'audio/webm' }) : null)
-      rec.stop()
-    })
+    this.playback?.stop()
+    this.mic?.stop()
+    const recording = (await this.recorder?.stop()) ?? null
     await this.ctx?.close().catch(() => {})
     this.cb.onStatus('ended')
     return { lines: this.state.lines, recording }
@@ -155,6 +129,11 @@ export class InterviewSession {
       } catch {
         return
       }
+      if ((msg as { serverContent?: unknown }).serverContent) {
+        // The model is talking again, so the connection really recovered.
+        this.resumes = 0
+        this.freshStarts = 0
+      }
       const { state, effects } = applyServerMessage(this.state, msg, this.now())
       const linesChanged = state.lines !== this.state.lines
       this.state = state
@@ -169,16 +148,33 @@ export class InterviewSession {
     }
     ws.onclose = (ev) => {
       if (this.ws !== ws || this.ended) return
-      if (this.state.handle && this.reconnects < MAX_RECONNECTS) {
+      if (this.state.handle && this.resumes < MAX_RESUMES) {
+        this.resumes++
         this.reconnect()
+      } else if (this.freshStarts < MAX_FRESH_STARTS) {
+        this.freshStarts++
+        this.startFresh()
       } else {
         this.cb.onStatus('error', `Connection closed${ev.reason ? `: ${ev.reason}` : ` (code ${ev.code})`}`)
       }
     }
   }
 
+  /** Manual retry from the page after automatic recovery gave up. */
+  rejoin() {
+    if (this.ended) return
+    this.resumes = MAX_RESUMES
+    this.freshStarts = 0
+    this.startFresh()
+  }
+
+  private startFresh() {
+    this.state = { ...this.state, handle: undefined }
+    this.seedOnSetup = true
+    this.reconnect()
+  }
+
   private reconnect() {
-    this.reconnects++
     this.cb.onStatus('reconnecting')
     const old = this.ws
     this.ws = undefined
@@ -193,18 +189,20 @@ export class InterviewSession {
   private handle(e: LiveEffect) {
     switch (e.type) {
       case 'setupComplete':
-        this.reconnects = 0
         this.cb.onStatus('live')
-        if (!this.started) {
+        if (this.seedOnSetup) {
+          this.seedOnSetup = false
+          this.sendText(rejoinPrompt(this.config.cues.rejoin, this.state.lines), true)
+        } else if (!this.started) {
           this.started = true
-          this.sendText('(The candidate has joined the call. Begin the interview.)', true)
+          this.sendText(this.config.cues.start, true)
         }
         break
       case 'audio':
-        this.play(e.data)
+        this.playback?.play(e.data)
         break
       case 'interrupt':
-        this.stopPlayback()
+        this.playback?.stop()
         break
       case 'reconnect':
         if (this.state.handle) this.reconnect()
@@ -220,67 +218,16 @@ export class InterviewSession {
     this.ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete } }))
   }
 
-  /** The model has no clock, so the page whispers the time. */
+  private sendAudio(chunk: AudioChunk, level: number) {
+    this.cb.onMicLevel?.(level)
+    this.ws?.send(JSON.stringify({ realtimeInput: { audio: chunk } }))
+  }
+
   private scheduleTimekeeper() {
-    const total = this.config.minutes * 60_000
-    const warnBefore = (this.config.minutes <= 10 ? 2 : 4) * 60_000
+    const { wrapUp, wrapUpAtMs, timeUp, timeUpAtMs } = this.config.cues
     this.timers.push(
-      window.setTimeout(() => this.sendText(`[Timekeeper: about ${warnBefore / 60_000} minutes remain. Start wrapping up after the current answer.]`, false), total - warnBefore),
-      window.setTimeout(() => this.sendText('[Timekeeper: time is up. Thank the candidate and close the interview now.]', false), total),
+      window.setTimeout(() => this.sendText(wrapUp, false), wrapUpAtMs),
+      window.setTimeout(() => this.sendText(timeUp, false), timeUpAtMs),
     )
-  }
-
-  private onMicFrames(frames: Float32Array) {
-    if (!this.ctx || this.muted || this.ws?.readyState !== WebSocket.OPEN) return
-    this.pending.push(frames)
-    this.pendingLength += frames.length
-    if (this.pendingLength < this.ctx.sampleRate * CHUNK_SECONDS) return
-    const joined = new Float32Array(this.pendingLength)
-    let offset = 0
-    for (const f of this.pending) {
-      joined.set(f, offset)
-      offset += f.length
-    }
-    this.pending = []
-    this.pendingLength = 0
-    this.cb.onMicLevel?.(micLevel(joined))
-    const data = encodeMicChunk(joined, this.ctx.sampleRate)
-    this.ws.send(JSON.stringify({ realtimeInput: { audio: { data, mimeType: 'audio/pcm;rate=16000' } } }))
-  }
-
-  private play(b64: string) {
-    const ctx = this.ctx
-    if (!ctx) return
-    const samples = decodeModelAudio(b64)
-    if (samples.length === 0) return
-    const buffer = ctx.createBuffer(1, samples.length, OUTPUT_RATE)
-    buffer.copyToChannel(samples, 0)
-    const src = ctx.createBufferSource()
-    src.buffer = buffer
-    src.connect(ctx.destination)
-    if (this.recDest) src.connect(this.recDest)
-    // Back-to-back while speaking; a small cushion when the queue had run dry.
-    const startAt = this.playHead > ctx.currentTime ? this.playHead : ctx.currentTime + PLAYBACK_CUSHION
-    src.start(startAt)
-    this.playHead = startAt + buffer.duration
-    this.sources.add(src)
-    this.cb.onSpeaking('interviewer')
-    src.onended = () => {
-      this.sources.delete(src)
-      if (this.sources.size === 0) this.cb.onSpeaking(null)
-    }
-  }
-
-  private stopPlayback() {
-    this.sources.forEach((s) => {
-      try {
-        s.stop()
-      } catch {
-        // already stopped
-      }
-    })
-    this.sources.clear()
-    this.playHead = this.ctx?.currentTime ?? 0
-    this.cb.onSpeaking(null)
   }
 }

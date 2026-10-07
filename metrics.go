@@ -66,40 +66,30 @@ func followUpDue(j Job, daysInStage int, today string, thresholdDays int) bool {
 }
 
 func (r *Repo) latestStageTimes() (map[string]string, error) {
-	rows, err := r.db.Query(`SELECT job_id, MAX(at) FROM stage_events GROUP BY job_id`)
+	latest, err := queryAll(r.db, scanKeyValue[string], `SELECT job_id, MAX(at) FROM stage_events GROUP BY job_id`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := map[string]string{}
-	for rows.Next() {
-		var id, at string
-		if err := rows.Scan(&id, &at); err != nil {
-			return nil, err
-		}
-		out[id] = at
+	out := make(map[string]string, len(latest))
+	for _, kv := range latest {
+		out[kv.key] = kv.value
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // nextInterviews maps each job to its soonest upcoming, not-completed interview.
 func (r *Repo) nextInterviews(now time.Time) (map[string]Interview, error) {
-	rows, err := r.db.Query(`SELECT `+interviewColumns+` FROM interviews WHERE completed = 0 AND scheduled_at >= ? ORDER BY scheduled_at`, ts(now))
+	upcoming, err := queryAll(r.db, scanInterview, `SELECT `+interviewColumns+` FROM interviews WHERE completed = 0 AND scheduled_at >= ? ORDER BY scheduled_at`, ts(now))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	out := map[string]Interview{}
-	for rows.Next() {
-		iv, err := scanInterview(rows)
-		if err != nil {
-			return nil, err
-		}
+	for _, iv := range upcoming {
 		if _, seen := out[iv.JobID]; !seen {
 			out[iv.JobID] = iv
 		}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func (r *Repo) ListJobSummaries(followUpDays int) ([]JobSummary, error) {

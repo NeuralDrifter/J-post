@@ -7,13 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -28,12 +27,6 @@ var (
 	adzunaTimeout   = 20 * time.Second
 	adzunaBaseURL   = "https://api.adzuna.com/v1/api/jobs/us/search/1"
 )
-
-// knownSources are the values DiscoverQuery.Sources may contain.
-var knownSources = map[string]bool{
-	"indeed": true, "linkedin": true, "zip_recruiter": true, // scraped via JobSpy
-	"adzuna": true, "usajobs": true, "himalayas": true, "jobicy": true, "themuse": true, // official APIs
-}
 
 type DiscoverQuery struct {
 	Term       string   `json:"term"`
@@ -101,6 +94,21 @@ func resolvePython(override, exeDir, cwd string) (string, error) {
 	return "", fmt.Errorf("Python with JobSpy not found (checked %s). Set the Python path in Settings", strings.Join(candidates, ", "))
 }
 
+// findPython locates the Python that has JobSpy: the Settings override, else a
+// venv next to the app or in the working directory.
+func findPython(override string) (string, error) {
+	cwd, _ := os.Getwd() // "" just drops that candidate's directory
+	return resolvePython(strings.TrimSpace(override), exeDir(), cwd)
+}
+
+func exeDir() string {
+	p, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	return filepath.Dir(p)
+}
+
 var errUnreadableOutput = errors.New("unreadable scraper output")
 
 func lastLine(s, fallback string) string {
@@ -111,13 +119,6 @@ func lastLine(s, fallback string) string {
 		}
 	}
 	return fallback
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "…"
 }
 
 // parseScraperOutput reads the JSON payload from the last non-empty stdout
@@ -212,9 +213,6 @@ type adzunaResponse struct {
 }
 
 func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-	if appID == "" || appKey == "" {
-		return nil, errors.New("Adzuna keys are not set (add them in Settings)")
-	}
 	what := q.Term
 	if q.RemoteOnly {
 		what += " remote"
@@ -228,45 +226,19 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 		params.Set("where", q.Location)
 	}
 	if opts.HoursOld > 0 {
-		params.Set("max_days_old", strconv.Itoa((opts.HoursOld+23)/24))
-	}
-	ctx, cancel := context.WithTimeout(ctx, adzunaTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, adzunaBaseURL+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, errors.New("could not build Adzuna request")
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return nil, fmt.Errorf("timed out after %s", adzunaTimeout)
-		}
-		// *url.Error includes the request URL, which contains the app key.
-		var uerr *url.Error
-		if errors.As(err, &uerr) {
-			err = uerr.Err
-		}
-		return nil, fmt.Errorf("could not reach Adzuna: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return nil, errors.New(httpErrorMessage("Adzuna", resp.StatusCode, body))
+		params.Set("max_days_old", strconv.Itoa(opts.maxDaysOld()))
 	}
 	var parsed adzunaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return nil, fmt.Errorf("unexpected Adzuna response: %v", err)
+	req := apiRequest{source: "Adzuna", url: adzunaBaseURL + "?" + params.Encode(), timeout: adzunaTimeout}
+	if _, err := getJSON(ctx, req, &parsed); err != nil {
+		return nil, err
 	}
 	out := make([]rawJob, 0, len(parsed.Results))
 	for _, it := range parsed.Results {
-		date := it.Created
-		if len(date) >= 10 {
-			date = date[:10]
-		}
 		out = append(out, rawJob{
 			Title: it.Title, Company: it.Company.DisplayName, Location: it.Location.DisplayName,
 			MinAmount: it.SalaryMin, MaxAmount: it.SalaryMax, Interval: "yearly",
-			Description: it.Description, DatePosted: date, URL: it.RedirectURL, Site: "adzuna",
+			Description: it.Description, DatePosted: datePart(it.Created), URL: it.RedirectURL, Site: "adzuna",
 		})
 	}
 	return out, nil
@@ -293,17 +265,24 @@ func moneyText(v float64) string {
 	return "$" + b.String()
 }
 
+// annualSalary is a posted pay range in whole dollars a year.
+type annualSalary struct {
+	min, max   *int64 // nil = not posted
+	annualized bool   // converted from an hourly, monthly, ... rate
+	text       string // the range as posted, e.g. "$22.50–$30/hr"
+}
+
 // normalizeSalary converts a posted range to annual integers. Missing or
 // non-positive amounts count as absent; unknown intervals are treated as yearly.
-func normalizeSalary(min, max *float64, interval string) (lo, hi *int64, annualized bool, text string) {
-	if min != nil && *min <= 0 {
-		min = nil
+func normalizeSalary(minAmount, maxAmount *float64, interval string) annualSalary {
+	if minAmount != nil && *minAmount <= 0 {
+		minAmount = nil
 	}
-	if max != nil && *max <= 0 {
-		max = nil
+	if maxAmount != nil && *maxAmount <= 0 {
+		maxAmount = nil
 	}
-	if min == nil && max == nil {
-		return nil, nil, false, ""
+	if minAmount == nil && maxAmount == nil {
+		return annualSalary{}
 	}
 	interval = strings.ToLower(strings.TrimSpace(interval))
 	factor, ok := intervalFactor[interval]
@@ -318,20 +297,20 @@ func normalizeSalary(min, max *float64, interval string) (lo, hi *int64, annuali
 		return &x
 	}
 	unit := "/" + intervalUnit[interval]
+	var text string
 	switch {
-	case min != nil && max != nil:
-		text = moneyText(*min) + "–" + moneyText(*max) + unit
-	case min != nil:
-		text = "From " + moneyText(*min) + unit
+	case minAmount != nil && maxAmount != nil:
+		text = moneyText(*minAmount) + "–" + moneyText(*maxAmount) + unit
+	case minAmount != nil:
+		text = "From " + moneyText(*minAmount) + unit
 	default:
-		text = "Up to " + moneyText(*max) + unit
+		text = "Up to " + moneyText(*maxAmount) + unit
 	}
-	return annualize(min), annualize(max), interval != "yearly", text
+	return annualSalary{min: annualize(minAmount), max: annualize(maxAmount), annualized: interval != "yearly", text: text}
 }
 
 func dedupeKey(company, title string) string {
-	norm := func(s string) string { return strings.Join(strings.Fields(strings.ToLower(s)), " ") }
-	return norm(company) + "|" + norm(title)
+	return normalizeForMatch(company) + "|" + normalizeForMatch(title)
 }
 
 func fromRaw(r rawJob, source string) DiscoverResult {
@@ -347,14 +326,15 @@ func fromRaw(r rawJob, source string) DiscoverResult {
 	if r.IsRemote {
 		res.WorkMode = "remote"
 	}
-	res.SalaryMin, res.SalaryMax, res.Annualized, res.SalaryText = normalizeSalary(r.MinAmount, r.MaxAmount, r.Interval)
+	pay := normalizeSalary(r.MinAmount, r.MaxAmount, r.Interval)
+	res.SalaryMin, res.SalaryMax, res.Annualized, res.SalaryText = pay.min, pay.max, pay.annualized, pay.text
 	res.Key = dedupeKey(res.Company, res.Title)
 	return res
 }
 
 func mergeInto(a, b DiscoverResult) DiscoverResult {
 	for _, s := range b.Sources {
-		if !contains(a.Sources, s) {
+		if !slices.Contains(a.Sources, s) {
 			a.Sources = append(a.Sources, s)
 		}
 	}
@@ -416,10 +396,10 @@ func markTracked(results []DiscoverResult, jobs []Job) {
 
 // runDiscover queries every requested source concurrently; one failing source
 // only adds an entry to Errors.
-func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked []Job, optsFor func(source string) fetchOptions) DiscoverResponse {
+func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor func(source string) fetchOptions) DiscoverResponse {
 	var sources []string
 	for _, s := range q.Sources {
-		if knownSources[s] && !contains(sources, s) {
+		if isKnownSource(s) && !slices.Contains(sources, s) {
 			sources = append(sources, s)
 		}
 	}
@@ -455,6 +435,5 @@ func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, tracked
 		lists = append(lists, perSource[s])
 	}
 	resp.Results = mergeResults(lists...)
-	markTracked(resp.Results, tracked)
 	return resp
 }

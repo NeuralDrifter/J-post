@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router'
 import { Mic, TriangleAlert } from 'lucide-react'
 import { api } from '../../lib/api'
 import { GetProfile, GetSettings, PrepareInterview, type main } from '../../lib/backend'
-import { holdSession, MOCK_KINDS, MOCK_LENGTHS, MOCK_PERSONAS } from '../../lib/interview'
+import { holdSession } from '../../lib/interview'
+import { useInterviewOptions } from '../../lib/interviewOptions'
 import { useLoad } from '../../lib/useLoad'
 import { Field } from '../JobForm'
 import { Modal } from '../Modal'
@@ -22,6 +23,7 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
     focus: '',
   })
   const [starting, setStarting] = useState(false)
+  const options = useInterviewOptions()
 
   const noKey = settings && !settings.geminiKey
   const noResume = profile && !profile.resumeText.trim()
@@ -65,16 +67,16 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Interview type">
               <select className="field" value={setup.kind} onChange={(e) => setSetup({ ...setup, kind: e.target.value })}>
-                {MOCK_KINDS.map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
+                {options?.kinds.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.label}
                   </option>
                 ))}
               </select>
             </Field>
             <Field label="Length">
               <div className="flex gap-1.5">
-                {MOCK_LENGTHS.map((m) => (
+                {options?.minutes.map((m) => (
                   <button
                     key={m}
                     type="button"
@@ -88,15 +90,15 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
             </Field>
             <Field label="Interviewer" wide>
               <div className="grid grid-cols-3 gap-2">
-                {MOCK_PERSONAS.map(([v, l, hint]) => (
+                {options?.personas.map((p) => (
                   <button
-                    key={v}
+                    key={p.id}
                     type="button"
-                    onClick={() => setSetup({ ...setup, persona: v })}
-                    className={`rounded-xl border p-2.5 text-left transition ${setup.persona === v ? 'border-accent/60 bg-accent/15' : 'border-line hover:border-line-strong'}`}
+                    onClick={() => setSetup({ ...setup, persona: p.id })}
+                    className={`rounded-xl border p-2.5 text-left transition ${setup.persona === p.id ? 'border-accent/60 bg-accent/15' : 'border-line hover:border-line-strong'}`}
                   >
-                    <span className="block text-sm font-semibold">{l}</span>
-                    <span className="block text-[11px] text-ink-3">{hint}</span>
+                    <span className="block text-sm font-semibold">{p.label}</span>
+                    <span className="block text-[11px] text-ink-3">{p.description}</span>
                   </button>
                 ))}
               </div>

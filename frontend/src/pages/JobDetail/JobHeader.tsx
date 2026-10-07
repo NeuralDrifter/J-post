@@ -2,16 +2,8 @@ import { ChevronLeft, ExternalLink, MapPin, Pencil, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'
 import { BrowserOpenURL, type main } from '../../lib/backend'
-import {
-  CLOSE_REASON_LABEL,
-  formatDate,
-  formatSalary,
-  initials,
-  SOURCE_LABEL,
-  STATUSES,
-  STATUS_LABEL,
-  WORK_MODE_LABEL,
-} from '../../lib/format'
+import { CLOSE_REASON_LABEL, formatDate, formatSalary, initials, labelFor, STATUS_LABEL, STATUSES, WORK_MODE_LABEL } from '../../lib/format'
+import { sourceLabel, useJobSources } from '../../lib/jobSources'
 
 type Props = {
   job: main.Job
@@ -22,6 +14,7 @@ type Props = {
 
 export function JobHeader({ job, onStatus, onEdit, onDelete }: Props) {
   const navigate = useNavigate()
+  const sources = useJobSources()
   const salary = formatSalary(job.salaryMin, job.salaryMax)
 
   return (
@@ -48,8 +41,8 @@ export function JobHeader({ job, onStatus, onEdit, onDelete }: Props) {
                 {job.location}
               </Chip>
             )}
-            {job.workMode && <Chip>{WORK_MODE_LABEL[job.workMode]}</Chip>}
-            {job.source !== 'manual' && <Chip tone="accent">via {SOURCE_LABEL[job.source] ?? job.source}</Chip>}
+            {job.workMode && <Chip>{labelFor(WORK_MODE_LABEL, job.workMode)}</Chip>}
+            {job.source !== 'manual' && <Chip tone="accent">via {sourceLabel(sources, job.source)}</Chip>}
             {job.dateApplied && <Chip>Applied {formatDate(job.dateApplied)}</Chip>}
             {job.followUpOn && <Chip tone="warn">Follow up {formatDate(job.followUpOn)}</Chip>}
           </div>
@@ -59,7 +52,7 @@ export function JobHeader({ job, onStatus, onEdit, onDelete }: Props) {
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABEL[s]}
-                {s === 'closed' && job.status === 'closed' && job.closeReason ? ` · ${CLOSE_REASON_LABEL[job.closeReason]}` : ''}
+                {s === 'closed' && job.status === 'closed' && job.closeReason ? ` · ${labelFor(CLOSE_REASON_LABEL, job.closeReason)}` : ''}
               </option>
             ))}
           </select>

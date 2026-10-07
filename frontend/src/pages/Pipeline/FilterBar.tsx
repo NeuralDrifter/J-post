@@ -1,5 +1,6 @@
 import { Columns3, Rows3 } from 'lucide-react'
-import { SOURCE_LABEL, WORK_MODE_LABEL } from '../../lib/format'
+import { WORK_MODE_LABEL } from '../../lib/format'
+import { sourceOptions, useJobSources } from '../../lib/jobSources'
 
 export type PipelineView = 'board' | 'table'
 export type PipelineFilters = { workMode: string; source: string }
@@ -14,6 +15,7 @@ type Props = {
 }
 
 export function FilterBar({ view, onViewChange, filters, onChange, shown, total }: Props) {
+  const sources = useJobSources()
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="flex rounded-lg border border-line bg-white/5 p-0.5">
@@ -48,8 +50,8 @@ export function FilterBar({ view, onViewChange, filters, onChange, shown, total 
         onChange={(e) => onChange({ ...filters, source: e.target.value })}
       >
         <option value="">Any source</option>
-        {Object.entries(SOURCE_LABEL).map(([value, label]) => (
-          <option key={value} value={value}>
+        {sourceOptions(sources).map(({ id, label }) => (
+          <option key={id} value={id}>
             {label}
           </option>
         ))}

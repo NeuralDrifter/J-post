@@ -37,13 +37,6 @@ func mapLegacyStatus(s string) (status, reason string) {
 	}
 }
 
-func orDefault(s, fallback string) string {
-	if s = strings.TrimSpace(s); s == "" {
-		return fallback
-	}
-	return s
-}
-
 // ImportLegacy moves the old JSON store into the database once: only when the
 // file exists and the jobs table is empty. On success the file is renamed to
 // data.json.bak; on failure nothing is written or renamed.

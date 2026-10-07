@@ -358,6 +358,20 @@ export namespace main {
 	        this.notes = source["notes"];
 	    }
 	}
+	export class CutOff {
+	    spokeMs: number;
+	    gapMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CutOff(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.spokeMs = source["spokeMs"];
+	        this.gapMs = source["gapMs"];
+	    }
+	}
 	export class SourceInfo {
 	    name: string;
 	    release: string;
@@ -457,6 +471,71 @@ export namespace main {
 	        this.completed = source["completed"];
 	    }
 	}
+	export class InterviewKind {
+	    id: string;
+	    label: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewKind(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	    }
+	}
+	export class InterviewPersona {
+	    id: string;
+	    label: string;
+	    description: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewPersona(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.description = source["description"];
+	    }
+	}
+	export class InterviewOptions {
+	    kinds: InterviewKind[];
+	    personas: InterviewPersona[];
+	    minutes: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kinds = this.convertValues(source["kinds"], InterviewKind);
+	        this.personas = this.convertValues(source["personas"], InterviewPersona);
+	        this.minutes = source["minutes"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class InterviewSetup {
 	    kind: string;
 	    minutes: number;
@@ -527,6 +606,30 @@ export namespace main {
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}
+	export class JobSource {
+	    id: string;
+	    label: string;
+	    kind: string;
+	    maxResults: number;
+	    note: string;
+	    defaultOn: boolean;
+	    unavailable: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new JobSource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.kind = source["kind"];
+	        this.maxResults = source["maxResults"];
+	        this.note = source["note"];
+	        this.defaultOn = source["defaultOn"];
+	        this.unavailable = source["unavailable"];
+	    }
+	}
 	export class JobSummary {
 	    job: Job;
 	    stageSince: string;
@@ -569,6 +672,28 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class LiveCues {
+	    start: string;
+	    wrapUp: string;
+	    wrapUpAtMs: number;
+	    timeUp: string;
+	    timeUpAtMs: number;
+	    rejoin: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LiveCues(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.start = source["start"];
+	        this.wrapUp = source["wrapUp"];
+	        this.wrapUpAtMs = source["wrapUpAtMs"];
+	        this.timeUp = source["timeUp"];
+	        this.timeUpAtMs = source["timeUpAtMs"];
+	        this.rejoin = source["rejoin"];
+	    }
+	}
 	export class LiveSession {
 	    sessionId: string;
 	    token: string;
@@ -580,6 +705,7 @@ export namespace main {
 	    position: string;
 	    voice: string;
 	    interviewerName: string;
+	    cues: LiveCues;
 	
 	    static createFrom(source: any = {}) {
 	        return new LiveSession(source);
@@ -597,7 +723,26 @@ export namespace main {
 	        this.position = source["position"];
 	        this.voice = source["voice"];
 	        this.interviewerName = source["interviewerName"];
+	        this.cues = this.convertValues(source["cues"], LiveCues);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	
 	
@@ -757,6 +902,7 @@ export namespace main {
 	    speaker: string;
 	    text: string;
 	    atMs: number;
+	    cutOff?: CutOff;
 	
 	    static createFrom(source: any = {}) {
 	        return new TranscriptLine(source);
@@ -767,7 +913,26 @@ export namespace main {
 	        this.speaker = source["speaker"];
 	        this.text = source["text"];
 	        this.atMs = source["atMs"];
+	        this.cutOff = this.convertValues(source["cutOff"], CutOff);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class MockInterview {
 	    id: string;
@@ -1037,12 +1202,8 @@ export namespace main {
 	    usajobsEmail: string;
 	    museCategories: string[];
 	    geminiKey: string;
-	    geminiTextModel: string;
 	    geminiLiveModel: string;
 	    discoverCacheHours: number;
-	    windowWidth: number;
-	    windowHeight: number;
-	    windowMaximised: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1061,12 +1222,8 @@ export namespace main {
 	        this.usajobsEmail = source["usajobsEmail"];
 	        this.museCategories = source["museCategories"];
 	        this.geminiKey = source["geminiKey"];
-	        this.geminiTextModel = source["geminiTextModel"];
 	        this.geminiLiveModel = source["geminiLiveModel"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
-	        this.windowWidth = source["windowWidth"];
-	        this.windowHeight = source["windowHeight"];
-	        this.windowMaximised = source["windowMaximised"];
 	    }
 	}
 	

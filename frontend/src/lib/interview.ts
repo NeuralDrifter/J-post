@@ -1,22 +1,5 @@
 import type { main } from './backend'
 
-export const MOCK_KINDS: [string, string][] = [
-  ['phone_screen', 'Phone screen'],
-  ['behavioral', 'Behavioral'],
-  ['technical', 'Technical (talk-through)'],
-  ['hiring_manager', 'Hiring manager'],
-  ['final_round', 'Final round'],
-]
-export const MOCK_KIND_LABEL = Object.fromEntries(MOCK_KINDS) as Record<string, string>
-
-export const MOCK_LENGTHS = [10, 25, 45]
-
-export const MOCK_PERSONAS: [string, string, string][] = [
-  ['friendly', 'Friendly', 'Warm and encouraging'],
-  ['neutral', 'Neutral', 'Professional, like most real interviews'],
-  ['tough', 'Tough', 'Probes vague answers and pushes back'],
-]
-
 export const SCORE_DIMENSIONS: [keyof main.ScoreSet, string][] = [
   ['communication', 'Communication'],
   ['structure', 'Structure'],

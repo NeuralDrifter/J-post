@@ -3,7 +3,7 @@ import { copyText } from '../../components/ContextMenu'
 import { Panel } from '../../components/Panel'
 import { openMenu } from '../../lib/menu'
 import type { main } from '../../lib/backend'
-import { CLOSE_REASON_LABEL, formatDateTime, STATUS_DOT, STATUS_LABEL } from '../../lib/format'
+import { CLOSE_REASON_LABEL, formatDateTime, labelFor, lookup, STATUS_DOT, STATUS_LABEL } from '../../lib/format'
 
 export function StageTimeline({ events }: { events: main.StageEvent[] }) {
   return (
@@ -22,12 +22,12 @@ export function StageTimeline({ events }: { events: main.StageEvent[] }) {
               >
                 <span
                   className={`absolute top-1.5 -left-[21px] h-2.5 w-2.5 rounded-full ring-4 ring-[#131b2e] ${
-                    latest ? STATUS_DOT[e.toStatus] : 'bg-ink-3/60'
+                    latest ? lookup(STATUS_DOT, e.toStatus, '') : 'bg-ink-3/60'
                   }`}
                 />
                 <p className={`text-sm font-semibold ${latest ? '' : 'text-ink-2'}`}>
-                  {e.fromStatus ? STATUS_LABEL[e.toStatus] : `Added to ${STATUS_LABEL[e.toStatus]}`}
-                  {e.closeReason && <span className="font-normal text-ink-2"> · {CLOSE_REASON_LABEL[e.closeReason]}</span>}
+                  {e.fromStatus ? labelFor(STATUS_LABEL, e.toStatus) : `Added to ${labelFor(STATUS_LABEL, e.toStatus)}`}
+                  {e.closeReason && <span className="font-normal text-ink-2"> · {labelFor(CLOSE_REASON_LABEL, e.closeReason)}</span>}
                 </p>
                 <p className="font-mono text-[11px] text-ink-3">{formatDateTime(e.at)}</p>
                 {e.note && e.note !== 'imported' && <p className="mt-1 text-xs text-ink-2">{e.note}</p>}

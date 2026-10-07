@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { labelFor } from '../../lib/format'
 import { TriangleAlert } from 'lucide-react'
 import { api } from '../../lib/api'
 import {
@@ -76,12 +77,12 @@ export function PackageEditor({ initial, onClose }: { initial: main.CompPackage;
     setSaving(false)
     if (!saved) return
     notifyDataChanged()
-    toast.success(`${KIND_LABEL[saved.kind]} saved`)
+    toast.success(`${labelFor(KIND_LABEL, saved.kind)} saved`)
     onClose()
   }
 
   return (
-    <Modal title={`${p.id ? 'Edit' : 'New'} ${KIND_LABEL[p.kind].toLowerCase()}`} onClose={onClose} width="max-w-3xl">
+    <Modal title={`${p.id ? 'Edit' : 'New'} ${labelFor(KIND_LABEL, p.kind).toLowerCase()}`} onClose={onClose} width="max-w-3xl">
       <form onSubmit={submit} className="space-y-4">
         <Field label="Label">
           <input className="field" value={p.label} onChange={(e) => set('label', e.target.value)} placeholder="e.g. Initial offer" />

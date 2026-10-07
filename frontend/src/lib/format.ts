@@ -3,7 +3,21 @@
 export const STATUSES = ['interested', 'applied', 'interviewing', 'offer', 'closed'] as const
 export type Status = (typeof STATUSES)[number]
 
-export const STATUS_LABEL: Record<string, string> = {
+/**
+ * Looks up a value that arrives from the backend as a plain string. Maps are
+ * keyed by their exact value type, so a misspelled or missing key fails to
+ * compile; an unexpected value at runtime falls back instead of rendering nothing.
+ */
+export function lookup<K extends string, V>(map: Record<K, V>, key: string, fallback: V): V {
+  return (map as Record<string, V | undefined>)[key] ?? fallback
+}
+
+/** A label for a backend value; unknown values are shown as they are. */
+export function labelFor<K extends string>(labels: Record<K, string>, key: string): string {
+  return lookup(labels, key, key)
+}
+
+export const STATUS_LABEL: Record<Status, string> = {
   interested: 'Interested',
   applied: 'Applied',
   interviewing: 'Interviewing',
@@ -11,7 +25,7 @@ export const STATUS_LABEL: Record<string, string> = {
   closed: 'Closed',
 }
 
-export const STATUS_DOT: Record<string, string> = {
+export const STATUS_DOT: Record<Status, string> = {
   interested: 'bg-ink-3',
   applied: 'bg-sky-400',
   interviewing: 'bg-info',
@@ -20,31 +34,24 @@ export const STATUS_DOT: Record<string, string> = {
 }
 
 export const CLOSE_REASONS = ['rejected', 'withdrawn', 'ghosted', 'declined'] as const
+export type CloseReason = (typeof CLOSE_REASONS)[number]
 
-export const CLOSE_REASON_LABEL: Record<string, string> = {
+export const CLOSE_REASON_LABEL: Record<CloseReason, string> = {
   rejected: 'Not selected',
   withdrawn: 'I withdrew',
   ghosted: 'No response',
   declined: 'I declined',
 }
 
-export const WORK_MODE_LABEL: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }
+export const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const
+export type WorkMode = (typeof WORK_MODES)[number]
 
-export const SOURCE_LABEL: Record<string, string> = {
-  linkedin: 'LinkedIn',
-  indeed: 'Indeed',
-  zip_recruiter: 'ZipRecruiter',
-  adzuna: 'Adzuna',
-  usajobs: 'USAJobs',
-  himalayas: 'Himalayas',
-  jobicy: 'Jobicy',
-  themuse: 'The Muse',
-  manual: 'Manual',
-}
+export const WORK_MODE_LABEL: Record<WorkMode, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }
 
 export const INTERVIEW_KINDS = ['phone_screen', 'technical', 'behavioral', 'onsite', 'panel', 'other'] as const
+export type InterviewKind = (typeof INTERVIEW_KINDS)[number]
 
-export const INTERVIEW_KIND_LABEL: Record<string, string> = {
+export const INTERVIEW_KIND_LABEL: Record<InterviewKind, string> = {
   phone_screen: 'Phone screen',
   technical: 'Technical',
   behavioral: 'Behavioral',

@@ -50,6 +50,39 @@ func TestCompPackageCRUD(t *testing.T) {
 	}
 }
 
+// Every column gets a distinct value, so a column/value misalignment in the
+// INSERT, UPDATE or SELECT shows up as a mismatched field.
+func TestCompPackageRoundTripsEveryField(t *testing.T) {
+	r := newTestRepo(t)
+	j := mustCreate(t, r, Job{Company: "Acme", Position: "Dev", Status: StatusOffer})
+	offer := mustSavePkg(t, r, basePackage(j.ID))
+	p := CompPackage{
+		JobID: j.ID, Kind: "counter", Label: "Counter", ParentID: offer.ID, BaseSalary: 101, SigningBonus: 102,
+		SigningClawbackMonths: 3, TargetBonusPct: 4.5, AnnualRaisePct: 5.5, EquityType: "options", RSUGrantValue: 106,
+		OptionShares: 107, OptionStrike: 8.5, ShareValue: 9.5, Vesting: "custom", VestingCustom: "10,20,30,40",
+		K401MatchPct: 11.5, K401MatchCapPct: 12.5, K401ContribPct: 13.5, HealthPremiumAnnual: 114, StipendsAnnual: 115,
+		OtherAnnual: 116, PTODays: 17, OccupationCode: "occ", AreaCode: "area", TaxState: "ST", LocalTaxPct: 18.5,
+		Notes: "notes",
+	}
+	saved := mustSavePkg(t, r, p)
+	assertSamePackage(t, r, saved)
+
+	saved.BaseSalary, saved.Notes, saved.LocalTaxPct, saved.Vesting = 201, "edited", 2.5, "backloaded"
+	updated := mustSavePkg(t, r, saved)
+	assertSamePackage(t, r, updated)
+}
+
+func assertSamePackage(t *testing.T, r *Repo, want CompPackage) {
+	t.Helper()
+	got, err := r.GetCompPackage(want.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("stored package differs\n got: %+v\nwant: %+v", got, want)
+	}
+}
+
 func TestOnlyOneCurrent(t *testing.T) {
 	r := newTestRepo(t)
 	cur := CompPackage{Kind: "current", Label: "Current job", BaseSalary: 120000, Vesting: "standard", EquityType: "none", TaxState: "CO"}
@@ -162,5 +195,20 @@ func TestMigration2OnPhase1DB(t *testing.T) {
 	}
 	if v, _ := schemaVersion(db); v != len(migrations) {
 		t.Fatalf("version = %d", v)
+	}
+}
+
+func TestWithOfferTotals(t *testing.T) {
+	summaries := []JobSummary{{Job: Job{ID: "a"}}, {Job: Job{ID: "b"}}}
+	packages := []CompPackage{
+		{JobID: "a", Kind: "offer", BaseSalary: 100},
+		{JobID: "a", Kind: "offer", BaseSalary: 200}, // the later offer wins
+		{JobID: "b", Kind: "estimate", BaseSalary: 300},
+	}
+	withOfferTotals(summaries, packages, func(p CompPackage) (PackageResult, error) {
+		return PackageResult{Year1Total: p.BaseSalary}, nil
+	})
+	if summaries[0].OfferYear1Total == nil || *summaries[0].OfferYear1Total != 200 || summaries[1].OfferYear1Total != nil {
+		t.Fatalf("summaries = %+v", summaries)
 	}
 }

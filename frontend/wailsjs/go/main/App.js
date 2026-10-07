@@ -114,8 +114,16 @@ export function ListContacts(arg1) {
   return window['go']['main']['App']['ListContacts'](arg1);
 }
 
+export function ListInterviewOptions() {
+  return window['go']['main']['App']['ListInterviewOptions']();
+}
+
 export function ListInterviews(arg1) {
   return window['go']['main']['App']['ListInterviews'](arg1);
+}
+
+export function ListJobSources() {
+  return window['go']['main']['App']['ListJobSources']();
 }
 
 export function ListJobSummaries() {
@@ -178,6 +186,10 @@ export function PreviewComp(arg1) {
   return window['go']['main']['App']['PreviewComp'](arg1);
 }
 
+export function RefreshSearch(arg1) {
+  return window['go']['main']['App']['RefreshSearch'](arg1);
+}
+
 export function RenameAttachment(arg1, arg2) {
   return window['go']['main']['App']['RenameAttachment'](arg1, arg2);
 }
@@ -186,8 +198,8 @@ export function RestorePosting(arg1) {
   return window['go']['main']['App']['RestorePosting'](arg1);
 }
 
-export function RunSearch(arg1, arg2) {
-  return window['go']['main']['App']['RunSearch'](arg1, arg2);
+export function RunSearch(arg1) {
+  return window['go']['main']['App']['RunSearch'](arg1);
 }
 
 export function SaveCompPackage(arg1) {

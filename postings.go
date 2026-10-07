@@ -4,12 +4,20 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
 
+// Posting states: new → seen (opened) → saved (on the pipeline) or dismissed (not interested).
+const (
+	PostingNew       = "new"
+	PostingSeen      = "seen"
+	PostingSaved     = "saved"
+	PostingDismissed = "dismissed"
+)
+
 // Posting is a job listing found by Discover and kept in the inbox.
-// State: new → seen (opened) → saved (on the pipeline) or dismissed (not interested).
 type Posting struct {
 	ID          string   `json:"id"`
 	DedupeKey   string   `json:"dedupeKey"`
@@ -105,8 +113,7 @@ func (r *Repo) UpsertPostings(results []DiscoverResult, searchID string) (int, e
 	if err != nil {
 		return 0, err
 	}
-	tracked := results[:0:0]
-	tracked = append(tracked, results...)
+	tracked := slices.Clone(results) // markTracked edits in place; leave the caller's slice alone
 	markTracked(tracked, jobs)
 
 	now := ts(r.now())
@@ -126,9 +133,9 @@ func (r *Repo) UpsertPostings(results []DiscoverResult, searchID string) (int, e
 				m.URL, m.Location, m.WorkMode, nullInt(m.SalaryMin), nullInt(m.SalaryMax), m.SalaryText, m.Annualized,
 				m.Description, m.DatePosted, strings.Join(m.Sources, ","), now, existing.ID)
 		case errors.Is(err, sql.ErrNoRows):
-			state := "new"
+			state := PostingNew
 			if res.TrackedJobID != "" {
-				state = "saved"
+				state = PostingSaved
 			} else {
 				newCount++
 			}
@@ -153,14 +160,14 @@ func (r *Repo) ListPostings(f PostingFilter) ([]Posting, error) {
 	switch f.Tab {
 	case "", "inbox":
 		if f.OnlyNew {
-			where = append(where, "p.state = 'new'")
+			where, args = append(where, "p.state = ?"), append(args, PostingNew)
 		} else {
-			where = append(where, "p.state IN ('new', 'seen')")
+			where, args = append(where, "p.state IN (?, ?)"), append(args, PostingNew, PostingSeen)
 		}
 	case "saved":
-		where = append(where, "p.state = 'saved'")
+		where, args = append(where, "p.state = ?"), append(args, PostingSaved)
 	case "dismissed":
-		where = append(where, "p.state = 'dismissed'")
+		where, args = append(where, "p.state = ?"), append(args, PostingDismissed)
 		order = "p.dismissed_at DESC, p.rowid DESC"
 	default:
 		return nil, fmt.Errorf("unknown tab %q", f.Tab)
@@ -174,20 +181,7 @@ func (r *Repo) ListPostings(f PostingFilter) ([]Posting, error) {
 		where = append(where, "(',' || p.sources || ',') LIKE ?")
 		args = append(args, "%,"+f.Source+",%")
 	}
-	rows, err := r.db.Query(`SELECT `+postingColumns+postingFrom+`WHERE `+strings.Join(where, " AND ")+` ORDER BY `+order, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Posting{}
-	for rows.Next() {
-		p, err := scanPosting(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanPosting, `SELECT `+postingColumns+postingFrom+`WHERE `+strings.Join(where, " AND ")+` ORDER BY `+order, args...)
 }
 
 func (r *Repo) GetPosting(id string) (Posting, error) {
@@ -200,44 +194,39 @@ func (r *Repo) GetPosting(id string) (Posting, error) {
 
 func (r *Repo) InboxCounts() (InboxCounts, error) {
 	var c InboxCounts
-	rows, err := r.db.Query(`SELECT state, COUNT(*) FROM postings GROUP BY state`)
+	perState, err := queryAll(r.db, scanKeyValue[int], `SELECT state, COUNT(*) FROM postings GROUP BY state`)
 	if err != nil {
 		return c, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var state string
-		var n int
-		if err := rows.Scan(&state, &n); err != nil {
-			return c, err
-		}
+	for _, kv := range perState {
+		state, n := kv.key, kv.value
 		switch state {
-		case "new":
+		case PostingNew:
 			c.New, c.Inbox = n, c.Inbox+n
-		case "seen":
+		case PostingSeen:
 			c.Inbox += n
-		case "saved":
+		case PostingSaved:
 			c.Saved = n
-		case "dismissed":
+		case PostingDismissed:
 			c.Dismissed = n
 		}
 	}
-	return c, rows.Err()
+	return c, nil
 }
 
 func (r *Repo) MarkPostingSeen(id string) error {
-	res, err := r.db.Exec(`UPDATE postings SET state = CASE WHEN state = 'new' THEN 'seen' ELSE state END WHERE id = ?`, id)
+	res, err := r.db.Exec(`UPDATE postings SET state = CASE WHEN state = ? THEN ? ELSE state END WHERE id = ?`, PostingNew, PostingSeen, id)
 	return expectOneRow(res, err, "posting", id)
 }
 
 func (r *Repo) DismissPosting(id string) error {
-	res, err := r.db.Exec(`UPDATE postings SET state = 'dismissed', dismissed_at = ? WHERE id = ?`, ts(r.now()), id)
+	res, err := r.db.Exec(`UPDATE postings SET state = ?, dismissed_at = ? WHERE id = ?`, PostingDismissed, ts(r.now()), id)
 	return expectOneRow(res, err, "posting", id)
 }
 
 // RestorePosting moves a dismissed posting back to the inbox.
 func (r *Repo) RestorePosting(id string) error {
-	res, err := r.db.Exec(`UPDATE postings SET state = 'seen', dismissed_at = '' WHERE id = ? AND state = 'dismissed'`, id)
+	res, err := r.db.Exec(`UPDATE postings SET state = ?, dismissed_at = '' WHERE id = ? AND state = ?`, PostingSeen, id, PostingDismissed)
 	return expectOneRow(res, err, "dismissed posting", id)
 }
 
@@ -247,7 +236,7 @@ func (r *Repo) SavePosting(id string) (Job, error) {
 	if err != nil {
 		return Job{}, err
 	}
-	if p.State == "saved" && p.JobID != "" {
+	if p.State == PostingSaved && p.JobID != "" {
 		if j, err := r.GetJob(p.JobID); err == nil {
 			return j, nil
 		}
@@ -256,11 +245,17 @@ func (r *Repo) SavePosting(id string) (Job, error) {
 	if company == "" {
 		company = "Unknown company"
 	}
-	source := "manual"
+	source := SourceManual
 	if len(p.Sources) > 0 {
 		source = p.Sources[0]
 	}
-	j, err := r.CreateJob(Job{
+	// One transaction, so a failed posting update can't leave an orphaned job.
+	tx, err := r.db.Begin()
+	if err != nil {
+		return Job{}, err
+	}
+	defer tx.Rollback()
+	j, err := r.insertJob(tx, Job{
 		Company: company, Position: p.Title, Status: StatusInterested, Location: p.Location, WorkMode: p.WorkMode,
 		SalaryMin: p.SalaryMin, SalaryMax: p.SalaryMax, SalaryText: p.SalaryText, URL: p.URL, Source: source,
 		Description: p.Description, DatePosted: p.DatePosted,
@@ -268,14 +263,16 @@ func (r *Repo) SavePosting(id string) (Job, error) {
 	if err != nil {
 		return Job{}, err
 	}
-	_, err = r.db.Exec(`UPDATE postings SET state = 'saved', job_id = ?, dismissed_at = '' WHERE id = ?`, j.ID, id)
-	return j, err
+	if _, err := tx.Exec(`UPDATE postings SET state = ?, job_id = ?, dismissed_at = '' WHERE id = ?`, PostingSaved, j.ID, id); err != nil {
+		return Job{}, err
+	}
+	return j, tx.Commit()
 }
 
 // ClearDismissed deletes dismissed postings older than the given number of days.
 func (r *Repo) ClearDismissed(olderThanDays int) (int, error) {
 	cutoff := ts(r.now().Add(-time.Duration(olderThanDays) * 24 * time.Hour))
-	res, err := r.db.Exec(`DELETE FROM postings WHERE state = 'dismissed' AND dismissed_at < ?`, cutoff)
+	res, err := r.db.Exec(`DELETE FROM postings WHERE state = ? AND dismissed_at < ?`, PostingDismissed, cutoff)
 	if err != nil {
 		return 0, err
 	}

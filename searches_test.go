@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -97,7 +98,7 @@ func TestRunSearchFakeFetcher(t *testing.T) {
 	q := SearchQuery{Term: "dev", Sources: []string{"indeed", "linkedin"}, PerSource: map[string]int{"indeed": 30}}
 
 	f := &fakeFetch{calls: map[string]fetchOptions{}}
-	run, err := RunSearch(context.Background(), r, q, false, settings, f.fn)
+	run, err := RunSearch(context.Background(), r, q, settings, f.fn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,18 +110,30 @@ func TestRunSearchFakeFetcher(t *testing.T) {
 	}
 
 	f2 := &fakeFetch{calls: map[string]fetchOptions{}}
-	again, _ := RunSearch(context.Background(), r, q, false, settings, f2.fn)
+	again, _ := RunSearch(context.Background(), r, q, settings, f2.fn)
 	if !again.Cached || len(f2.calls) != 0 {
 		t.Fatalf("second run within the window should be cached: %+v calls=%v", again, f2.calls)
 	}
 
 	setNow(r, 2026, time.October, 1, 15) // 3 hours later
-	forced, _ := RunSearch(context.Background(), r, q, true, settings, f2.fn)
+	forced, _ := RefreshSearch(context.Background(), r, q, f2.fn)
 	if forced.Cached || forced.NewCount != 0 || f2.calls["indeed"].HoursOld != 3+24 {
 		t.Fatalf("forced = %+v calls=%v", forced, f2.calls)
 	}
 
-	if _, err := RunSearch(context.Background(), r, SearchQuery{Term: "  "}, false, settings, f2.fn); err == nil {
+	if _, err := RunSearch(context.Background(), r, SearchQuery{Term: "  "}, settings, f2.fn); err == nil {
 		t.Fatal("empty term should error")
+	}
+}
+
+func TestUnreadablePerSourceIsReported(t *testing.T) {
+	r := newTestRepo(t)
+	s, err := r.UpsertSearch(SearchQuery{Term: "dev", Sources: []string{"indeed"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.db.Exec(`UPDATE searches SET per_source = 'not json' WHERE id = ?`, s.ID)
+	if _, err := r.ListRecentSearches(5); err == nil || !strings.Contains(err.Error(), "per-board") {
+		t.Fatalf("err = %v", err)
 	}
 }

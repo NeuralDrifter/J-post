@@ -45,6 +45,37 @@ type querier interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
+// keyValue is one row of a two-column "key, value" query (e.g. a GROUP BY count).
+type keyValue[V any] struct {
+	key   string
+	value V
+}
+
+func scanKeyValue[V any](s rowScanner) (keyValue[V], error) {
+	var kv keyValue[V]
+	err := s.Scan(&kv.key, &kv.value)
+	return kv, err
+}
+
+// queryAll runs a query and scans every row with scan. It returns an empty
+// (non-nil) slice when nothing matches, so the frontend gets [] rather than null.
+func queryAll[T any](db *sql.DB, scan func(rowScanner) (T, error), query string, args ...any) ([]T, error) {
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []T{}
+	for rows.Next() {
+		v, err := scan(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
 func nullInt(p *int64) any {
 	if p == nil {
 		return nil

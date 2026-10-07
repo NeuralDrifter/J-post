@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	_ "embed"
 	"encoding/json"
@@ -18,6 +19,11 @@ import (
 var marketDataGz []byte
 
 var percentilePoints = [5]float64{10, 25, 50, 75, 90}
+
+const (
+	medianPoint  = 2    // percentilePoints[medianPoint] is the 50th percentile
+	nationalArea = "US" // the area code for the whole United States
+)
 
 type SourceInfo struct {
 	Name    string `json:"name"`
@@ -55,6 +61,9 @@ type MarketResult struct {
 	OccCode    string   `json:"occCode"`
 	OccTitle   string   `json:"occTitle"`
 }
+
+// Median is the 50th-percentile wage (0 when not published).
+func (m MarketResult) Median() int64 { return m.Points[medianPoint] }
 
 type Option struct {
 	Code  string `json:"code"`
@@ -119,7 +128,7 @@ func (md *MarketData) MarketPosition(occ, area string, base int64) MarketResult 
 	} else if ok && a.Type == "state" {
 		candidates[0].level = "state"
 	}
-	candidates = append(candidates, struct{ code, level string }{"US", "national"})
+	candidates = append(candidates, struct{ code, level string }{nationalArea, "national"})
 
 	for _, c := range candidates {
 		if c.code == "" {
@@ -129,7 +138,7 @@ func (md *MarketData) MarketPosition(occ, area string, base int64) MarketResult 
 		if !ok {
 			continue
 		}
-		if c.code == "US" {
+		if c.code == nationalArea {
 			c.level = "national"
 		}
 		res.Found, res.Level, res.AreaCode, res.AreaTitle = true, c.level, c.code, md.Areas[c.code].Title
@@ -242,7 +251,7 @@ func (md *MarketData) GuessArea(location string) string {
 		return ""
 	}
 	if strings.Contains(text, "remote") {
-		return "US"
+		return nationalArea
 	}
 	city, state := text, ""
 	if i := strings.LastIndex(text, ","); i >= 0 {
@@ -278,4 +287,20 @@ func (md *MarketData) GuessArea(location string) string {
 		return md.stateAreaCode(state)
 	}
 	return ""
+}
+
+// EstimateLocation picks the pay area and tax state for a job: the area its
+// location names, else the user's home area. Remote (national) jobs are taxed
+// in the user's home state. state is "" when no single state applies.
+func (md *MarketData) EstimateLocation(jobLocation, homeArea string) (area, state string) {
+	area = cmp.Or(md.GuessArea(jobLocation), homeArea)
+	stateArea := area
+	if area == nationalArea {
+		stateArea = homeArea
+	}
+	state = md.Areas[stateArea].State
+	if state == nationalArea {
+		state = ""
+	}
+	return area, state
 }

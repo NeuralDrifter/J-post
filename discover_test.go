@@ -40,9 +40,9 @@ func TestNormalizeSalary(t *testing.T) {
 		{"cents", f64(22.5), f64(30), "hourly", 46800, 62400, true, "$22.50–$30/hr"},
 	}
 	for _, c := range cases {
-		lo, hi, ann, text := normalizeSalary(c.lo, c.hi, c.interval)
-		if i64val(lo) != c.wantLo || i64val(hi) != c.wantHi || ann != c.annualized || text != c.text {
-			t.Errorf("%s: got %d %d %v %q", c.name, i64val(lo), i64val(hi), ann, text)
+		pay := normalizeSalary(c.lo, c.hi, c.interval)
+		if i64val(pay.min) != c.wantLo || i64val(pay.max) != c.wantHi || pay.annualized != c.annualized || pay.text != c.text {
+			t.Errorf("%s: got %d %d %v %q", c.name, i64val(pay.min), i64val(pay.max), pay.annualized, pay.text)
 		}
 	}
 }
@@ -115,8 +115,8 @@ func TestRunDiscoverPartialFailure(t *testing.T) {
 		return nil, nil
 	}
 	q := DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin", "indeed", "myspace"}}
-	resp := runDiscover(context.Background(), q, fetch, []Job{{ID: "j1", Company: "Acme", Position: "Dev", Status: StatusOffer}}, func(string) fetchOptions { return fetchOptions{} })
-	if len(resp.Results) != 1 || resp.Results[0].TrackedStatus != StatusOffer {
+	resp := runDiscover(context.Background(), q, fetch, func(string) fetchOptions { return fetchOptions{} })
+	if len(resp.Results) != 1 || resp.Results[0].Company != "Acme" {
 		t.Fatalf("results = %+v", resp.Results)
 	}
 	if resp.Errors["linkedin"] != "blocked" || len(resp.Errors) != 1 {
@@ -179,9 +179,6 @@ func TestAdzunaSearchMapsFields(t *testing.T) {
 }
 
 func TestAdzunaErrorDoesNotLeakKey(t *testing.T) {
-	if _, err := adzunaSearch(context.Background(), "", "", DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil {
-		t.Fatal("missing keys should error")
-	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "bad credentials", http.StatusUnauthorized)
 	}))

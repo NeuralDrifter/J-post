@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { base64ToBytes, bytesToBase64, downsample, floatToPCM16, micLevel, pcm16ToFloat } from './audio'
+import { base64ToBytes, bytesToBase64, downsample, encodeMicChunk, floatToPCM16, INPUT_RATE, micLevel, pcm16ToFloat } from './audio'
 import { chooseDevice } from './devices'
 import { answerStats, countFillers, wordCount } from './metrics'
-import { applyServerMessage, initialLiveState, type LiveState } from './reducer'
+import { applyServerMessage, initialLiveState, rejoinPrompt, type LiveState } from './reducer'
 
 describe('audio', () => {
   it('downsamples 48 kHz to 16 kHz by averaging', () => {
@@ -92,6 +92,25 @@ describe('live reducer', () => {
     expect(effects).toEqual([{ type: 'audio', data: 'AAA=' }, { type: 'interrupt' }])
   })
 
+  it('records how an interrupted interviewer line was cut off', () => {
+    const { state } = run([
+      { serverContent: { outputTranscription: { text: 'Tell me about yourself.' } } }, // 0 ms
+      { serverContent: { inputTranscription: { text: 'I started in recruiting' } } }, // 1000: candidate's last words
+      { serverContent: { outputTranscription: { text: 'Great, and' } } }, // 2000: interviewer starts 1000 ms later
+      { serverContent: { interrupted: true, inputTranscription: { text: ' and then' } } }, // 3000: candidate keeps going
+    ])
+    expect(state.lines[2]).toEqual({ speaker: 'interviewer', text: 'Great, and', atMs: 2000, cutOff: { spokeMs: 1000, gapMs: 1000 } })
+    expect(state.lines[3]).toEqual({ speaker: 'you', text: 'and then', atMs: 3000 })
+  })
+
+  it('marks an interruption with no earlier candidate words with gapMs -1', () => {
+    const { state } = run([
+      { serverContent: { outputTranscription: { text: 'Hi, I am Dana' } } },
+      { serverContent: { interrupted: true } },
+    ])
+    expect(state.lines[0].cutOff).toEqual({ spokeMs: 1000, gapMs: -1 })
+  })
+
   it('keeps the resumption handle and asks to reconnect on goAway', () => {
     const { state, effects } = run([
       { setupComplete: {} },
@@ -127,5 +146,23 @@ describe('chooseDevice', () => {
   it('falls back to the system default when the remembered one is gone', () => {
     expect(chooseDevice(devices, 'unplugged')).toBe('default')
     expect(chooseDevice([], 'abc')).toBe('')
+  })
+})
+
+describe('encodeMicChunk', () => {
+  it('labels the chunk with the rate it was resampled to', () => {
+    const chunk = encodeMicChunk(new Float32Array(4800), 48000)
+    expect(chunk.mimeType).toBe(`audio/pcm;rate=${INPUT_RATE}`)
+    expect(base64ToBytes(chunk.data).length).toBe(1600 * 2) // 100 ms at 16 kHz, 2 bytes per sample
+  })
+})
+
+describe('rejoinPrompt', () => {
+  it('replays the conversation after the rejoin note', () => {
+    const prompt = rejoinPrompt('(Reconnected. Continue without greeting.)', [
+      { speaker: 'interviewer', text: 'Tell me about yourself.', atMs: 0 },
+      { speaker: 'you', text: 'I started in recruiting.', atMs: 4000 },
+    ])
+    expect(prompt).toBe('(Reconnected. Continue without greeting.)\n\nInterviewer: Tell me about yourself.\nCandidate: I started in recruiting.')
   })
 })

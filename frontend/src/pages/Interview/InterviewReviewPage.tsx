@@ -8,7 +8,8 @@ import { api, apiOk } from '../../lib/api'
 import { DeleteMockInterview, GetInterviewRecording, GetMockInterview, ScoreInterview, type main } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
-import { averageScore, clock, MOCK_KIND_LABEL, SCORE_DIMENSIONS } from '../../lib/interview'
+import { averageScore, clock, SCORE_DIMENSIONS } from '../../lib/interview'
+import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 
@@ -16,6 +17,7 @@ export default function InterviewReviewPage() {
   const { id = '' } = useParams()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  const options = useInterviewOptions()
   const { data: mi, setData } = useLoad(() => api(GetMockInterview(id)), [id])
   const [scoring, setScoring] = useState(false)
   const [audioUrl, setAudioUrl] = useState('')
@@ -41,7 +43,7 @@ export default function InterviewReviewPage() {
   }, [mi, params])
 
   useEffect(() => {
-    if (mi?.hasRecording && !audioUrl) GetInterviewRecording(id).then(setAudioUrl, () => {})
+    if (mi?.hasRecording && !audioUrl) void api(GetInterviewRecording(id)).then((url) => url && setAudioUrl(url))
   }, [mi?.hasRecording, id, audioUrl])
 
   if (!mi) return <p className="text-sm text-ink-2">Loading…</p>
@@ -73,7 +75,7 @@ export default function InterviewReviewPage() {
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-extrabold tracking-tight">Mock interview review</h1>
             <p className="mt-1 text-sm text-ink-2">
-              {mi.position} · {MOCK_KIND_LABEL[mi.kind]} · {mi.minutes} min · {mi.persona}
+              {mi.position} · {kindLabel(options, mi.kind)} · {mi.minutes} min · {mi.persona}
               {mi.interviewerName && ` · with ${mi.interviewerName} (${mi.voice})`} · {formatDateTime(mi.startedAt)}
             </p>
           </div>

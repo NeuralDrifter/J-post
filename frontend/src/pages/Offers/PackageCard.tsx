@@ -1,4 +1,5 @@
 import { Copy, Eye, EyeOff, Pencil, Trash2, TriangleAlert } from 'lucide-react'
+import { labelFor, lookup } from '../../lib/format'
 import { openMenu } from '../../lib/menu'
 import { Chip } from '../../components/Chip'
 import { IconButton } from '../../components/IconButton'
@@ -45,11 +46,11 @@ export function PackageCard({ item, sources, selected, onToggle, onEdit, onCount
         <div className="min-w-0 flex-1">
           <p className="truncate font-mono text-[11px] text-ink-2">{item.company}</p>
           <h3 className="truncate text-sm font-semibold" title={p.label}>
-            {p.label || KIND_LABEL[p.kind]}
+            {p.label || labelFor(KIND_LABEL, p.kind)}
           </h3>
           {item.position && <p className="truncate text-xs text-ink-3">{item.position}</p>}
         </div>
-        <Chip tone={KIND_TONE[p.kind]}>{KIND_LABEL[p.kind]}</Chip>
+        <Chip tone={lookup(KIND_TONE, p.kind, 'neutral')}>{labelFor(KIND_LABEL, p.kind)}</Chip>
       </header>
 
       <div className="mt-4">

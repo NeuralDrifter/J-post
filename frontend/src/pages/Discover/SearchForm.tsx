@@ -1,39 +1,38 @@
 import { LoaderCircle, MapPin, RefreshCw, Search } from 'lucide-react'
 import type { main } from '../../lib/backend'
-import { SOURCE_LABEL } from '../../lib/format'
 
-export const OFFICIAL_SOURCES = ['adzuna', 'usajobs', 'himalayas', 'jobicy', 'themuse'] as const
-export const SCRAPED_SOURCES = ['indeed', 'linkedin', 'zip_recruiter'] as const
-export const ALL_SOURCES = [...OFFICIAL_SOURCES, ...SCRAPED_SOURCES]
 export const DEFAULT_PER_SOURCE = 20
+const MIN_PER_SOURCE = 5
 
-const MAX_PER_SOURCE: Record<string, number> = { adzuna: 50 }
-const SOURCE_NOTE: Record<string, string> = { himalayas: 'remote only', jobicy: 'remote only, 1 call/hour' }
+const KIND_TITLE: Record<string, string> = { official: 'Official APIs', scraped: 'Scraped via JobSpy' }
 
 type Props = {
   query: main.SearchQuery
   onChange: (q: main.SearchQuery) => void
-  onSearch: (force: boolean) => void
+  onSearch: () => void
+  /** Search again even if this search ran recently. */
+  onRefresh: () => void
   searching: boolean
-  /** Sources that can't run yet, with the reason (missing keys etc.). */
-  unavailable: Record<string, string>
+  /** Every board, with why it can't run yet (missing keys etc.). */
+  sources: main.JobSource[]
 }
 
-export function SearchForm({ query, onChange, onSearch, searching, unavailable }: Props) {
+export function SearchForm({ query, onChange, onSearch, onRefresh, searching, sources }: Props) {
   const toggle = (source: string) =>
     onChange({
       ...query,
       sources: query.sources.includes(source) ? query.sources.filter((s) => s !== source) : [...query.sources, source],
     })
   const setCount = (source: string, n: number) => onChange({ ...query, perSource: { ...query.perSource, [source]: n } })
-  const active = query.sources.filter((s) => !unavailable[s])
+  const ready = new Set(sources.filter((s) => !s.unavailable).map((s) => s.id))
+  const active = query.sources.filter((s) => ready.has(s))
   const linkedInHigh = query.sources.includes('linkedin') && (query.perSource.linkedin ?? DEFAULT_PER_SOURCE) > 25
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
-        onSearch(false)
+        onSearch()
       }}
       className="glass space-y-3 rounded-2xl p-4"
     >
@@ -70,7 +69,7 @@ export function SearchForm({ query, onChange, onSearch, searching, unavailable }
           type="button"
           className="btn btn-ghost"
           disabled={searching || active.length === 0 || !query.term.trim()}
-          onClick={() => onSearch(true)}
+          onClick={onRefresh}
           title="Scrape again even if this search ran recently"
         >
           <RefreshCw size={15} /> Refresh now
@@ -89,8 +88,9 @@ export function SearchForm({ query, onChange, onSearch, searching, unavailable }
         </label>
       </div>
 
-      <SourceRow title="Official APIs" sources={OFFICIAL_SOURCES} query={query} toggle={toggle} setCount={setCount} unavailable={unavailable} />
-      <SourceRow title="Scraped via JobSpy" sources={SCRAPED_SOURCES} query={query} toggle={toggle} setCount={setCount} unavailable={unavailable} />
+      {Object.entries(KIND_TITLE).map(([kind, title]) => (
+        <SourceRow key={kind} title={title} sources={sources.filter((s) => s.kind === kind)} query={query} toggle={toggle} setCount={setCount} />
+      ))}
       {linkedInHigh && <p className="text-[11px] text-amber-300/90">LinkedIn often blocks requests above ~25 results.</p>}
     </form>
   )
@@ -102,39 +102,37 @@ function SourceRow({
   query,
   toggle,
   setCount,
-  unavailable,
 }: {
   title: string
-  sources: readonly string[]
+  sources: main.JobSource[]
   query: main.SearchQuery
   toggle: (s: string) => void
   setCount: (s: string, n: number) => void
-  unavailable: Record<string, string>
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-2">
       <span className="label-mono w-36 shrink-0">{title}</span>
       {sources.map((s) => {
-        const reason = unavailable[s]
-        const checked = !reason && query.sources.includes(s)
+        const reason = s.unavailable
+        const checked = !reason && query.sources.includes(s.id)
         return (
-          <span key={s} className={`flex items-center gap-1.5 ${reason ? 'opacity-50' : ''}`} title={reason ?? SOURCE_NOTE[s]}>
+          <span key={s.id} className={`flex items-center gap-1.5 ${reason ? 'opacity-50' : ''}`} title={reason || s.note}>
             <label className="flex items-center gap-1.5">
-              <input type="checkbox" className="accent-indigo-500" disabled={!!reason} checked={checked} onChange={() => toggle(s)} />
-              {SOURCE_LABEL[s]}
-              {reason ? <span className="text-ink-3">(setup needed)</span> : SOURCE_NOTE[s] && <span className="text-ink-3">({SOURCE_NOTE[s]})</span>}
+              <input type="checkbox" className="accent-indigo-500" disabled={!!reason} checked={checked} onChange={() => toggle(s.id)} />
+              {s.label}
+              {reason ? <span className="text-ink-3">(setup needed)</span> : s.note && <span className="text-ink-3">({s.note})</span>}
             </label>
             {checked && (
               <input
                 type="number"
-                min={5}
-                max={MAX_PER_SOURCE[s] ?? 100}
+                min={MIN_PER_SOURCE}
+                max={s.maxResults}
                 step={5}
-                value={query.perSource[s] ?? DEFAULT_PER_SOURCE}
-                onChange={(e) => setCount(s, Number(e.target.value) || DEFAULT_PER_SOURCE)}
+                value={query.perSource[s.id] ?? DEFAULT_PER_SOURCE}
+                onChange={(e) => setCount(s.id, Number(e.target.value) || DEFAULT_PER_SOURCE)}
                 className="field w-16 px-2 py-0.5 text-xs"
-                title={`Results to fetch from ${SOURCE_LABEL[s]}`}
-                aria-label={`Results from ${SOURCE_LABEL[s]}`}
+                title={`Results to fetch from ${s.label}`}
+                aria-label={`Results from ${s.label}`}
               />
             )}
           </span>

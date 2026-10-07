@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,8 +16,6 @@ var (
 	usajobsBaseURL   = "https://data.usajobs.gov/api/search"
 	himalayasBaseURL = "https://himalayas.app/jobs/api/search"
 	jobicyBaseURL    = "https://jobicy.com/api/v2/remote-jobs"
-	apiTimeout       = 30 * time.Second
-	apiUserAgent     = "JobTrack/1.0 (personal job tracker)"
 )
 
 const (
@@ -30,53 +25,11 @@ const (
 	usajobsMaxDays    = 60
 )
 
-// getJSON performs a GET and decodes JSON, keeping URLs (which may hold keys) out of errors.
-func getJSON(ctx context.Context, source, rawURL string, headers map[string]string, out any) error {
-	ctx, cancel := context.WithTimeout(ctx, apiTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return fmt.Errorf("could not build %s request", source)
-	}
-	req.Header.Set("User-Agent", apiUserAgent)
-	req.Header.Set("Accept", "application/json")
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return fmt.Errorf("timed out after %s", apiTimeout)
-		}
-		var uerr *url.Error
-		if errors.As(err, &uerr) {
-			err = uerr.Err
-		}
-		return fmt.Errorf("could not reach %s: %v", source, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return errors.New(httpErrorMessage(source, resp.StatusCode, body))
-	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-		return fmt.Errorf("unexpected %s response: %v", source, err)
-	}
-	return nil
-}
-
 func floatPtr(v float64) *float64 {
 	if v <= 0 {
 		return nil
 	}
 	return &v
-}
-
-func firstN(s string, n int) string {
-	if len(s) > n {
-		return s[:n]
-	}
-	return s
 }
 
 // ---- USAJobs (federal jobs; free key + registered email) ----
@@ -108,9 +61,6 @@ type usajobsResponse struct {
 }
 
 func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-	if key == "" || email == "" {
-		return nil, errors.New("USAJobs needs an API key and your registered email (add them in Settings)")
-	}
 	params := url.Values{"Keyword": {q.Term}, "ResultsPerPage": {strconv.Itoa(max(opts.Results, 1))}}
 	if q.Location != "" {
 		params.Set("LocationName", q.Location)
@@ -119,11 +69,11 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 		params.Set("RemoteIndicator", "True")
 	}
 	if opts.HoursOld > 0 {
-		params.Set("DatePosted", strconv.Itoa(min((opts.HoursOld+23)/24, usajobsMaxDays)))
+		params.Set("DatePosted", strconv.Itoa(min(opts.maxDaysOld(), usajobsMaxDays)))
 	}
 	var resp usajobsResponse
 	headers := map[string]string{"Host": "data.usajobs.gov", "User-Agent": email, "Authorization-Key": key}
-	if err := getJSON(ctx, "USAJobs", usajobsBaseURL+"?"+params.Encode(), headers, &resp); err != nil {
+	if _, err := getJSON(ctx, apiRequest{source: "USAJobs", url: usajobsBaseURL + "?" + params.Encode(), headers: headers}, &resp); err != nil {
 		return nil, err
 	}
 	out := []rawJob{}
@@ -131,12 +81,12 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 		d := item.MatchedObjectDescriptor
 		j := rawJob{
 			Title: d.PositionTitle, Company: d.OrganizationName, Location: d.PositionLocationDisplay,
-			URL: d.PositionURI, DatePosted: firstN(d.PublicationStartDate, 10), Site: "usajobs",
+			URL: d.PositionURI, DatePosted: datePart(d.PublicationStartDate), Site: "usajobs",
 			Description: htmlToText(d.UserArea.Details.JobSummary),
 		}
 		if len(d.PositionRemuneration) > 0 {
 			pay := d.PositionRemuneration[0]
-			lo, _ := strconv.ParseFloat(pay.MinimumRange, 64)
+			lo, _ := strconv.ParseFloat(pay.MinimumRange, 64) // unparseable pay counts as not posted
 			hi, _ := strconv.ParseFloat(pay.MaximumRange, 64)
 			j.MinAmount, j.MaxAmount, j.Interval = floatPtr(lo), floatPtr(hi), usajobsIntervals[pay.RateIntervalCode]
 		}
@@ -167,7 +117,7 @@ func himalayasSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([
 	for page := 1; page <= himalayasMaxPages && len(out) < want; page++ {
 		var resp himalayasResponse
 		params := url.Values{"q": {q.Term}, "page": {strconv.Itoa(page)}}
-		if err := getJSON(ctx, "Himalayas", himalayasBaseURL+"?"+params.Encode(), nil, &resp); err != nil {
+		if _, err := getJSON(ctx, apiRequest{source: "Himalayas", url: himalayasBaseURL + "?" + params.Encode()}, &resp); err != nil {
 			if len(out) > 0 {
 				break // keep what we already have
 			}
@@ -221,14 +171,14 @@ type jobicyResponse struct {
 func jobicySearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
 	params := url.Values{"count": {strconv.Itoa(min(max(opts.Results, 1), jobicyMaxCount))}, "tag": {q.Term}}
 	var resp jobicyResponse
-	if err := getJSON(ctx, "Jobicy", jobicyBaseURL+"?"+params.Encode(), nil, &resp); err != nil {
+	if _, err := getJSON(ctx, apiRequest{source: "Jobicy", url: jobicyBaseURL + "?" + params.Encode()}, &resp); err != nil {
 		return nil, err
 	}
 	out := []rawJob{}
 	for _, jb := range resp.Jobs {
 		j := rawJob{
 			Title: jb.JobTitle, Company: jb.CompanyName, URL: jb.URL, Location: jb.JobGeo, IsRemote: true,
-			DatePosted: firstN(jb.PubDate, 10), Description: htmlToText(jb.JobDescription), Site: "jobicy",
+			DatePosted: datePart(jb.PubDate), Description: htmlToText(jb.JobDescription), Site: "jobicy",
 		}
 		if jb.SalaryCurrency == "" || jb.SalaryCurrency == "USD" {
 			lo, hi := jb.SalaryMin, jb.SalaryMax

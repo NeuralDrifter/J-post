@@ -3,30 +3,41 @@ import type { main } from './backend'
 export const PACKAGE_KINDS = ['offer', 'estimate', 'counter', 'current'] as const
 export type PackageKind = (typeof PACKAGE_KINDS)[number]
 
-export const KIND_LABEL: Record<string, string> = {
+export const KIND_LABEL: Record<PackageKind, string> = {
   offer: 'Offer',
   estimate: 'Estimate',
   counter: 'Counter',
   current: 'Current job',
 }
 
-export const KIND_TONE: Record<string, 'success' | 'info' | 'accent' | 'neutral'> = {
+export type ChipTone = 'success' | 'info' | 'accent' | 'neutral'
+
+export const KIND_TONE: Record<PackageKind, ChipTone> = {
   offer: 'success',
   estimate: 'info',
   counter: 'accent',
   current: 'neutral',
 }
 
-export const VESTING_LABEL: Record<string, string> = {
+export const VESTINGS = ['standard', 'backloaded', 'monthly', 'custom'] as const
+export type Vesting = (typeof VESTINGS)[number]
+
+export const VESTING_LABEL: Record<Vesting, string> = {
   standard: '4 years, 1-year cliff (25% yearly)',
   backloaded: 'Backloaded (5 / 15 / 40 / 40)',
   monthly: '4 years monthly, no cliff',
   custom: 'Custom yearly %',
 }
 
-export const EQUITY_LABEL: Record<string, string> = { none: 'None', rsu: 'RSUs', options: 'Stock options' }
+export const EQUITY_TYPES = ['none', 'rsu', 'options'] as const
+export type Equity = (typeof EQUITY_TYPES)[number]
 
-export const FILING_LABEL: Record<string, string> = {
+export const EQUITY_LABEL: Record<Equity, string> = { none: 'None', rsu: 'RSUs', options: 'Stock options' }
+
+export const FILING_STATUSES = ['single', 'married', 'head'] as const
+export type Filing = (typeof FILING_STATUSES)[number]
+
+export const FILING_LABEL: Record<Filing, string> = {
   single: 'Single',
   married: 'Married filing jointly',
   head: 'Head of household',

@@ -31,20 +31,7 @@ func scanInterview(s rowScanner) (Interview, error) {
 
 // ListInterviews returns upcoming (not completed) interviews first, each group by time.
 func (r *Repo) ListInterviews(jobID string) ([]Interview, error) {
-	rows, err := r.db.Query(`SELECT `+interviewColumns+` FROM interviews WHERE job_id = ? ORDER BY completed, scheduled_at`, jobID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Interview{}
-	for rows.Next() {
-		iv, err := scanInterview(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, iv)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanInterview, `SELECT `+interviewColumns+` FROM interviews WHERE job_id = ? ORDER BY completed, scheduled_at`, jobID)
 }
 
 func (r *Repo) SaveInterview(iv Interview) (Interview, error) {

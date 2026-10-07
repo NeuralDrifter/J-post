@@ -2,7 +2,17 @@
 // the session what to do (play audio, stop playback, reconnect, nudge).
 
 export type Speaker = 'interviewer' | 'you'
-export type Line = { speaker: Speaker; text: string; atMs: number }
+
+/**
+ * Facts about an interviewer line the candidate's speech cut off, so scoring can
+ * tell a real interruption from the interviewer jumping into a thinking pause.
+ */
+export type CutOff = {
+  spokeMs: number // how long the interviewer had been talking
+  gapMs: number // silence between the candidate's previous words and the interviewer starting; -1 if none
+}
+
+export type Line = { speaker: Speaker; text: string; atMs: number; cutOff?: CutOff }
 
 export type LiveState = {
   lines: Line[]
@@ -43,6 +53,23 @@ function appendText(lines: Line[], speaker: Speaker, fragment: string, atMs: num
   return [...lines, { speaker, text: fragment.replace(/\s+/g, ' ').trimStart(), atMs }]
 }
 
+// Called before the interrupting words are added, so youLastMs is still the end
+// of the candidate's previous answer.
+function markCutOff(state: LiveState, atMs: number): Line[] {
+  const lines = state.lines
+  const last = lines[lines.length - 1]
+  if (last?.speaker !== 'interviewer') return lines
+  const followedCandidate = lines[lines.length - 2]?.speaker === 'you'
+  const cutOff = { spokeMs: atMs - last.atMs, gapMs: followedCandidate ? last.atMs - state.youLastMs : -1 }
+  return [...lines.slice(0, -1), { ...last, cutOff }]
+}
+
+/** The conversation so far, for seeding a fresh session after a dropped call. */
+export function rejoinPrompt(note: string, lines: Line[]): string {
+  const history = lines.map((l) => `${l.speaker === 'you' ? 'Candidate' : 'Interviewer'}: ${l.text}`).join('\n')
+  return `${note}\n\n${history}`
+}
+
 export function applyServerMessage(state: LiveState, raw: unknown, atMs: number): { state: LiveState; effects: LiveEffect[] } {
   const msg = raw as ServerMessage
   const effects: LiveEffect[] = []
@@ -60,7 +87,10 @@ export function applyServerMessage(state: LiveState, raw: unknown, atMs: number)
         effects.push({ type: 'audio', data: part.inlineData.data })
       }
     }
-    if (content.interrupted) effects.push({ type: 'interrupt' })
+    if (content.interrupted) {
+      effects.push({ type: 'interrupt' })
+      next = { ...next, lines: markCutOff(next, atMs) }
+    }
 
     const heard = content.inputTranscription?.text
     if (heard) {

@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -55,10 +57,13 @@ type fetchOptions struct {
 	HoursOld int // 0 = no age limit
 }
 
+// maxDaysOld is HoursOld in whole days, rounded up, for APIs that filter by day.
+func (o fetchOptions) maxDaysOld() int { return (o.HoursOld + 23) / 24 }
+
 func normalizeSources(sources []string) []string {
 	out := []string{}
 	for _, s := range sources {
-		if knownSources[s] && !contains(out, s) {
+		if isKnownSource(s) && !slices.Contains(out, s) {
 			out = append(out, s)
 		}
 	}
@@ -66,22 +71,12 @@ func normalizeSources(sources []string) []string {
 	return out
 }
 
-func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
-
 func searchKey(q SearchQuery) string {
-	norm := func(s string) string { return strings.Join(strings.Fields(strings.ToLower(s)), " ") }
 	remote := "0"
 	if q.RemoteOnly {
 		remote = "1"
 	}
-	return norm(q.Term) + "|" + norm(q.Location) + "|" + remote + "|" + strings.Join(normalizeSources(q.Sources), ",")
+	return normalizeForMatch(q.Term) + "|" + normalizeForMatch(q.Location) + "|" + remote + "|" + strings.Join(normalizeSources(q.Sources), ",")
 }
 
 // perSourceCount is the clamped number of results to request from one board.
@@ -90,11 +85,8 @@ func perSourceCount(q SearchQuery, source string) int {
 	if !ok || n <= 0 {
 		n = defaultPerSource
 	}
-	n = max(minPerSource, min(n, maxPerSource))
-	if source == "adzuna" {
-		n = min(n, maxAdzunaResults)
-	}
-	return n
+	src, _ := findSource(source)
+	return max(minPerSource, min(n, src.resultCap()))
 }
 
 // hoursOld asks scrapers only for postings newer than the previous run (plus a day
@@ -128,23 +120,31 @@ const searchColumns = `id, term, location, remote_only, sources, per_source, las
 func scanSearch(s rowScanner) (SavedSearch, error) {
 	var out SavedSearch
 	var sources, perSource string
-	err := s.Scan(&out.ID, &out.Term, &out.Location, &out.RemoteOnly, &sources, &perSource, &out.LastRunAt, &out.CreatedAt)
+	if err := s.Scan(&out.ID, &out.Term, &out.Location, &out.RemoteOnly, &sources, &perSource, &out.LastRunAt, &out.CreatedAt); err != nil {
+		return out, err
+	}
 	out.Sources = splitSources(sources)
 	out.PerSource = map[string]int{}
-	_ = json.Unmarshal([]byte(perSource), &out.PerSource)
-	return out, err
+	if err := json.Unmarshal([]byte(perSource), &out.PerSource); err != nil {
+		return out, fmt.Errorf("search %s: unreadable per-board counts: %w", out.ID, err)
+	}
+	return out, nil
 }
 
 // UpsertSearch finds the saved search for this query (same term, location, remote
 // flag and sources) or creates it, storing the latest per-board counts.
 func (r *Repo) UpsertSearch(q SearchQuery) (SavedSearch, error) {
 	key := searchKey(q)
-	per, _ := json.Marshal(q.PerSource)
-	if q.PerSource == nil {
-		per = []byte("{}")
+	perSource := q.PerSource
+	if perSource == nil {
+		perSource = map[string]int{}
+	}
+	per, err := json.Marshal(perSource)
+	if err != nil {
+		return SavedSearch{}, err
 	}
 	var id string
-	err := r.db.QueryRow(`SELECT id FROM searches WHERE query_key = ?`, key).Scan(&id)
+	err = r.db.QueryRow(`SELECT id FROM searches WHERE query_key = ?`, key).Scan(&id)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		id = newID()
@@ -166,20 +166,7 @@ func (r *Repo) markSearchRun(id string, at time.Time) error {
 }
 
 func (r *Repo) ListRecentSearches(limit int) ([]SavedSearch, error) {
-	rows, err := r.db.Query(`SELECT `+searchColumns+` FROM searches ORDER BY last_run_at DESC, created_at DESC LIMIT ?`, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []SavedSearch{}
-	for rows.Next() {
-		s, err := scanSearch(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, s)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanSearch, `SELECT `+searchColumns+` FROM searches ORDER BY last_run_at DESC, created_at DESC LIMIT ?`, limit)
 }
 
 func (r *Repo) DeleteSearch(id string) error {
@@ -187,9 +174,20 @@ func (r *Repo) DeleteSearch(id string) error {
 	return expectOneRow(res, err, "search", id)
 }
 
-// RunSearch serves a recent search from the inbox, or scrapes each board (only
-// postings newer than the last run) and stores what it finds.
-func RunSearch(ctx context.Context, r *Repo, q SearchQuery, force bool, s Settings, fetch sourceFunc) (SearchRun, error) {
+// RunSearch serves a search that ran within the cache window from the inbox;
+// otherwise it fetches like RefreshSearch.
+func RunSearch(ctx context.Context, r *Repo, q SearchQuery, s Settings, fetch sourceFunc) (SearchRun, error) {
+	return runSearch(ctx, r, q, s.DiscoverCacheHours, fetch)
+}
+
+// RefreshSearch asks each board for postings newer than the last run, even if
+// the search ran recently, and stores what it finds.
+func RefreshSearch(ctx context.Context, r *Repo, q SearchQuery, fetch sourceFunc) (SearchRun, error) {
+	return runSearch(ctx, r, q, 0, fetch)
+}
+
+// runSearch reuses results younger than cacheHours (0 = always fetch).
+func runSearch(ctx context.Context, r *Repo, q SearchQuery, cacheHours int, fetch sourceFunc) (SearchRun, error) {
 	q.Term, q.Location = strings.TrimSpace(q.Term), strings.TrimSpace(q.Location)
 	if q.Term == "" {
 		return SearchRun{}, errors.New("enter a job title or keywords to search")
@@ -204,14 +202,14 @@ func RunSearch(ctx context.Context, r *Repo, q SearchQuery, force bool, s Settin
 	}
 	now := r.now()
 	run := SearchRun{SearchID: saved.ID, Errors: map[string]string{}, LastRunAt: saved.LastRunAt}
-	if !force && cacheHit(saved, now, s.DiscoverCacheHours) {
+	if cacheHit(saved, now, cacheHours) {
 		run.Cached = true
 		return run, nil
 	}
 
 	age := hoursOld(saved.LastRunAt, now)
 	dq := DiscoverQuery{Term: q.Term, Location: q.Location, RemoteOnly: q.RemoteOnly, Sources: q.Sources}
-	resp := runDiscover(ctx, dq, fetch, nil, func(source string) fetchOptions {
+	resp := runDiscover(ctx, dq, fetch, func(source string) fetchOptions {
 		return fetchOptions{Results: perSourceCount(q, source), HoursOld: age}
 	})
 	run.Errors, run.Fetched = resp.Errors, len(resp.Results)

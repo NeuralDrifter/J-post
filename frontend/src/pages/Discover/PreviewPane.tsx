@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'
 import { Markdown } from '../../components/Markdown'
 import { BrowserOpenURL, type main } from '../../lib/backend'
-import { formatDate, formatSalary, SOURCE_LABEL } from '../../lib/format'
+import { formatDate, formatSalary } from '../../lib/format'
+import { sourceLabel, useJobSources } from '../../lib/jobSources'
 import type { PostingActions } from './PostingList'
 
 type Props = { posting: main.Posting; busy: boolean; actions: PostingActions; onClose: () => void }
@@ -11,6 +12,7 @@ type Props = { posting: main.Posting; busy: boolean; actions: PostingActions; on
 /** Side pane on wide windows; a slide-over panel below 1100px. */
 export function PreviewPane({ posting: p, busy, actions, onClose }: Props) {
   const navigate = useNavigate()
+  const sources = useJobSources()
   const salary = formatSalary(p.salaryMin, p.salaryMax)
 
   return (
@@ -43,7 +45,7 @@ export function PreviewPane({ posting: p, busy, actions, onClose }: Props) {
           {p.datePosted && <Chip>Posted {formatDate(p.datePosted)}</Chip>}
           {p.sources.map((s) => (
             <Chip key={s} tone="info">
-              {SOURCE_LABEL[s] ?? s}
+              {sourceLabel(sources, s)}
             </Chip>
           ))}
         </div>

@@ -114,3 +114,20 @@ func TestExtractPDFTextScanned(t *testing.T) {
 		t.Fatal("a broken file should error")
 	}
 }
+
+func TestExtractResumeText(t *testing.T) {
+	dir := t.TempDir()
+	txt := filepath.Join(dir, "cv.md")
+	os.WriteFile(txt, []byte("  # Jane Doe\nGo developer  "), 0o644)
+	if got, err := extractResumeText(txt); err != nil || got != "  # Jane Doe\nGo developer  " {
+		t.Fatalf("got %q, %v", got, err)
+	}
+	blank := filepath.Join(dir, "blank.txt")
+	os.WriteFile(blank, []byte(" \n "), 0o644)
+	if _, err := extractResumeText(blank); err == nil || !strings.Contains(err.Error(), "no text") {
+		t.Fatalf("blank err = %v", err)
+	}
+	if _, err := extractResumeText(filepath.Join(dir, "cv.rtf")); err == nil || !strings.Contains(err.Error(), "PDF") {
+		t.Fatalf("unsupported err = %v", err)
+	}
+}

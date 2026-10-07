@@ -5,17 +5,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand/v2"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 // VoiceOption is one of Google's prebuilt voices (usable by Live and TTS models).
@@ -70,11 +66,7 @@ func randomInterviewerName(voice string) string {
 	return pick(first) + " " + pick(lastNames)
 }
 
-// geminiLiveWSBase is the Live API host (a var so tests can use a fake server).
-var geminiLiveWSBase = "wss://generativelanguage.googleapis.com"
-
 const (
-	liveWSPath       = "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 	liveSampleRate   = 24000
 	voiceSampleLimit = 45 * time.Second
 	voicePreviewLine = "Hi, thanks for joining today. I'm looking forward to hearing about your experience. To start, could you tell me a little about yourself?"
@@ -89,86 +81,43 @@ func liveVoiceSample(ctx context.Context, key, model, voice, text string) ([]byt
 	}
 	ctx, cancel := context.WithTimeout(ctx, voiceSampleLimit)
 	defer cancel()
-	hide := func(err error) string { return strings.ReplaceAll(err.Error(), key, "[key]") }
-
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, geminiLiveWSBase+liveWSPath+"?key="+url.QueryEscape(key), nil)
+	s, err := openLiveSession(ctx, key, liveVoiceSetup(model, voice, "You are recording a voice sample for an interview app. "+
+		"When given a line, say exactly that line in a natural, friendly, professional interviewer tone. Say nothing else."))
 	if err != nil {
-		return nil, fmt.Errorf("could not reach Gemini Live: %s", hide(err))
+		return nil, err
 	}
-	defer conn.Close()
-	if dl, ok := ctx.Deadline(); ok {
-		_ = conn.SetReadDeadline(dl)
-		_ = conn.SetWriteDeadline(dl)
-	}
-
-	setup := map[string]any{"setup": map[string]any{
-		"model": "models/" + model,
-		"generationConfig": map[string]any{
-			"responseModalities": []string{"AUDIO"},
-			"speechConfig":       map[string]any{"voiceConfig": map[string]any{"prebuiltVoiceConfig": map[string]any{"voiceName": voice}}},
-		},
-		"systemInstruction": map[string]any{"parts": []map[string]any{{"text": "You are recording a voice sample for an interview app. " +
-			"When given a line, say exactly that line in a natural, friendly, professional interviewer tone. Say nothing else."}}},
-	}}
-	if err := conn.WriteJSON(setup); err != nil {
-		return nil, fmt.Errorf("Gemini Live: %s", hide(err))
-	}
+	defer s.close()
 
 	var pcm []byte
 	for {
-		_, raw, err := conn.ReadMessage()
+		msg, err := s.next()
 		if err != nil {
-			var ce *websocket.CloseError
-			if errors.As(err, &ce) && ce.Text != "" {
-				return nil, fmt.Errorf("Gemini Live closed the session: %s", strings.ReplaceAll(ce.Text, key, "[key]"))
-			}
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				return nil, errors.New("Gemini Live took too long to answer")
-			}
-			return nil, fmt.Errorf("Gemini Live: %s", hide(err))
-		}
-		var msg struct {
-			SetupComplete *struct{} `json:"setupComplete"`
-			ServerContent *struct {
-				ModelTurn *struct {
-					Parts []struct {
-						InlineData *geminiBlob `json:"inlineData"`
-					} `json:"parts"`
-				} `json:"modelTurn"`
-				TurnComplete bool `json:"turnComplete"`
-			} `json:"serverContent"`
-		}
-		if json.Unmarshal(raw, &msg) != nil {
-			continue
+			return nil, err
 		}
 		if msg.SetupComplete != nil {
-			turn := map[string]any{"clientContent": map[string]any{
-				"turns":        []any{map[string]any{"role": "user", "parts": []map[string]any{{"text": "Say exactly: " + text}}}},
-				"turnComplete": true,
-			}}
-			if err := conn.WriteJSON(turn); err != nil {
-				return nil, fmt.Errorf("Gemini Live: %s", hide(err))
+			if err := s.sendTurn([]geminiPart{{Text: "Say exactly: " + text}}); err != nil {
+				return nil, err
 			}
 			continue
 		}
-		if sc := msg.ServerContent; sc != nil {
-			if sc.ModelTurn != nil {
-				for _, p := range sc.ModelTurn.Parts {
-					if p.InlineData == nil || !strings.HasPrefix(p.InlineData.MimeType, "audio/") {
-						continue
-					}
-					chunk, err := base64.StdEncoding.DecodeString(p.InlineData.Data)
-					if err == nil {
-						pcm = append(pcm, chunk...)
-					}
+		sc := msg.ServerContent
+		if sc == nil {
+			continue
+		}
+		if sc.ModelTurn != nil {
+			for _, p := range sc.ModelTurn.Parts {
+				if p.InlineData == nil || !strings.HasPrefix(p.InlineData.MimeType, "audio/") {
+					continue
+				}
+				if chunk, err := base64.StdEncoding.DecodeString(p.InlineData.Data); err == nil {
+					pcm = append(pcm, chunk...)
 				}
 			}
-			if sc.TurnComplete {
-				break
-			}
+		}
+		if sc.TurnComplete {
+			break
 		}
 	}
-	_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "done"))
 	if len(pcm) == 0 {
 		return nil, errors.New("Gemini Live returned no audio")
 	}

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { MarketSources, type main } from './backend'
+import { useStaticData } from './staticData'
 
 // Every figure derived from an outside dataset carries a numbered ✦ mark.
 export type SourceKey = 'bls' | 'bea' | 'tax'
@@ -30,19 +30,7 @@ export function taxDetail(t: main.TaxResult): string {
   return `Tax year ${t.year || 2026} · federal (IRS)${state} · estimate`
 }
 
-let cache: main.DataSources | undefined
-
-/** Dataset names, releases and links (loaded once). */
+/** Dataset names, releases and links. */
 export function useSources(): main.DataSources | undefined {
-  const [sources, setSources] = useState(cache)
-  useEffect(() => {
-    if (cache) return
-    MarketSources()
-      .then((s) => {
-        cache = s
-        setSources(s)
-      })
-      .catch(() => {})
-  }, [])
-  return sources
+  return useStaticData('dataSources', MarketSources)
 }

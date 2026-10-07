@@ -18,6 +18,9 @@ const (
 	StatusClosed       = "closed"
 )
 
+// SourceManual marks a job the user added by hand (not from a job board).
+const SourceManual = "manual"
+
 var validStatuses = map[string]bool{
 	StatusInterested: true, StatusApplied: true, StatusInterviewing: true, StatusOffer: true, StatusClosed: true,
 }
@@ -109,7 +112,7 @@ func validateJobFields(j *Job) error {
 		}
 	}
 	if j.Source == "" {
-		j.Source = "manual"
+		j.Source = SourceManual
 	}
 	return nil
 }
@@ -140,6 +143,20 @@ func insertStageEvent(ex execer, jobID, from, to, reason, at, note string) error
 }
 
 func (r *Repo) CreateJob(j Job) (Job, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return Job{}, err
+	}
+	defer tx.Rollback()
+	j, err = r.insertJob(tx, j)
+	if err != nil {
+		return Job{}, err
+	}
+	return j, tx.Commit()
+}
+
+// insertJob validates and inserts a new job with its first stage event, inside tx.
+func (r *Repo) insertJob(tx *sql.Tx, j Job) (Job, error) {
 	if j.Status == "" {
 		j.Status = StatusInterested
 	}
@@ -154,13 +171,7 @@ func (r *Repo) CreateJob(j Job) (Job, error) {
 	}
 	now := ts(r.now())
 	j.ID, j.CreatedAt, j.UpdatedAt = newID(), now, now
-
-	tx, err := r.db.Begin()
-	if err != nil {
-		return Job{}, err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(`INSERT INTO jobs (`+jobColumns+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := tx.Exec(`INSERT INTO jobs (`+jobColumns+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		j.ID, j.Company, j.Position, j.Status, j.CloseReason, j.Location, j.WorkMode,
 		nullInt(j.SalaryMin), nullInt(j.SalaryMax), j.SalaryText, j.URL, j.Source, j.Description,
 		j.DatePosted, j.DateApplied, j.FollowUpOn, j.Notes, j.CreatedAt, j.UpdatedAt)
@@ -170,7 +181,7 @@ func (r *Repo) CreateJob(j Job) (Job, error) {
 	if err := insertStageEvent(tx, j.ID, "", j.Status, j.CloseReason, now, ""); err != nil {
 		return Job{}, err
 	}
-	return j, tx.Commit()
+	return j, nil
 }
 
 func getJob(q querier, id string) (Job, error) {
@@ -184,20 +195,7 @@ func getJob(q querier, id string) (Job, error) {
 func (r *Repo) GetJob(id string) (Job, error) { return getJob(r.db, id) }
 
 func (r *Repo) ListJobs() ([]Job, error) {
-	rows, err := r.db.Query(`SELECT ` + jobColumns + ` FROM jobs ORDER BY updated_at DESC`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Job{}
-	for rows.Next() {
-		j, err := scanJob(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, j)
-	}
-	return out, rows.Err()
+	return queryAll(r.db, scanJob, `SELECT `+jobColumns+` FROM jobs ORDER BY updated_at DESC`)
 }
 
 // UpdateJob saves the editable fields. Status changes go through ChangeStatus
@@ -268,21 +266,14 @@ func (r *Repo) DeleteJob(id string) error {
 }
 
 func (r *Repo) ListStageEvents(jobID string) ([]StageEvent, error) {
-	rows, err := r.db.Query(`SELECT id, job_id, from_status, to_status, close_reason, at, note
+	return queryAll(r.db, scanStageEvent, `SELECT id, job_id, from_status, to_status, close_reason, at, note
 		FROM stage_events WHERE job_id = ? ORDER BY at, rowid`, jobID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []StageEvent{}
-	for rows.Next() {
-		var e StageEvent
-		var from sql.NullString
-		if err := rows.Scan(&e.ID, &e.JobID, &from, &e.ToStatus, &e.CloseReason, &e.At, &e.Note); err != nil {
-			return nil, err
-		}
-		e.FromStatus = from.String
-		out = append(out, e)
-	}
-	return out, rows.Err()
+}
+
+func scanStageEvent(s rowScanner) (StageEvent, error) {
+	var e StageEvent
+	var from sql.NullString
+	err := s.Scan(&e.ID, &e.JobID, &from, &e.ToStatus, &e.CloseReason, &e.At, &e.Note)
+	e.FromStatus = from.String
+	return e, err
 }
