@@ -1,6 +1,12 @@
 # AI Providers — Claude Code (headless + temporary MCP) and Anthropic API — Design Spec
 
-**Date:** 2026-10-07 · **Status:** Approved in chat, awaiting spec review · **Builds on:** Phase 2b-1 (mock interviews on Gemini Live)
+**Date:** 2026-10-07 · **Status:** Implemented (branch feature/ai-providers) · **Builds on:** Phase 2b-1 (mock interviews on Gemini Live)
+
+**Deviations found while building:**
+- Claude Code runs **without `--bare`**: bare mode never reads the OAuth login, so it couldn't use the user's Claude subscription. Isolation comes from `--setting-sources ""`, `--strict-mcp-config`, `--tools ""`, `--disable-slash-commands` and a temp working directory (section 3).
+- The Anthropic provider uses the **beta** Messages endpoint, the only one the Go SDK exposes the refusal `fallbacks` parameter on.
+- `claudeCodeMCPExecutable` lets end-to-end checks point the per-run MCP server at the built app (under `go test` the executable is the test binary).
+- Verified end to end (2026-10-07) on a copy of real data: Gemini Live graded in ~7 s and Claude Code (claude-opus-5-5, subscription) in ~57 s, both with tips saved; the Anthropic API was not exercised against the live service (no key configured) — its tests run against a fake server.
 
 ## Goal
 
