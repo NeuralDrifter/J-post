@@ -83,6 +83,9 @@ type QuestionReview struct {
 	Worked         string `json:"worked"`
 	Improve        string `json:"improve"`
 	StrongerAnswer string `json:"strongerAnswer"`
+	// PlanIndex is the planned question this answers (0-based); nil for an
+	// off-plan question or an interview without a plan.
+	PlanIndex *int `json:"planIndex,omitempty"`
 }
 
 type Scorecard struct {

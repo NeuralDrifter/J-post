@@ -163,3 +163,19 @@ func interviewPlanFor(ctx context.Context, s Settings, job Job, resume string, s
 	}
 	return &InterviewPlanRecord{Provider: provider, Model: model, Plan: p}, nil
 }
+
+// gradingSection is the plan for the grader, numbered by planIndex.
+func (p InterviewPlan) gradingSection() string {
+	var b strings.Builder
+	b.WriteString("Question plan the interviewer was given (planIndex in brackets):\n")
+	for i, q := range p.Questions {
+		fmt.Fprintf(&b, "[%d] %s (tests %s)\n    A strong answer covers: %s\n", i, q.Question, q.Tests, strings.Join(q.StrongAnswer, "; "))
+	}
+	if len(p.ResumeClaims) > 0 {
+		b.WriteString("Resume claims to verify:\n")
+		for _, c := range p.ResumeClaims {
+			fmt.Fprintf(&b, "- %s\n", c.Claim)
+		}
+	}
+	return b.String()
+}

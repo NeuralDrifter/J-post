@@ -400,3 +400,65 @@ func TestRetryOfMissingInterview(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func plannedForGrading() MockInterview {
+	plan := samplePlan(2)
+	return MockInterview{Kind: "behavioral", Persona: "tough", Transcript: sampleTranscript,
+		Plan: &InterviewPlanRecord{ID: "p1", Provider: providerClaudeCode, Plan: plan}}
+}
+
+func TestScoringPromptIncludesPlan(t *testing.T) {
+	prompt := scoringPrompt(planJob, plannedForGrading(), "cv")
+	for _, want := range []string{"Question plan", "[0] Question 1?", "[1] Question 2?", "Point 1-a", "Point 2-b", "Cut deploy time 60%"} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("prompt is missing %q:\n%s", want, prompt)
+		}
+	}
+	if strings.Index(prompt, "Question plan") > strings.Index(prompt, "Transcript:") {
+		t.Error("the plan belongs before the transcript")
+	}
+}
+
+func TestScoringPromptWithoutPlan(t *testing.T) {
+	if strings.Contains(scoringPrompt(planJob, MockInterview{Kind: "behavioral", Transcript: sampleTranscript}, "cv"), "Question plan") {
+		t.Fatal("no plan, no plan section")
+	}
+}
+
+func TestScoringInstructionCoversPlan(t *testing.T) {
+	for _, want := range []string{"strong answer", "planIndex", "not the candidate's"} {
+		if !strings.Contains(scoringInstruction, want) {
+			t.Errorf("scoring instruction is missing %q", want)
+		}
+	}
+}
+
+func TestPlanIndexRoundTrips(t *testing.T) {
+	var c Scorecard
+	if err := json.Unmarshal([]byte(`{"questions":[{"question":"a","planIndex":0},{"question":"b"}]}`), &c); err != nil {
+		t.Fatal(err)
+	}
+	if c.Questions[0].PlanIndex == nil || *c.Questions[0].PlanIndex != 0 || c.Questions[1].PlanIndex != nil {
+		t.Fatalf("questions = %+v", c.Questions)
+	}
+	raw, _ := json.Marshal(c.Questions[1])
+	if strings.Contains(string(raw), "planIndex") {
+		t.Fatalf("an off-plan question should omit planIndex: %s", raw)
+	}
+}
+
+func TestScorecardSchemaPlanIndexIsOptionalInteger(t *testing.T) {
+	items := scorecardSchema["properties"].(map[string]any)["questions"].(map[string]any)["items"].(map[string]any)
+	if items["properties"].(map[string]any)["planIndex"].(map[string]any)["type"] != "integer" {
+		t.Fatalf("planIndex = %v", items["properties"].(map[string]any)["planIndex"])
+	}
+	for _, r := range items["required"].([]string) {
+		if r == "planIndex" {
+			t.Fatal("planIndex must stay optional so older scorecards stay valid")
+		}
+	}
+	g := geminiSchema(scorecardSchema)["properties"].(map[string]any)["questions"].(map[string]any)["items"].(map[string]any)
+	if g["properties"].(map[string]any)["planIndex"].(map[string]any)["type"] != "INTEGER" {
+		t.Fatal("Gemini's dialect needs INTEGER")
+	}
+}
