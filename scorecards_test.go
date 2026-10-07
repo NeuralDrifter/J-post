@@ -178,3 +178,22 @@ func TestListAllMockInterviews(t *testing.T) {
 		t.Fatalf("first = %+v", f)
 	}
 }
+
+func TestRecordingFileMissingOnDiskIsTreatedAsNoRecording(t *testing.T) {
+	r := newTestRepo(t)
+	mi := newMock(t, r)
+	r.SetInterviewRecording(mi.ID, filepath.Join(t.TempDir(), "gone.webm")) // deleted outside the app
+	data, err := r.recordingData(mi.ID)
+	if err != nil || data != nil {
+		t.Fatalf("a missing file should read as no recording, not an error: %v", err)
+	}
+	if got, _ := r.GetMockInterview(mi.ID); got.HasRecording {
+		t.Fatal("the stale recording path should be cleared so the page and list stop showing it")
+	}
+	rec := filepath.Join(t.TempDir(), "rec.webm")
+	os.WriteFile(rec, []byte("webm"), 0o644)
+	r.SetInterviewRecording(mi.ID, rec)
+	if data, err := r.recordingData(mi.ID); err != nil || string(data) != "webm" {
+		t.Fatalf("data = %q, err = %v", data, err)
+	}
+}

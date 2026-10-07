@@ -580,13 +580,9 @@ func (a *App) SaveInterviewRecording(id, base64Data string) error {
 
 // GetInterviewRecording returns the recording as a data URL for the audio player.
 func (a *App) GetInterviewRecording(id string) (string, error) {
-	path, err := a.repo.recordingPath(id)
-	if err != nil || path == "" {
+	raw, err := a.repo.recordingData(id)
+	if err != nil || raw == nil {
 		return "", err
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("the recording file is missing: %w", err)
 	}
 	return "data:audio/webm;base64," + base64.StdEncoding.EncodeToString(raw), nil
 }

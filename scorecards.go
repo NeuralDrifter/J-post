@@ -73,6 +73,21 @@ func (r *Repo) DeleteInterviewRecording(id string) error {
 	return r.SetInterviewRecording(id, "")
 }
 
+// recordingData returns the interview's audio, or nil when it has none. A file
+// deleted outside the app counts as none, and the stale path is cleared so the
+// review page and Interviews list stop offering it.
+func (r *Repo) recordingData(id string) ([]byte, error) {
+	path, err := r.recordingPath(id)
+	if err != nil || path == "" {
+		return nil, err
+	}
+	raw, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, r.SetInterviewRecording(id, "")
+	}
+	return raw, err
+}
+
 // loadReviewData fills in an interview's scorecards (newest first; the newest
 // is also Scorecard) and tips (in answer order).
 func (r *Repo) loadReviewData(m *MockInterview) error {

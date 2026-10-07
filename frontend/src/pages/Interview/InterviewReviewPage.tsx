@@ -59,7 +59,8 @@ export default function InterviewReviewPage() {
   }, [mi, params])
 
   useEffect(() => {
-    if (mi?.hasRecording && !audioUrl) void api(GetInterviewRecording(id)).then((url) => url && setAudioUrl(url))
+    // An empty answer means the file was gone; the backend cleared it, so refresh.
+    if (mi?.hasRecording && !audioUrl) void api(GetInterviewRecording(id)).then((url) => (url ? setAudioUrl(url) : url === '' && notifyDataChanged()))
   }, [mi?.hasRecording, id, audioUrl])
 
   if (!mi) return <p className="text-sm text-ink-2">Loading…</p>
