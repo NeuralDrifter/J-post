@@ -50,6 +50,8 @@ export function GetStartupError():Promise<string>;
 
 export function InboxCounts():Promise<main.InboxCounts>;
 
+export function ListAIProviders():Promise<Array<main.AIProvider>>;
+
 export function ListAttachments(arg1:string):Promise<Array<main.Attachment>>;
 
 export function ListCompForJob(arg1:string):Promise<Array<main.ComparisonItem>>;

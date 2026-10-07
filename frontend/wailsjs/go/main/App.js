@@ -98,6 +98,10 @@ export function InboxCounts() {
   return window['go']['main']['App']['InboxCounts']();
 }
 
+export function ListAIProviders() {
+  return window['go']['main']['App']['ListAIProviders']();
+}
+
 export function ListAttachments(arg1) {
   return window['go']['main']['App']['ListAttachments'](arg1);
 }

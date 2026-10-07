@@ -51,6 +51,21 @@ func aiProviders() []aiProvider {
 	return []aiProvider{geminiProvider{}}
 }
 
+// AIProvider is a provider as Settings and the review page see it.
+type AIProvider struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Unavailable string `json:"unavailable"` // what's missing before it can run; "" when ready
+}
+
+func ListAIProviders(s Settings) []AIProvider {
+	out := []AIProvider{}
+	for _, p := range aiProviders() {
+		out = append(out, AIProvider{ID: p.id(), Label: p.label(), Unavailable: p.unavailable(s)})
+	}
+	return out
+}
+
 func providerByID(id string) (aiProvider, bool) {
 	for _, p := range aiProviders() {
 		if p.id() == id {

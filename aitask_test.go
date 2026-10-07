@@ -85,3 +85,20 @@ func TestRunAITaskReturnsModel(t *testing.T) {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
 }
+
+func TestListAIProvidersReadiness(t *testing.T) {
+	list := ListAIProviders(Settings{})
+	var ids []string
+	for _, p := range list {
+		ids = append(ids, p.ID)
+		if p.Label == "" || p.Unavailable == "" {
+			t.Errorf("%s: label %q, unavailable %q (unconfigured providers need a reason)", p.ID, p.Label, p.Unavailable)
+		}
+	}
+	if got := strings.Join(ids, ","); got != "gemini-live" {
+		t.Fatalf("ids = %s", got)
+	}
+	if ListAIProviders(Settings{GeminiKey: "k"})[0].Unavailable != "" {
+		t.Fatal("Gemini with a key should be ready")
+	}
+}

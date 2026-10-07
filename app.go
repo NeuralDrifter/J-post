@@ -572,6 +572,15 @@ func (a *App) DeleteMockInterview(id string) error {
 	return a.repo.DeleteMockInterview(id)
 }
 
+// ListAIProviders returns every AI provider with why each can't run yet.
+func (a *App) ListAIProviders() ([]AIProvider, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return nil, err
+	}
+	return ListAIProviders(s), nil
+}
+
 // ListInterviewOptions returns the interview types, interviewer styles and lengths.
 func (a *App) ListInterviewOptions() InterviewOptions { return interviewOptions }
 

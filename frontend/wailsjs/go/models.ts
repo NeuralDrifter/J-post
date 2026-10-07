@@ -1,5 +1,21 @@
 export namespace main {
 	
+	export class AIProvider {
+	    id: string;
+	    label: string;
+	    unavailable: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIProvider(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.unavailable = source["unavailable"];
+	    }
+	}
 	export class Attachment {
 	    id: string;
 	    jobId: string;
@@ -1203,6 +1219,14 @@ export namespace main {
 	    museCategories: string[];
 	    geminiKey: string;
 	    geminiLiveModel: string;
+	    gradingProvider: string;
+	    tipsProvider: string;
+	    anthropicKey: string;
+	    anthropicModel: string;
+	    anthropicGradingEffort: string;
+	    anthropicTipsEffort: string;
+	    claudeCodePath: string;
+	    claudeCodeModel: string;
 	    discoverCacheHours: number;
 	
 	    static createFrom(source: any = {}) {
@@ -1223,6 +1247,14 @@ export namespace main {
 	        this.museCategories = source["museCategories"];
 	        this.geminiKey = source["geminiKey"];
 	        this.geminiLiveModel = source["geminiLiveModel"];
+	        this.gradingProvider = source["gradingProvider"];
+	        this.tipsProvider = source["tipsProvider"];
+	        this.anthropicKey = source["anthropicKey"];
+	        this.anthropicModel = source["anthropicModel"];
+	        this.anthropicGradingEffort = source["anthropicGradingEffort"];
+	        this.anthropicTipsEffort = source["anthropicTipsEffort"];
+	        this.claudeCodePath = source["claudeCodePath"];
+	        this.claudeCodeModel = source["claudeCodeModel"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
 	    }
 	}
