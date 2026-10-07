@@ -21,12 +21,16 @@ import (
 // each re-check initErr; a stray call would come back as Wails' recovered-panic
 // error, not a crash.
 type App struct {
-	ctx         context.Context
-	dataDir     string
-	repo        *Repo
-	settings    *SettingsStore
-	window      *WindowStateStore
-	market      *MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
+	ctx      context.Context
+	dataDir  string
+	repo     *Repo
+	settings *SettingsStore
+	window   *WindowStateStore
+	market   *MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
+	// aiCtx lives as long as the app; shutdown cancels it so AI work (headless
+	// Claude Code, API calls) never outlives the window.
+	aiCtx       context.Context
+	aiCancel    context.CancelFunc
 	initErr     error
 	windowShown bool
 }
@@ -35,6 +39,7 @@ type App struct {
 // is kept in initErr and shown full-screen by the frontend instead of crashing.
 func NewApp(dataDir string) *App {
 	a := &App{dataDir: dataDir, settings: NewSettingsStore(dataDir), window: NewWindowStateStore(dataDir)}
+	a.aiCtx, a.aiCancel = context.WithCancel(context.Background())
 	if md, err := loadMarketData(); err != nil {
 		log.Printf("market data unavailable: %v", err)
 	} else {
@@ -58,7 +63,11 @@ func NewApp(dataDir string) *App {
 
 func (a *App) startup(ctx context.Context) { a.ctx = ctx }
 
+// aiContext is the context for AI work; it ends when the app closes.
+func (a *App) aiContext() context.Context { return a.aiCtx }
+
 func (a *App) shutdown(ctx context.Context) {
+	a.aiCancel()
 	if a.repo != nil {
 		a.repo.db.Close()
 	}
@@ -502,7 +511,7 @@ func (a *App) PrepareInterview(jobID string, setup InterviewSetup) (LiveSession,
 	if err != nil {
 		return LiveSession{}, err
 	}
-	return prepareInterview(context.Background(), a.repo, s, jobID, setup)
+	return prepareInterview(a.aiContext(), a.repo, s, jobID, setup)
 }
 
 // NudgeAnswer returns one short coaching cue for the answer just given.
@@ -512,7 +521,7 @@ func (a *App) NudgeAnswer(sessionID, question, answer string, answerAtMs int64) 
 	if err != nil {
 		return Nudge{}, err
 	}
-	return nudgeAnswer(context.Background(), a.repo, s, sessionID, question, answer, answerAtMs)
+	return nudgeAnswer(a.aiContext(), a.repo, s, sessionID, question, answer, answerAtMs)
 }
 
 // RegradeInterview scores an interview again with another provider and keeps both scorecards.
@@ -521,7 +530,7 @@ func (a *App) RegradeInterview(id, provider string) (MockInterview, error) {
 	if err != nil {
 		return MockInterview{}, err
 	}
-	return regradeInterview(context.Background(), a.repo, s, id, provider)
+	return regradeInterview(a.aiContext(), a.repo, s, id, provider)
 }
 
 // DeleteScorecard removes one provider's scorecard from an interview.
@@ -541,7 +550,7 @@ func (a *App) ScoreInterview(id string) (MockInterview, error) {
 	if err != nil {
 		return MockInterview{}, err
 	}
-	return scoreInterview(context.Background(), a.repo, s, id)
+	return scoreInterview(a.aiContext(), a.repo, s, id)
 }
 
 func (a *App) SaveInterviewTranscript(id string, lines []TranscriptLine) error {
@@ -610,7 +619,7 @@ func (a *App) TestClaudeCode(path string) (string, error) {
 		return "", err
 	}
 	s.ClaudeCodePath = strings.TrimSpace(path)
-	return claudeCodeVersion(context.Background(), s)
+	return claudeCodeVersion(a.aiContext(), s)
 }
 
 // ListInterviewOptions returns the interview types, interviewer styles and lengths.
@@ -625,7 +634,7 @@ func (a *App) VoicePreview(voice string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	wav, err := voicePreview(context.Background(), s, filepath.Join(a.dataDir, "voice-previews"), voice)
+	wav, err := voicePreview(a.aiContext(), s, filepath.Join(a.dataDir, "voice-previews"), voice)
 	if err != nil {
 		return "", err
 	}

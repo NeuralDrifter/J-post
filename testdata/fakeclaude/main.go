@@ -5,6 +5,8 @@
 //   - nosubmit: report success without writing a result
 //   - sleep: hang past the provider's timeout
 //   - version: print a version line
+//   - grandchild: start a copy of itself (sleep mode) that inherits stdout, then
+//     sleep — like an npm claude.cmd wrapper whose node child holds the pipe
 //
 // FAKE_ARGS, when set, names a file that receives the argv as JSON.
 package main
@@ -13,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 )
 
@@ -30,6 +33,15 @@ func main() {
 	case "nosubmit":
 		fmt.Println(`{"type":"result","is_error":false,"result":"I could not decide."}`)
 	case "sleep":
+		time.Sleep(10 * time.Second)
+	case "grandchild":
+		child := exec.Command(os.Args[0])
+		child.Env = append(os.Environ(), "FAKE_MODE=sleep", "FAKE_ARGS=")
+		child.Stdout, child.Stderr = os.Stdout, os.Stderr
+		if err := child.Start(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
 		time.Sleep(10 * time.Second)
 	default:
 		if err := submitCannedResult(); err != nil {

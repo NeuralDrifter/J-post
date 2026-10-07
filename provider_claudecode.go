@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -114,7 +115,7 @@ func (claudeCodeProvider) run(ctx context.Context, s Settings, t aiTask) (aiResu
 	if err != nil {
 		return aiResult{}, err
 	}
-	defer os.RemoveAll(dir)
+	defer removeAllRetry(dir)
 
 	task := mcpTaskFile{Instruction: t.instruction, Input: t.input, Schema: t.schema, OutputPath: filepath.Join(dir, "result.json")}
 	taskPath, mcpPath := filepath.Join(dir, "task.json"), filepath.Join(dir, "mcp.json")
@@ -131,6 +132,10 @@ func (claudeCodeProvider) run(ctx context.Context, s Settings, t aiTask) (aiResu
 	cmd := exec.CommandContext(ctx, claude, claudeCodeArgs(t, mcpPath, s)...)
 	cmd.Dir = dir // keeps any project's CLAUDE.md out of the run
 	hideConsole(cmd)
+	// On timeout or cancel, end claude and everything under it, and stop waiting
+	// for pipes a leftover process might still hold.
+	cmd.Cancel = func() error { return killProcessTree(cmd.Process) }
+	cmd.WaitDelay = 2 * time.Second
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr // stdin stays closed, so it never waits for input
 	runErr := cmd.Run()
@@ -176,6 +181,20 @@ func claudeCodeVersion(ctx context.Context, s Settings) (string, error) {
 		return "", fmt.Errorf("Claude Code didn't start: %v", err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// removeAllRetry deletes a run's temp folder. Windows refuses while a process
+// that just ended still has it open, so it retries briefly; the folder holds
+// the resume and transcript, so a final failure is logged.
+func removeAllRetry(dir string) {
+	var err error
+	for range 10 {
+		if err = os.RemoveAll(dir); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	log.Printf("could not delete AI task folder %s: %v", dir, err)
 }
 
 func writeJSONFile(path string, v any) error {

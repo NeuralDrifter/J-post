@@ -186,3 +186,17 @@ func TestClaudeCodeVersion(t *testing.T) {
 		t.Fatalf("v = %q, err = %v", v, err)
 	}
 }
+
+func TestClaudeCodeTimeoutKillsTheWholeProcessTree(t *testing.T) {
+	s, root := useFakeClaude(t, "grandchild")
+	old := claudeCodeTimeout[roleTips]
+	claudeCodeTimeout[roleTips] = 500 * time.Millisecond
+	t.Cleanup(func() { claudeCodeTimeout[roleTips] = old })
+	start := time.Now()
+	var n Nudge
+	_, err := runAITask(context.Background(), s, providerClaudeCode, nudgeTask("q", "a"), &n)
+	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 6*time.Second {
+		t.Fatalf("a grandchild holding the output pipe must not keep the run alive: err = %v after %s", err, time.Since(start))
+	}
+	assertEmptyDir(t, root)
+}
