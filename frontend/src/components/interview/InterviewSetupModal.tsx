@@ -1,48 +1,56 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { Mic, TriangleAlert } from 'lucide-react'
-import { api } from '../../lib/api'
-import { GetProfile, GetSettings, PrepareInterview, type main } from '../../lib/backend'
+import { LoaderCircle, Mic, TriangleAlert } from 'lucide-react'
+import { api, errorMessage } from '../../lib/api'
+import { GetProfile, GetSettings, ListAIProviders, PrepareInterview, type main } from '../../lib/backend'
+import { formatDate } from '../../lib/format'
 import { holdSession } from '../../lib/interview'
 import { useInterviewOptions } from '../../lib/interviewOptions'
 import { useLoad } from '../../lib/useLoad'
 import { Field } from '../JobForm'
 import { Modal } from '../Modal'
+import { initialSetup, preparingLabel, type RetryInfo } from './setupState'
 import { VoicePicker } from './VoicePicker'
 
-export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: () => void }) {
+/** Sets up a mock interview; with retry, a new attempt at that interview's question plan. */
+export function InterviewSetupModal({ job, onClose, retry }: { job: main.Job; onClose: () => void; retry?: RetryInfo }) {
   const navigate = useNavigate()
   const { data: settings } = useLoad(() => api(GetSettings()), [])
   const { data: profile } = useLoad(() => api(GetProfile()), [])
-  const [setup, setSetup] = useState<main.InterviewSetup>({
-    kind: job.status === 'interviewing' ? 'behavioral' : 'phone_screen',
-    minutes: 25,
-    persona: 'neutral',
-    voice: '', // surprise me
-    interviewerName: '',
-    focus: '',
-    planProvider: '', // the setting
-    retryOf: '',
-  })
+  const { data: providers } = useLoad(() => api(ListAIProviders()), [])
+  const [setup, setSetup] = useState<main.InterviewSetup>(() => initialSetup(job, retry))
   const [starting, setStarting] = useState(false)
+  const [failure, setFailure] = useState('')
   const options = useInterviewOptions()
 
   const noKey = settings && !settings.geminiKey
   const noResume = profile && !profile.resumeText.trim()
+  const planner = setup.planProvider || settings?.planProvider || ''
+  const plannerLabel = providers?.find((p) => p.id === planner)?.label ?? planner
 
-  const start = async (e: FormEvent) => {
-    e.preventDefault()
+  const begin = async (s: main.InterviewSetup) => {
     setStarting(true)
-    const live = await api(PrepareInterview(job.id, setup))
-    setStarting(false)
-    if (!live) return
-    holdSession(live)
-    onClose()
-    navigate(`/interviews/${live.sessionId}/live`)
+    setFailure('')
+    try {
+      const live = await PrepareInterview(job.id, s)
+      holdSession(live)
+      onClose()
+      navigate(`/interviews/${live.sessionId}/live`)
+    } catch (err) {
+      // Shown in the modal with ways forward, not as a passing toast.
+      setFailure(errorMessage(err))
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  const start = (e: FormEvent) => {
+    e.preventDefault()
+    void begin(setup)
   }
 
   return (
-    <Modal title={`Mock interview · ${job.company}`} onClose={onClose} width="max-w-2xl">
+    <Modal title={retry ? `Retry · ${job.company}` : `Mock interview · ${job.company}`} onClose={onClose} width="max-w-2xl">
       {noKey ? (
         <div className="space-y-4">
           <p className="text-sm text-ink-2">Mock interviews use Google Gemini. Add your Gemini API key in Settings → AI first.</p>
@@ -63,12 +71,19 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
         </div>
       ) : (
         <form onSubmit={start} className="space-y-5">
-          <p className="text-sm text-ink-2">
-            A voice interviewer for <strong className="text-ink">{job.position}</strong> who has read the job description, your notes and your resume.
-          </p>
+          {retry ? (
+            <p className="text-sm text-ink-2">
+              Retry: same questions as the interview on <strong className="text-ink">{formatDate(retry.startedAt)}</strong>. Type and length stay the same; pick
+              any interviewer you like.
+            </p>
+          ) : (
+            <p className="text-sm text-ink-2">
+              A voice interviewer for <strong className="text-ink">{job.position}</strong> who has read the job description, your notes and your resume.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Interview type">
-              <select className="field" value={setup.kind} onChange={(e) => setSetup({ ...setup, kind: e.target.value })}>
+              <select className="field" value={setup.kind} disabled={!!retry} onChange={(e) => setSetup({ ...setup, kind: e.target.value })}>
                 {options?.kinds.map((k) => (
                   <option key={k.id} value={k.id}>
                     {k.label}
@@ -82,6 +97,7 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
                   <button
                     key={m}
                     type="button"
+                    disabled={!!retry}
                     onClick={() => setSetup({ ...setup, minutes: m })}
                     className={`btn flex-1 py-1.5 text-xs ${setup.minutes === m ? 'btn-primary' : 'btn-ghost'}`}
                   >
@@ -118,6 +134,23 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
                 />
               </Field>
             )}
+            {!retry && (
+              <Field label="Questions planned by" wide>
+                <select
+                  className="field"
+                  value={setup.planProvider}
+                  onChange={(e) => setSetup({ ...setup, planProvider: e.target.value })}
+                  aria-label="Question plan provider"
+                >
+                  <option value="">Default ({providers?.find((p) => p.id === settings?.planProvider)?.label ?? 'from Settings'})</option>
+                  {(providers ?? []).map((p) => (
+                    <option key={p.id} value={p.id} disabled={!!p.unavailable}>
+                      {p.unavailable ? `${p.label} — ${p.unavailable}` : p.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="Focus (optional)" wide>
               <textarea
                 className="field"
@@ -134,6 +167,22 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
               No resume yet, so questions will be generic. Upload one in Settings → Resume for questions about your real experience.
             </p>
           )}
+          {failure && (
+            <div className="space-y-2 rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-rose-200">
+              <p>{failure}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn btn-ghost py-1 text-xs" onClick={() => void begin(setup)} disabled={starting}>
+                  Try again
+                </button>
+                {!retry && (
+                  <button type="button" className="btn btn-ghost py-1 text-xs" onClick={() => void begin({ ...setup, planProvider: 'none' })} disabled={starting}>
+                    Start without a plan
+                  </button>
+                )}
+              </div>
+              {!retry && <p className="text-ink-3">Or pick another provider under “Questions planned by”.</p>}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-ink-3">Uses your microphone. Headphones give the best results.</p>
             <div className="flex gap-2">
@@ -141,7 +190,8 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
                 Cancel
               </button>
               <button className="btn btn-primary" disabled={starting}>
-                <Mic size={15} /> {starting ? 'Preparing…' : 'Start'}
+                {starting ? <LoaderCircle size={15} className="animate-spin" /> : <Mic size={15} />}{' '}
+                {starting ? preparingLabel(plannerLabel, !!retry || setup.planProvider === 'none') : 'Start'}
               </button>
             </div>
           </div>
