@@ -87,32 +87,36 @@ type Scorecard struct {
 	PracticeNext []string         `json:"practiceNext"`
 }
 
-// Mock interview statuses: live → scoring → done, or failed (kept so scoring can be retried).
+// Mock interview statuses: live → scoring → done, or failed (kept so scoring can
+// be retried). unscored: ended with no scorecard (every card was deleted).
 const (
-	MockLive    = "live"
-	MockScoring = "scoring"
-	MockDone    = "done"
-	MockFailed  = "failed"
+	MockLive     = "live"
+	MockScoring  = "scoring"
+	MockDone     = "done"
+	MockFailed   = "failed"
+	MockUnscored = "unscored"
 )
 
 type MockInterview struct {
-	ID              string           `json:"id"`
-	JobID           string           `json:"jobId"`
-	Company         string           `json:"company"`
-	Position        string           `json:"position"`
-	Kind            string           `json:"kind"`
-	Minutes         int              `json:"minutes"`
-	Persona         string           `json:"persona"`
-	Voice           string           `json:"voice"`
-	InterviewerName string           `json:"interviewerName"`
-	Focus           string           `json:"focus"`
-	Status          string           `json:"status"` // a Mock* constant
-	StartedAt       string           `json:"startedAt"`
-	EndedAt         string           `json:"endedAt"`
-	Transcript      []TranscriptLine `json:"transcript"`
-	Scorecard       *Scorecard       `json:"scorecard,omitempty"`
-	HasRecording    bool             `json:"hasRecording"`
-	Error           string           `json:"error"`
+	ID              string            `json:"id"`
+	JobID           string            `json:"jobId"`
+	Company         string            `json:"company"`
+	Position        string            `json:"position"`
+	Kind            string            `json:"kind"`
+	Minutes         int               `json:"minutes"`
+	Persona         string            `json:"persona"`
+	Voice           string            `json:"voice"`
+	InterviewerName string            `json:"interviewerName"`
+	Focus           string            `json:"focus"`
+	Status          string            `json:"status"` // a Mock* constant
+	StartedAt       string            `json:"startedAt"`
+	EndedAt         string            `json:"endedAt"`
+	Transcript      []TranscriptLine  `json:"transcript"`
+	Scorecards      []ScorecardResult `json:"scorecards"`          // one per grading provider, newest first
+	Scorecard       *Scorecard        `json:"scorecard,omitempty"` // the newest scorecard
+	Tips            []InterviewTip    `json:"tips"`                // coaching tips, in answer order
+	HasRecording    bool              `json:"hasRecording"`
+	Error           string            `json:"error"`
 }
 
 // LiveSession is what the page needs to open the voice connection.
@@ -255,26 +259,19 @@ func liveCues(minutes int) LiveCues {
 // ---- storage ----
 
 const mockColumns = `m.id, m.job_id, j.company, j.position, m.kind, m.minutes, m.persona, m.voice, m.interviewer_name, m.focus, m.status,
-	m.started_at, m.ended_at, m.transcript, m.scorecard, m.recording_path, m.error`
+	m.started_at, m.ended_at, m.transcript, m.recording_path, m.error`
 
 func scanMock(s rowScanner) (MockInterview, error) {
 	var m MockInterview
-	var transcript, scorecard, recording string
+	var transcript, recording string
 	err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona, &m.Voice, &m.InterviewerName, &m.Focus, &m.Status,
-		&m.StartedAt, &m.EndedAt, &transcript, &scorecard, &recording, &m.Error)
+		&m.StartedAt, &m.EndedAt, &transcript, &recording, &m.Error)
 	if err != nil {
 		return m, err
 	}
 	m.Transcript = []TranscriptLine{}
 	if err := json.Unmarshal([]byte(transcript), &m.Transcript); err != nil {
 		return m, fmt.Errorf("mock interview %s: unreadable transcript: %w", m.ID, err)
-	}
-	if scorecard != "" {
-		var sc Scorecard
-		if err := json.Unmarshal([]byte(scorecard), &sc); err != nil {
-			return m, fmt.Errorf("mock interview %s: unreadable scorecard: %w", m.ID, err)
-		}
-		m.Scorecard = &sc
 	}
 	m.HasRecording = recording != ""
 	return m, nil
@@ -301,12 +298,24 @@ func (r *Repo) GetMockInterview(id string) (MockInterview, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return m, fmt.Errorf("mock interview %s: %w", id, ErrNotFound)
 	}
-	return m, err
+	if err != nil {
+		return m, err
+	}
+	return m, r.loadReviewData(&m)
 }
 
 func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
-	return queryAll(r.db, scanMock, `SELECT `+mockColumns+` FROM mock_interviews m JOIN jobs j ON j.id = m.job_id
+	list, err := queryAll(r.db, scanMock, `SELECT `+mockColumns+` FROM mock_interviews m JOIN jobs j ON j.id = m.job_id
 		WHERE m.job_id = ? ORDER BY m.started_at DESC`, jobID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		if err := r.loadReviewData(&list[i]); err != nil {
+			return nil, err
+		}
+	}
+	return list, nil
 }
 
 // recordingPath is "" when the session has no recording.
@@ -346,13 +355,13 @@ func (r *Repo) markScoring(id string) error {
 	return err
 }
 
-func (r *Repo) markDone(id string, card Scorecard) error {
-	raw, err := json.Marshal(card)
-	if err != nil {
+// markDone saves the provider's scorecard and marks the interview scored.
+func (r *Repo) markDone(id, provider, model string, card Scorecard) error {
+	if err := r.saveScorecard(id, provider, model, card); err != nil {
 		return err
 	}
-	_, err = r.db.Exec(`UPDATE mock_interviews SET status = ?, scorecard = ?, error = '', `+endedAtOnce+` WHERE id = ?`,
-		MockDone, string(raw), ts(r.now()), id)
+	_, err := r.db.Exec(`UPDATE mock_interviews SET status = ?, error = '', `+endedAtOnce+` WHERE id = ?`,
+		MockDone, ts(r.now()), id)
 	return err
 }
 
@@ -439,11 +448,11 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 	if err := r.markScoring(id); err != nil {
 		return mi, err
 	}
-	card, err := requestScorecard(ctx, r, s, mi)
+	card, model, err := requestScorecard(ctx, r, s, providerGeminiLive, mi)
 	if err != nil {
 		return r.failScoring(mi, err)
 	}
-	if err := r.markDone(id, card); err != nil {
+	if err := r.markDone(id, providerGeminiLive, model, card); err != nil {
 		return mi, err
 	}
 	return r.GetMockInterview(id)
@@ -461,22 +470,24 @@ func (r *Repo) failScoring(mi MockInterview, cause error) (MockInterview, error)
 	return updated, cause
 }
 
-// requestScorecard asks the grading provider to review the session against the job and resume.
-func requestScorecard(ctx context.Context, r *Repo, s Settings, mi MockInterview) (Scorecard, error) {
+// requestScorecard asks a provider to review the session against the job and
+// resume; it also returns the model that graded it.
+func requestScorecard(ctx context.Context, r *Repo, s Settings, provider string, mi MockInterview) (Scorecard, string, error) {
 	var card Scorecard
 	job, err := r.GetJob(mi.JobID)
 	if err != nil {
-		return card, err
+		return card, "", err
 	}
 	profile, err := r.GetProfile()
 	if err != nil {
-		return card, err
+		return card, "", err
 	}
-	if _, err := runAITask(ctx, s, providerGeminiLive, scorecardTask(job, mi, profile.ResumeText), &card); err != nil {
-		return card, err
+	model, err := runAITask(ctx, s, provider, scorecardTask(job, mi, profile.ResumeText), &card)
+	if err != nil {
+		return card, "", err
 	}
 	card.normalize()
-	return card, nil
+	return card, model, nil
 }
 
 // normalize keeps model output inside the scorecard's contract: scores 1-5 and

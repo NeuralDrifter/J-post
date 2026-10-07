@@ -226,7 +226,7 @@ func TestMockInterviewStatusTransitions(t *testing.T) {
 		t.Fatalf("scoring = %+v (ended_at must not move)", scoring)
 	}
 
-	if err := r.markDone(mi.ID, Scorecard{Summary: "solid"}); err != nil {
+	if err := r.markDone(mi.ID, providerGeminiLive, "gemini-3.8-live", Scorecard{Summary: "solid"}); err != nil {
 		t.Fatal(err)
 	}
 	if done := get(); done.Status != MockDone || done.Scorecard == nil || done.Scorecard.Summary != "solid" {

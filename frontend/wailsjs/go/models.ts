@@ -574,6 +574,26 @@ export namespace main {
 	        this.focus = source["focus"];
 	    }
 	}
+	export class InterviewTip {
+	    answerAtMs: number;
+	    kind: string;
+	    text: string;
+	    provider: string;
+	    model: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewTip(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.answerAtMs = source["answerAtMs"];
+	        this.kind = source["kind"];
+	        this.text = source["text"];
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	    }
+	}
 	export class Job {
 	    id: string;
 	    company: string;
@@ -914,6 +934,42 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class ScorecardResult {
+	    provider: string;
+	    model: string;
+	    scorecard: Scorecard;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ScorecardResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	        this.scorecard = this.convertValues(source["scorecard"], Scorecard);
+	        this.createdAt = source["createdAt"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class TranscriptLine {
 	    speaker: string;
 	    text: string;
@@ -965,7 +1021,9 @@ export namespace main {
 	    startedAt: string;
 	    endedAt: string;
 	    transcript: TranscriptLine[];
+	    scorecards: ScorecardResult[];
 	    scorecard?: Scorecard;
+	    tips: InterviewTip[];
 	    hasRecording: boolean;
 	    error: string;
 	
@@ -989,7 +1047,9 @@ export namespace main {
 	        this.startedAt = source["startedAt"];
 	        this.endedAt = source["endedAt"];
 	        this.transcript = this.convertValues(source["transcript"], TranscriptLine);
+	        this.scorecards = this.convertValues(source["scorecards"], ScorecardResult);
 	        this.scorecard = this.convertValues(source["scorecard"], Scorecard);
+	        this.tips = this.convertValues(source["tips"], InterviewTip);
 	        this.hasRecording = source["hasRecording"];
 	        this.error = source["error"];
 	    }
@@ -1161,6 +1221,7 @@ export namespace main {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	
 	
 	
 	
