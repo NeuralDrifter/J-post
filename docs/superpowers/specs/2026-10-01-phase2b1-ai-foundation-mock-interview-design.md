@@ -130,7 +130,7 @@
 ## 6. Testing
 
 - **Go** (fake HTTP servers):
-  - `generateJSON`: request body (schema, mime type, header key) and response parsing.
+  - `liveStructured`: the tool declaration, the prompt turn, decoding the `submit_result` arguments, and failing when no tool call arrives.
   - The key never appears in errors.
   - `createLiveToken`: body fields, fieldMask and expire times.
   - DOCX extraction.
