@@ -6,9 +6,11 @@
 
 Interview grading and coaching tips can run on more than one AI provider, chosen in Settings, so the user can get sharper feedback from Claude and grade on their existing Claude subscription. An interview can be re-graded with a different provider and the scorecards compared side by side.
 
+Everything from an interview is kept for later review, so the user can study their performance and improve: the two-sided recording and transcript (already saved), every grader's scorecard, and the coaching tips (new). An **Interviews** page lists them all, and each part can be deleted.
+
 The work is a general **AI task layer**, not a grading-only feature: the planned AI review of job postings (ranking jobs against the resume, phase 2b-2) will plug in as another task with no redesign.
 
-**Out of scope:** the live voice interview itself (only Gemini Live provides it, so it stays there); job ranking (a later spec); any provider beyond the three below.
+**Out of scope:** progress charts across interviews (a later idea); the live voice interview itself (only Gemini Live provides it, so it stays there); job ranking (a later spec); any provider beyond the three below.
 
 ## 1. Tasks and providers
 
@@ -103,13 +105,44 @@ Migration 8 copies every non-empty `mock_interviews.scorecard` into the table as
 **Flows:**
 - **After an interview:** `ScoreInterview(id)` uses `gradingProvider` — status `scoring` → `done`, or `failed` with the error (as today).
 - **Re-grade:** `RegradeInterview(id, provider)`. On failure the interview keeps its status and cards; the error is returned for a toast. `failed` only applies while an interview has no scorecard.
-- **Tips:** `NudgeAnswer` runs the `nudge` task on `tipsProvider`; failures stay silent in the UI (console warning), as now.
+- **Tips:** `NudgeAnswer(sessionId, question, answer, answerAtMs)` runs the `nudge` task on `tipsProvider` and **saves the tip** (section 5a) before returning it; failures stay silent in the UI (console warning), as now.
+
+## 5a. Saved coaching tips (migration 8)
+
+Today tips exist only on the live page and are lost when it closes. Migration 8 also adds:
+
+| Column | |
+|---|---|
+| `id` | TEXT PRIMARY KEY |
+| `mock_interview_id` | REFERENCES mock_interviews(id) ON DELETE CASCADE |
+| `answer_at_ms` | when the answer the tip is about started (ties the tip to its transcript line) |
+| `kind` | `tip` / `good` |
+| `text` | |
+| `provider`, `model` | who gave it |
+| `created_at` | |
+
+The backend saves each tip inside `NudgeAnswer`, so nothing depends on the page staying open. `MockInterview` gains `tips: [{answerAtMs, kind, text, provider, model}]`. The live page still shows the latest six; all tips are kept.
 
 ## 6. Review page
 
+- **Recording** (already saved: your microphone and the interviewer mixed into one file): the audio player stays; clicking a transcript line still plays from that moment.
+- **Coaching tips** appear inside the transcript, directly under the answer they were about (matched by `answerAtMs`), styled like the live coach panel (tip / praise).
 - More than one scorecard → tabs labelled with provider and model (e.g. "Gemini Live · Claude Code (Opus 5.5)"); otherwise the single card as now.
 - A **Re-grade with…** menu lists every provider; unavailable ones are disabled with their reason.
 - While a re-grade runs, the menu shows a spinner and the current cards stay visible.
+- **Deleting parts** (each asks for confirmation):
+  - **Delete this scorecard** on each grader's tab: `DeleteScorecard(interviewId, provider)`. Deleting the last one returns the interview to "not scored", with a "Grade now" button.
+  - **Delete recording**: `DeleteInterviewRecording(id)` removes the audio file and clears the path; transcript, tips and scorecards stay.
+  - **Delete interview** (exists): removes everything, recording file included.
+
+## 6a. Interviews page
+
+A new **Interviews** item in the navigation rail (route `/interviews`), so past sessions are reachable without first opening the right job. The job page's Mock interviews panel stays as a shortcut.
+
+- One row per mock interview across all jobs, newest first: date, job · company, interview type, length, interviewer name, latest overall score with a badge per grader that scored it, and icons when a recording or saved tips exist. Status shown for `scoring` / `failed` / not scored.
+- Filter by job. Clicking a row opens the review page.
+- Row context menu: Open, Delete interview (confirmation).
+- Backed by `ListAllMockInterviews()`: summary rows (no transcript, tips or scorecard bodies), so the list stays fast as recordings pile up.
 
 ## 7. Errors
 
@@ -125,4 +158,7 @@ Migration 8 copies every non-empty `mock_interviews.scorecard` into the table as
 - Claude Code provider with a fake `claude` executable built by the test: command line flags, temp files created and removed, result read, error JSON surfaced.
 - MCP server in-process through pipes: `get_input`, valid `submit_result` written, invalid result rejected.
 - Migration 8 on a database with existing scorecards; per-provider replace/add; re-grade failure keeps status and cards.
+- Tips: `NudgeAnswer` saves the tip with provider, model and `answerAtMs`; tips cascade with their interview; a failed tip call saves nothing.
+- Deletes: `DeleteScorecard` (last one → not scored), `DeleteInterviewRecording` (file removed, other data kept), whole-interview delete still removes the file.
+- `ListAllMockInterviews` returns summaries across jobs, newest first, with grader badges and recording/tip flags.
 - Before calling it done: one real run of each provider with the user's accounts on a copy of the database.
