@@ -340,3 +340,111 @@ func TestLiveCuesRejoinNote(t *testing.T) {
 		t.Fatalf("rejoin = %q", rejoin)
 	}
 }
+
+// scoredInterview returns an interview with a transcript, ready to grade.
+func scoredInterviewSetup(t *testing.T, r *Repo) MockInterview {
+	t.Helper()
+	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.SaveInterviewTranscript(mi.ID, sampleTranscript); err != nil {
+		t.Fatal(err)
+	}
+	return mi
+}
+
+func scorecardArgs() map[string]any {
+	return map[string]any{
+		"overall": map[string]any{"communication": 4, "structure": 3, "relevance": 4, "depth": 3, "confidence": 4},
+		"summary": "Solid.", "questions": []any{}, "practiceNext": []any{"a", "b", "c"},
+	}
+}
+
+func scorecardJSON() string {
+	b, _ := json.Marshal(scorecardArgs())
+	return string(b)
+}
+
+func TestScoreInterviewUsesGradingProviderAndSavesCard(t *testing.T) {
+	r := newTestRepo(t)
+	mi := scoredInterviewSetup(t, r)
+	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(anthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
+	})
+	s := anthropicSettings
+	s.GradingProvider = providerAnthropic
+	done, err := scoreInterview(context.Background(), r, s, mi.ID)
+	if err != nil || done.Status != MockDone || len(done.Scorecards) != 1 {
+		t.Fatalf("done = %+v, err = %v", done, err)
+	}
+	if c := done.Scorecards[0]; c.Provider != providerAnthropic || c.Model != "claude-opus-5-5" || c.Scorecard.Summary != "Solid." {
+		t.Fatalf("card = %+v", c)
+	}
+}
+
+func TestRegradeAddsSecondCard(t *testing.T) {
+	r := newTestRepo(t)
+	mi := scoredInterviewSetup(t, r)
+	fakeLiveServer(t, replyWithToolCall(t, scorecardArgs(), nil))
+	s := anthropicSettings
+	s.GeminiKey, s.GeminiLiveModel = "k", "gemini-3.8-live"
+	if _, err := scoreInterview(context.Background(), r, s, mi.ID); err != nil {
+		t.Fatal(err)
+	}
+	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(anthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
+	})
+	got, err := regradeInterview(context.Background(), r, s, mi.ID, providerAnthropic)
+	if err != nil || len(got.Scorecards) != 2 || got.Scorecards[0].Provider != providerAnthropic || got.Status != MockDone {
+		t.Fatalf("got = %+v, err = %v", got, err)
+	}
+}
+
+func TestRegradeFailureKeepsStatusAndCards(t *testing.T) {
+	r := newTestRepo(t)
+	mi := scoredInterviewSetup(t, r)
+	r.markDone(mi.ID, providerGeminiLive, "gemini-3.8-live", card("first", 3))
+	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"type":"error","error":{"type":"api_error","message":"boom"}}`))
+	})
+	got, err := regradeInterview(context.Background(), r, anthropicSettings, mi.ID, providerAnthropic)
+	if err == nil {
+		t.Fatal("the re-grade should report the failure")
+	}
+	if got.Status != MockDone || len(got.Scorecards) != 1 || got.Scorecards[0].Scorecard.Summary != "first" {
+		t.Fatalf("a failed re-grade must keep the status and cards: %+v", got)
+	}
+}
+
+func TestRegradeWithUnavailableProvider(t *testing.T) {
+	r := newTestRepo(t)
+	mi := scoredInterviewSetup(t, r)
+	r.markDone(mi.ID, providerGeminiLive, "gemini-3.8-live", card("first", 3))
+	calls := 0
+	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) { calls++ })
+	got, err := regradeInterview(context.Background(), r, Settings{}, mi.ID, providerAnthropic)
+	if err == nil || !strings.Contains(err.Error(), "Anthropic API key") || calls != 0 {
+		t.Fatalf("err = %v, calls = %d", err, calls)
+	}
+	if got.Status != MockDone || len(got.Scorecards) != 1 {
+		t.Fatalf("status and cards must be untouched: %+v", got)
+	}
+}
+
+func TestNudgeSavesTip(t *testing.T) {
+	r := newTestRepo(t)
+	mi := scoredInterviewSetup(t, r)
+	fakeLiveServer(t, replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
+	n, err := nudgeAnswer(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, mi.ID, "Q?", "A long answer.", 4000)
+	if err != nil || n.Nudge != "Lead with the result" {
+		t.Fatalf("n = %+v, err = %v", n, err)
+	}
+	got, _ := r.GetMockInterview(mi.ID)
+	if len(got.Tips) != 1 || got.Tips[0] != (InterviewTip{AnswerAtMs: 4000, Kind: "tip", Text: "Lead with the result", Provider: providerGeminiLive, Model: "gemini-3.8-live"}) {
+		t.Fatalf("tips = %+v", got.Tips)
+	}
+}

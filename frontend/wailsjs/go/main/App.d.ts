@@ -18,9 +18,13 @@ export function DeleteContact(arg1:string):Promise<void>;
 
 export function DeleteInterview(arg1:string):Promise<void>;
 
+export function DeleteInterviewRecording(arg1:string):Promise<void>;
+
 export function DeleteJob(arg1:string):Promise<void>;
 
 export function DeleteMockInterview(arg1:string):Promise<void>;
+
+export function DeleteScorecard(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteSearch(arg1:string):Promise<void>;
 
@@ -51,6 +55,8 @@ export function GetStartupError():Promise<string>;
 export function InboxCounts():Promise<main.InboxCounts>;
 
 export function ListAIProviders():Promise<Array<main.AIProvider>>;
+
+export function ListAllMockInterviews():Promise<Array<main.MockInterviewSummary>>;
 
 export function ListAttachments(arg1:string):Promise<Array<main.Attachment>>;
 
@@ -84,7 +90,7 @@ export function MarketSources():Promise<main.DataSources>;
 
 export function NewEstimate(arg1:string):Promise<main.CompPackage>;
 
-export function NudgeAnswer(arg1:string,arg2:string):Promise<main.Nudge>;
+export function NudgeAnswer(arg1:string,arg2:string,arg3:string,arg4:number):Promise<main.Nudge>;
 
 export function OpenAttachment(arg1:string):Promise<void>;
 
@@ -97,6 +103,8 @@ export function PrepareInterview(arg1:string,arg2:main.InterviewSetup):Promise<m
 export function PreviewComp(arg1:main.CompPackage):Promise<main.PackageResult>;
 
 export function RefreshSearch(arg1:main.SearchQuery):Promise<main.SearchRun>;
+
+export function RegradeInterview(arg1:string,arg2:string):Promise<main.MockInterview>;
 
 export function RenameAttachment(arg1:string,arg2:string):Promise<void>;
 

@@ -506,14 +506,36 @@ func (a *App) PrepareInterview(jobID string, setup InterviewSetup) (LiveSession,
 }
 
 // NudgeAnswer returns one short coaching cue for the answer just given.
-func (a *App) NudgeAnswer(question, answer string) (Nudge, error) {
+// The tip is saved with the interview, tied to the answer that started at answerAtMs.
+func (a *App) NudgeAnswer(sessionID, question, answer string, answerAtMs int64) (Nudge, error) {
 	s, err := a.settings.Load()
 	if err != nil {
 		return Nudge{}, err
 	}
-	return nudgeAnswer(context.Background(), s, question, answer)
+	return nudgeAnswer(context.Background(), a.repo, s, sessionID, question, answer, answerAtMs)
 }
 
+// RegradeInterview scores an interview again with another provider and keeps both scorecards.
+func (a *App) RegradeInterview(id, provider string) (MockInterview, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return MockInterview{}, err
+	}
+	return regradeInterview(context.Background(), a.repo, s, id, provider)
+}
+
+// DeleteScorecard removes one provider's scorecard from an interview.
+func (a *App) DeleteScorecard(id, provider string) error { return a.repo.DeleteScorecard(id, provider) }
+
+// DeleteInterviewRecording removes only the audio; transcript, tips and scorecards stay.
+func (a *App) DeleteInterviewRecording(id string) error { return a.repo.DeleteInterviewRecording(id) }
+
+// ListAllMockInterviews lists every mock interview across jobs, newest first.
+func (a *App) ListAllMockInterviews() ([]MockInterviewSummary, error) {
+	return a.repo.ListAllMockInterviews()
+}
+
+// ScoreInterview grades an interview with the grading provider chosen in Settings.
 func (a *App) ScoreInterview(id string) (MockInterview, error) {
 	s, err := a.settings.Load()
 	if err != nil {

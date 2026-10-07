@@ -1072,6 +1072,62 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class MockInterviewSummary {
+	    id: string;
+	    jobId: string;
+	    company: string;
+	    position: string;
+	    kind: string;
+	    minutes: number;
+	    persona: string;
+	    interviewerName: string;
+	    status: string;
+	    startedAt: string;
+	    latestOverall?: ScoreSet;
+	    graders: string[];
+	    hasRecording: boolean;
+	    hasTips: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MockInterviewSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.jobId = source["jobId"];
+	        this.company = source["company"];
+	        this.position = source["position"];
+	        this.kind = source["kind"];
+	        this.minutes = source["minutes"];
+	        this.persona = source["persona"];
+	        this.interviewerName = source["interviewerName"];
+	        this.status = source["status"];
+	        this.startedAt = source["startedAt"];
+	        this.latestOverall = this.convertValues(source["latestOverall"], ScoreSet);
+	        this.graders = source["graders"];
+	        this.hasRecording = source["hasRecording"];
+	        this.hasTips = source["hasTips"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	
 	export class Nudge {
 	    nudge: string;

@@ -4,11 +4,13 @@ import { apiOk } from '../../lib/api'
 import { main, NudgeAnswer, SaveInterviewRecording, SaveInterviewTranscript } from '../../lib/backend'
 import { releaseSession } from '../../lib/interview'
 import { bytesToBase64 } from '../../lib/live/audio'
-import type { Line, Speaker } from '../../lib/live/reducer'
+import type { LiveEffect, Line, Speaker } from '../../lib/live/reducer'
 import { InterviewSession, type SessionStatus } from '../../lib/live/session'
 import type { DeviceChoice } from './DeviceCheck'
 
 export type NudgeItem = { text: string; kind: string; atMs: number }
+
+type AnswerEnded = Extract<LiveEffect, { type: 'answerEnded' }>
 
 const CLOCK_TICK_MS = 500
 const AUTOSAVE_MS = 30_000 // crash safety: what was said survives a hard quit
@@ -55,9 +57,10 @@ export function useLiveInterview(id: string, live: main.LiveSession | undefined)
     [id],
   )
 
-  const addNudge = (question: string, answer: string, atMs: number) => {
-    NudgeAnswer(question, answer)
-      .then((n) => n.nudge && setNudges((list) => [{ text: n.nudge, kind: n.kind, atMs }, ...list].slice(0, MAX_NUDGES)))
+  // The backend saves each tip, tied to the answer's start, for the review page.
+  const addNudge = (e: AnswerEnded) => {
+    NudgeAnswer(id, e.question, e.answer, Math.round(e.startMs))
+      .then((n) => n.nudge && setNudges((list) => [{ text: n.nudge, kind: n.kind, atMs: e.endMs }, ...list].slice(0, MAX_NUDGES)))
       .catch((err) => console.warn('coaching cue failed', err)) // cues are optional; don't interrupt
   }
 
@@ -73,7 +76,7 @@ export function useLiveInterview(id: string, live: main.LiveSession | undefined)
         },
         onSpeaking: setSpeaking,
         onMicLevel: setMicLevel,
-        onAnswerEnded: (e) => addNudge(e.question, e.answer, e.endMs),
+        onAnswerEnded: addNudge,
       },
     )
     sessionRef.current = session
