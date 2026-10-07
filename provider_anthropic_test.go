@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeAnthropic serves /v1/messages with handler and points the provider at it.
@@ -143,5 +144,22 @@ func TestAnthropicOtherErrorsKeepTheAPIMessage(t *testing.T) {
 	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, nudgeTask("q", "a"))
 	if err == nil || !strings.Contains(err.Error(), "claude-opus-9") || strings.Contains(err.Error(), "sk-ant-s3cret") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestAnthropicStopsAtTheRoleTimeout(t *testing.T) {
+	fakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
+		select { // a stalled service: never answers until the client gives up
+		case <-r.Context().Done():
+		case <-time.After(2 * time.Second):
+		}
+	})
+	old := anthropicTimeout[roleTips]
+	anthropicTimeout[roleTips] = 300 * time.Millisecond
+	t.Cleanup(func() { anthropicTimeout[roleTips] = old })
+	start := time.Now()
+	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, nudgeTask("q", "a"))
+	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 5*time.Second {
+		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
 }

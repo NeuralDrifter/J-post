@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
@@ -21,6 +22,9 @@ var (
 	anthropicBaseURL    = "" // "" = the SDK default; tests point it at a fake server
 	anthropicMaxRetries = 1  // one retry for transient errors; a long rate-limit wait is reported instead
 	anthropicMaxTokens  = map[aiRole]int64{roleGrading: 16000, roleTips: 1024}
+	// anthropicTimeout bounds a whole run (retries included); the SDK's own
+	// per-attempt limit for large max_tokens is 10 minutes.
+	anthropicTimeout = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second}
 )
 
 func (anthropicProvider) id() string    { return providerAnthropic }
@@ -39,6 +43,9 @@ func (anthropicProvider) run(ctx context.Context, s Settings, t aiTask) (aiResul
 		opts = append(opts, option.WithBaseURL(anthropicBaseURL))
 	}
 	client := anthropic.NewClient(opts...)
+	timeout := anthropicTimeout[t.role]
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	effort := s.AnthropicGradingEffort
 	if t.role == roleTips {
 		effort = s.AnthropicTipsEffort
@@ -56,6 +63,9 @@ func (anthropicProvider) run(ctx context.Context, s Settings, t aiTask) (aiResul
 		Fallbacks: anthropic.BetaFallbacksParamUnion{OfDefault: constant.ValueOf[constant.Default]()},
 		Betas:     []anthropic.AnthropicBeta{anthropic.AnthropicBetaServerSideFallback2026_07_01},
 	})
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return aiResult{}, fmt.Errorf("Anthropic took too long (over %s)", timeout)
+	}
 	if err != nil {
 		return aiResult{}, anthropicError(err, s.AnthropicKey)
 	}
