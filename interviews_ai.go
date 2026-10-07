@@ -418,72 +418,11 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 		Cues: liveCues(setup.Minutes)}, nil
 }
 
-var nudgeSchema = map[string]any{
-	"type": "OBJECT",
-	"properties": map[string]any{
-		"nudge": map[string]any{"type": "STRING"},
-		"kind":  map[string]any{"type": "STRING", "enum": []string{"tip", "good"}},
-	},
-	"required": []string{"nudge", "kind"},
-}
-
-const nudgeInstruction = "You are a discreet interview coach. Give ONE short cue (max 12 words) about the candidate's last answer: " +
-	"either the single most useful improvement (kind: tip) or brief praise if it was strong (kind: good). No preamble."
-
 func nudgeAnswer(ctx context.Context, s Settings, question, answer string) (Nudge, error) {
 	var n Nudge
-	err := liveStructured(ctx, s.GeminiKey, jsonPrompt{
-		model:  s.GeminiLiveModel,
-		system: nudgeInstruction,
-		parts:  []geminiPart{{Text: "Interviewer asked: " + question + "\nCandidate answered: " + answer}},
-		schema: nudgeSchema,
-	}, &n)
+	_, err := runAITask(ctx, s, providerGeminiLive, nudgeTask(question, answer), &n)
 	return n, err
 }
-
-var scorecardSchema = func() map[string]any {
-	str := map[string]any{"type": "STRING"}
-	score := map[string]any{"type": "INTEGER"}
-	return map[string]any{
-		"type": "OBJECT",
-		"properties": map[string]any{
-			"overall": map[string]any{
-				"type": "OBJECT",
-				"properties": map[string]any{
-					"communication": score, "structure": score, "relevance": score, "depth": score, "confidence": score,
-				},
-				"required": []string{"communication", "structure", "relevance", "depth", "confidence"},
-			},
-			"summary": str,
-			"questions": map[string]any{"type": "ARRAY", "items": map[string]any{
-				"type":       "OBJECT",
-				"properties": map[string]any{"question": str, "answerSummary": str, "worked": str, "improve": str, "strongerAnswer": str},
-				"required":   []string{"question", "answerSummary", "worked", "improve", "strongerAnswer"},
-			}},
-			"practiceNext": map[string]any{"type": "ARRAY", "items": str},
-		},
-		"required": []string{"overall", "summary", "questions", "practiceNext"},
-	}
-}()
-
-// kindBriefName falls back to the raw id for sessions saved under a retired kind.
-func kindBriefName(id string) string {
-	if k, ok := findInterviewKind(id); ok {
-		return k.briefName
-	}
-	return id
-}
-
-const scoringInstruction = "You are an expert interview coach reviewing a mock interview. Score each dimension 1-5 (5 = excellent): " +
-	"communication (clarity, concision), structure (STAR or similar), relevance (answers the question, fits the role), " +
-	"depth (specifics, metrics, ownership), confidence (decisive, composed). For every interviewer question give a short " +
-	"answer summary, what worked, what to improve and a stronger example answer written in the candidate's voice using " +
-	"only facts from their answers and resume. End with exactly three things to practice next. Be candid and specific. " +
-	"The transcript comes from a voice call with automatic turn detection. An interviewer line marked " +
-	"[cut in while the candidate paused] means the interviewer started talking during a pause mid-answer and the " +
-	"candidate carried on: treat the candidate's words before and after it as one answer, and don't count it as " +
-	"interrupting or as speaking in fragments. A line marked [interrupted by the candidate] is a real interruption " +
-	"and fair to critique. Fragmented or rambling speech within an answer is the candidate's own and also fair to critique."
 
 func clampScore(v int) int { return clamp(v, 1, 5) }
 
@@ -522,7 +461,7 @@ func (r *Repo) failScoring(mi MockInterview, cause error) (MockInterview, error)
 	return updated, cause
 }
 
-// requestScorecard asks the text model to review the session against the job and resume.
+// requestScorecard asks the grading provider to review the session against the job and resume.
 func requestScorecard(ctx context.Context, r *Repo, s Settings, mi MockInterview) (Scorecard, error) {
 	var card Scorecard
 	job, err := r.GetJob(mi.JobID)
@@ -533,51 +472,11 @@ func requestScorecard(ctx context.Context, r *Repo, s Settings, mi MockInterview
 	if err != nil {
 		return card, err
 	}
-	err = liveStructured(ctx, s.GeminiKey, jsonPrompt{
-		model:  s.GeminiLiveModel,
-		system: scoringInstruction,
-		parts:  []geminiPart{{Text: scoringPrompt(job, mi, profile.ResumeText)}},
-		schema: scorecardSchema,
-	}, &card)
-	if err != nil {
+	if _, err := runAITask(ctx, s, providerGeminiLive, scorecardTask(job, mi, profile.ResumeText), &card); err != nil {
 		return card, err
 	}
 	card.normalize()
 	return card, nil
-}
-
-func scoringPrompt(job Job, mi MockInterview, resume string) string {
-	return fmt.Sprintf("Role: %s at %s (%s interview, %s interviewer).\n\nJob description:\n%s\n\nCandidate's resume:\n%s\n\nTranscript:\n%s",
-		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, orDefault(job.Description, "(not provided)"),
-		orDefault(resume, "(not provided)"), transcriptText(mi.Transcript))
-}
-
-// transcriptText renders the transcript as "Interviewer: …" / "Candidate: …"
-// lines, joining consecutive lines from the same speaker (an answer split by a
-// pause is still one answer).
-func transcriptText(lines []TranscriptLine) string {
-	var b strings.Builder
-	for i, l := range lines {
-		if i > 0 && lines[i-1].Speaker == l.Speaker {
-			fmt.Fprintf(&b, " %s", l.Text)
-			continue
-		}
-		if i > 0 {
-			b.WriteString("\n")
-		}
-		who := "Interviewer"
-		if l.Speaker == SpeakerCandidate {
-			who = "Candidate"
-		}
-		fmt.Fprintf(&b, "%s: %s", who, l.Text)
-		if l.CutOff != nil {
-			fmt.Fprintf(&b, " %s", l.CutOff.label())
-		}
-	}
-	if len(lines) > 0 {
-		b.WriteString("\n")
-	}
-	return b.String()
 }
 
 // normalize keeps model output inside the scorecard's contract: scores 1-5 and

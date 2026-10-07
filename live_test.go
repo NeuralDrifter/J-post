@@ -62,7 +62,7 @@ func TestLiveStructuredReturnsToolCallArgs(t *testing.T) {
 		replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, &prompt)(c, setup)
 	})
 	var n Nudge
-	err := liveStructured(context.Background(), "k3y", jsonPrompt{model: "gemini-3.8-live", system: "coach", parts: []geminiPart{{Text: "the answer"}}, schema: nudgeSchema}, &n)
+	err := liveStructured(context.Background(), "k3y", jsonPrompt{model: "gemini-3.8-live", system: "coach", parts: []geminiPart{{Text: "the answer"}}, schema: geminiSchema(nudgeSchema)}, &n)
 	if err != nil || n.Nudge != "Lead with the result" || n.Kind != "tip" {
 		t.Fatalf("n = %+v, err = %v", n, err)
 	}
@@ -79,7 +79,7 @@ func TestLiveStructuredWithoutToolCallFails(t *testing.T) {
 		c.ReadMessage()
 	})
 	var n Nudge
-	if err := liveStructured(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}, schema: nudgeSchema}, &n); err == nil {
+	if err := liveStructured(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}, schema: geminiSchema(nudgeSchema)}, &n); err == nil {
 		t.Fatal("a turn with no tool call should fail")
 	}
 }
