@@ -150,6 +150,10 @@ export function ListMockInterviews(arg1) {
   return window['go']['main']['App']['ListMockInterviews'](arg1);
 }
 
+export function ListPlanAttempts(arg1) {
+  return window['go']['main']['App']['ListPlanAttempts'](arg1);
+}
+
 export function ListPostings(arg1) {
   return window['go']['main']['App']['ListPostings'](arg1);
 }

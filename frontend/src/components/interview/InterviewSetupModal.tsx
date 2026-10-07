@@ -21,6 +21,8 @@ export function InterviewSetupModal({ job, onClose }: { job: main.Job; onClose: 
     voice: '', // surprise me
     interviewerName: '',
     focus: '',
+    planProvider: '', // the setting
+    retryOf: '',
   })
   const [starting, setStarting] = useState(false)
   const options = useInterviewOptions()
