@@ -21,6 +21,7 @@ type aiRole int
 const (
 	roleGrading aiRole = iota
 	roleTips
+	rolePlanning
 )
 
 // aiTask is one AI job with a structured answer.

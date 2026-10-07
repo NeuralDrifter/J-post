@@ -23,7 +23,7 @@ import (
 type claudeCodeProvider struct{}
 
 var (
-	claudeCodeTimeout  = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second}
+	claudeCodeTimeout  = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second, rolePlanning: 3 * time.Minute}
 	claudeCodeTempRoot = "" // "" = the OS temp folder; tests point it somewhere they can inspect
 	// claudeCodeMCPExecutable serves the per-run MCP server; "" = this executable.
 	// (Inside `go test` this executable is the test binary, so end-to-end checks
