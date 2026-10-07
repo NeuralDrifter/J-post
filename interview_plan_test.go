@@ -138,3 +138,52 @@ func TestPlanThroughClaudeCode(t *testing.T) {
 	}
 	assertEmptyDir(t, root)
 }
+
+func TestBriefHasDepthRules(t *testing.T) {
+	brief := buildInterviewBrief(planJob, nil, "cv", testSetup, nil)
+	for _, want := range []string{"personally", "numbers", "baseline", "rehearsed", "One topic at a time"} {
+		if !strings.Contains(brief, want) {
+			t.Errorf("brief is missing the depth rule about %q", want)
+		}
+	}
+}
+
+func TestBriefWithPlan(t *testing.T) {
+	plan := samplePlan(2)
+	brief := buildInterviewBrief(planJob, nil, "cv", testSetup, &plan)
+	for _, want := range []string{"Your interview plan", "Probe 1-a", "Probe 2-b", "Point 1-a", "Point 2-b", "skill 1",
+		"Cut deploy time 60%", "What was the baseline?", "4 min", "Cover every core question"} {
+		if !strings.Contains(brief, want) {
+			t.Errorf("brief is missing %q", want)
+		}
+	}
+	if q1, q2 := strings.Index(brief, "Question 1?"), strings.Index(brief, "Question 2?"); q1 < 0 || q2 < q1 {
+		t.Errorf("questions missing or out of order: %d, %d", q1, q2)
+	}
+	if !strings.Contains(brief, "Never read") || !strings.Contains(brief, "never hint") {
+		t.Error("the brief must tell the interviewer never to read out or hint at the plan")
+	}
+	if strings.Index(brief, "Your interview plan") > strings.Index(brief, "Job description:") {
+		t.Error("the plan belongs before the job description")
+	}
+}
+
+func TestBriefWithoutPlanHasNoPlanSection(t *testing.T) {
+	if strings.Contains(buildInterviewBrief(planJob, nil, "cv", testSetup, nil), "Your interview plan") {
+		t.Fatal("no plan, no plan section")
+	}
+}
+
+func TestWrapUpCueMentionsPlan(t *testing.T) {
+	with, without := liveCues(25, true), liveCues(25, false)
+	if !strings.Contains(with.WrapUp, "core question") || strings.Contains(without.WrapUp, "core question") {
+		t.Fatalf("with = %q, without = %q", with.WrapUp, without.WrapUp)
+	}
+	with.WrapUp = without.WrapUp
+	if with != without {
+		t.Fatalf("only the wrap-up note should differ: %+v vs %+v", with, without)
+	}
+	if !strings.HasSuffix(liveCues(25, true).WrapUp, "]") {
+		t.Error("the note must stay in square brackets")
+	}
+}

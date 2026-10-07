@@ -23,7 +23,7 @@ func interviewJob(t *testing.T, r *Repo) Job {
 
 func TestBriefContents(t *testing.T) {
 	job := Job{Company: "Acme", Position: "Staff Engineer", Description: "Lead payments.", Notes: "Values ownership."}
-	brief := buildInterviewBrief(job, []Contact{{Name: "Maya", Role: "Hiring manager"}}, "# Jane\n- Built billing at Brex", testSetup)
+	brief := buildInterviewBrief(job, []Contact{{Name: "Maya", Role: "Hiring manager"}}, "# Jane\n- Built billing at Brex", testSetup, nil)
 	for _, want := range []string{"Acme", "Staff Engineer", "behavioral", "25 minutes", "tough", "conflict stories",
 		"Lead payments.", "Values ownership.", "Built billing at Brex", "Hiring manager", "one question at a time", "Dana Reyes"} {
 		if !strings.Contains(brief, want) {
@@ -36,7 +36,7 @@ func TestBriefContents(t *testing.T) {
 }
 
 func TestBriefWithoutResume(t *testing.T) {
-	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "  ", testSetup)
+	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "  ", testSetup, nil)
 	if !strings.Contains(brief, "No resume was provided") {
 		t.Fatal("the brief should say there's no resume")
 	}
@@ -84,7 +84,7 @@ func TestPrepareInterview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" || live.Company != "Acme" || live.Kind != "behavioral" || live.Cues != liveCues(25) {
+	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" || live.Company != "Acme" || live.Kind != "behavioral" || live.Cues != liveCues(25, false) {
 		t.Fatalf("live = %+v", live)
 	}
 	if sentSetup["model"] != "models/gemini-3.8-live" {
@@ -258,11 +258,11 @@ func TestInterviewLengthErrorListsChoices(t *testing.T) {
 }
 
 func TestLiveCuesTiming(t *testing.T) {
-	short := liveCues(10)
+	short := liveCues(10, false)
 	if short.WrapUpAtMs != 8*60_000 || short.TimeUpAtMs != 10*60_000 || !strings.Contains(short.WrapUp, "about 2 minutes") {
 		t.Fatalf("10-minute cues = %+v", short)
 	}
-	long := liveCues(45)
+	long := liveCues(45, false)
 	if long.WrapUpAtMs != 41*60_000 || !strings.Contains(long.WrapUp, "about 4 minutes") {
 		t.Fatalf("45-minute cues = %+v", long)
 	}
@@ -288,7 +288,7 @@ func TestLiveSetupWaitsThroughThinkingPauses(t *testing.T) {
 }
 
 func TestBriefAndScoringAllowForPauses(t *testing.T) {
-	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "", testSetup)
+	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "", testSetup, nil)
 	if !strings.Contains(brief, "pausing to think") {
 		t.Error("brief should tell the interviewer to wait through pauses")
 	}
@@ -335,7 +335,7 @@ func TestTranscriptTextLabelsCutOffs(t *testing.T) {
 }
 
 func TestLiveCuesRejoinNote(t *testing.T) {
-	rejoin := liveCues(25).Rejoin
+	rejoin := liveCues(25, false).Rejoin
 	if !strings.HasPrefix(rejoin, "(") || !strings.Contains(rejoin, "without greeting") {
 		t.Fatalf("rejoin = %q", rejoin)
 	}

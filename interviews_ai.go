@@ -170,8 +170,9 @@ func validateInterviewSetup(s *InterviewSetup) error {
 	return nil
 }
 
-// buildInterviewBrief is the interviewer's system instruction. s must already be validated.
-func buildInterviewBrief(job Job, contacts []Contact, resume string, s InterviewSetup) string {
+// buildInterviewBrief is the interviewer's system instruction. s must already be
+// validated; plan is nil when the interview has no question plan.
+func buildInterviewBrief(job Job, contacts []Contact, resume string, s InterviewSetup, plan *InterviewPlan) string {
 	kind, _ := findInterviewKind(s.Kind)
 	persona, _ := findInterviewPersona(s.Persona)
 	var b strings.Builder
@@ -181,6 +182,11 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 - Greet the candidate briefly and introduce yourself by name and role.
 - Ask one question at a time, then listen. Ask realistic follow-ups based on what they actually said.
 - Ground questions in the job description and in the candidate's real experience from their resume.
+- Go deep before moving on. After each answer, ask at least one follow-up that digs into their own part: what they personally did, why they chose that approach over the alternatives, what they'd do differently.
+- Ask for specifics. If an answer is vague or says "we" throughout, ask for the concrete situation, the numbers, the result, or exactly what they contributed.
+- Test claims. When the candidate states an achievement, ask how it was measured and what the baseline was.
+- Don't accept a polished summary as the whole answer. If an answer sounds rehearsed, probe for one detail that couldn't have been rehearsed.
+- One topic at a time. Finish a thread before starting a new one, and keep your own turns short.
 - Never coach, grade or give feedback during the interview. Stay in character the whole time.
 - You'll receive silent timekeeper notes in [square brackets]. Never mention or read them out; when told time is nearly up, wrap up and invite the candidate's questions, then answer them in character. When told time is up, thank the candidate and close the interview.
 - If the candidate stops mid-sentence or trails off, they're probably pausing to think. Don't move on: wait, or briefly invite them to continue ("Take your time" / "Go on").
@@ -188,6 +194,9 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 `)
 	if s.Focus != "" {
 		fmt.Fprintf(&b, "- The candidate asked to practice: %s. Make sure this comes up.\n", s.Focus)
+	}
+	if plan != nil {
+		b.WriteString("\n" + plan.briefSection())
 	}
 	fmt.Fprintf(&b, "\nJob description:\n%s\n", orDefault(job.Description, "(not provided)"))
 	if strings.TrimSpace(job.Notes) != "" {
@@ -246,15 +255,21 @@ type LiveCues struct {
 	Rejoin string `json:"rejoin"`
 }
 
-func liveCues(minutes int) LiveCues {
+// liveCues builds the session's notes; with a plan, the wrap-up note also asks
+// for any core question still unasked.
+func liveCues(minutes int, hasPlan bool) LiveCues {
 	warnMinutes := 4
 	if minutes <= 10 {
 		warnMinutes = 2
 	}
+	wrapUp := fmt.Sprintf("Timekeeper: about %d minutes remain. Start wrapping up after the current answer.", warnMinutes)
+	if hasPlan {
+		wrapUp += " If a core question from your plan hasn't been asked yet, ask the most important one before wrapping up."
+	}
 	const msPerMinute = 60_000
 	return LiveCues{
 		Start:      "(The candidate has joined the call. Begin the interview.)",
-		WrapUp:     fmt.Sprintf("[Timekeeper: about %d minutes remain. Start wrapping up after the current answer.]", warnMinutes),
+		WrapUp:     "[" + wrapUp + "]",
 		WrapUpAtMs: int64(minutes-warnMinutes) * msPerMinute,
 		TimeUp:     "[Timekeeper: time is up. Thank the candidate and close the interview now.]",
 		TimeUpAtMs: int64(minutes) * msPerMinute,
@@ -424,7 +439,7 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	if err != nil {
 		return LiveSession{}, err
 	}
-	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup))
+	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup, nil))
 	mi, err := r.CreateMockInterview(jobID, setup, "")
 	if err != nil {
 		return LiveSession{}, err
@@ -438,7 +453,8 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
 		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName,
-		Cues: liveCues(setup.Minutes)}, nil
+		Cues: liveCues(setup.Minutes, false)}, nil
+
 }
 
 // nudgeAnswer asks the tips provider for one coaching cue about the answer that

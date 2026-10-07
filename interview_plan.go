@@ -108,3 +108,28 @@ func (p InterviewPlan) validate(minutes int) error {
 	}
 	return nil
 }
+
+// briefSection is the plan as the interviewer's private notes, for the brief.
+func (p InterviewPlan) briefSection() string {
+	var b strings.Builder
+	b.WriteString(`Your interview plan (private notes):
+- Cover every core question below, in order. Put each one in your own words, as you naturally would, rather than reading it out.
+- Follow up on what the candidate actually said before moving on. Use the probes when the answer doesn't already cover them, adapted to their answer.
+- Use "a strong answer covers" to decide what to probe for. Never read it out and never hint at it.
+- Keep to each question's time budget; when you're well over it, move on to the next question.
+- Work the resume claims in where they fit naturally.
+
+`)
+	for i, q := range p.Questions {
+		fmt.Fprintf(&b, "%d. %s (about %d min; tests %s)\n", i+1, q.Question, q.Minutes, q.Tests)
+		fmt.Fprintf(&b, "   Probes: %s\n", strings.Join(q.Probes, " | "))
+		fmt.Fprintf(&b, "   A strong answer covers: %s\n", strings.Join(q.StrongAnswer, "; "))
+	}
+	if len(p.ResumeClaims) > 0 {
+		b.WriteString("\nResume claims to verify:\n")
+		for _, c := range p.ResumeClaims {
+			fmt.Fprintf(&b, "- %s: %s\n", c.Claim, c.Probe)
+		}
+	}
+	return b.String()
+}
