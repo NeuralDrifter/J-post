@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
-import { ChevronLeft, LoaderCircle, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronLeft, LoaderCircle, RefreshCw, Repeat, Trash2 } from 'lucide-react'
 import { confirmDialog } from '../../components/ConfirmDialog'
+import { InterviewSetupModal } from '../../components/interview/InterviewSetupModal'
 import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
 import {
@@ -9,19 +10,24 @@ import {
   DeleteMockInterview,
   DeleteScorecard,
   GetInterviewRecording,
+  GetJob,
   GetMockInterview,
   ListAIProviders,
+  ListPlanAttempts,
   RegradeInterview,
   ScoreInterview,
+  type main,
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
 import { averageScore, gradeActions } from '../../lib/interview'
 import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { openMenu } from '../../lib/menu'
+import { canRetry } from '../../lib/plans'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
-import { cardLabel, ScorecardTabs, ScorecardView, TranscriptWithTips } from './ReviewParts'
+import { AttemptsStrip, CompareAttempts, PlanView } from './PlanParts'
+import { cardLabel, PLAN_TAB, ScorecardTabs, ScorecardView, TranscriptWithTips } from './ReviewParts'
 
 export default function InterviewReviewPage() {
   const { id = '' } = useParams()
@@ -34,6 +40,12 @@ export default function InterviewReviewPage() {
   const [regrading, setRegrading] = useState('')
   const [selected, setSelected] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
+  const [retryJob, setRetryJob] = useState<main.Job>()
+  // Every attempt at this interview's plan, for the comparison (only fetched when there are several).
+  const { data: attemptList } = useLoad(
+    () => ((mi?.attempts.length ?? 0) > 1 ? api(ListPlanAttempts(id)) : Promise.resolve(undefined)),
+    [id, mi?.attempts.length, mi?.scorecards.length],
+  )
   const audio = useRef<HTMLAudioElement>(null)
   const scoredOnce = useRef(false)
 
@@ -65,6 +77,7 @@ export default function InterviewReviewPage() {
 
   if (!mi) return <p className="text-sm text-ink-2">Loading…</p>
 
+  const showPlan = !!mi.plan && (selected === PLAN_TAB || mi.scorecards.length === 0)
   const shown = mi.scorecards.find((c) => c.provider === selected) ?? mi.scorecards[0]
   const avg = averageScore(shown?.scorecard.overall)
   const actions = gradeActions(mi.status)
@@ -114,6 +127,11 @@ export default function InterviewReviewPage() {
     toast.success('Mock interview deleted')
   }
 
+  const retry = async () => {
+    const job = await api(GetJob(mi.jobId))
+    if (job) setRetryJob(job)
+  }
+
   const seek = (ms: number) => {
     if (!audio.current) return
     audio.current.currentTime = ms / 1000
@@ -141,6 +159,11 @@ export default function InterviewReviewPage() {
             </div>
           )}
           <div className="flex gap-2">
+            {canRetry(mi) && (
+              <button className="btn btn-ghost" onClick={retry} title="A new attempt with the same planned questions">
+                <Repeat size={15} /> Retry these questions
+              </button>
+            )}
             {actions.gradeNow && (
               <button className="btn btn-ghost" onClick={score} disabled={scoring || !!regrading}>
                 <RefreshCw size={15} /> Grade now
@@ -156,6 +179,8 @@ export default function InterviewReviewPage() {
             </button>
           </div>
         </div>
+        <AttemptsStrip current={mi.id} attempts={mi.attempts} onOpen={(other) => navigate(`/interviews/${other}`)} />
+        {mi.planError && <p className="mt-3 text-xs text-ink-3">The question plan for this interview couldn't be read.</p>}
         {audioUrl && (
           <div className="mt-4 flex items-center gap-2">
             <audio ref={audio} src={audioUrl} controls className="w-full" />
@@ -183,17 +208,30 @@ export default function InterviewReviewPage() {
 
       <div className="grid items-start gap-4 min-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-4">
-          {shown && (
-            <>
-              <ScorecardTabs cards={mi.scorecards} selected={shown.provider} providers={providers} onSelect={setSelected} onDelete={deleteCard} />
-              <ScorecardView card={shown.scorecard} />
-            </>
+          {(shown || mi.plan) && (
+            <ScorecardTabs
+              cards={mi.scorecards}
+              selected={showPlan ? PLAN_TAB : (shown?.provider ?? '')}
+              providers={providers}
+              hasPlan={!!mi.plan}
+              onSelect={setSelected}
+              onDelete={deleteCard}
+            />
           )}
+          {showPlan && mi.plan ? <PlanView record={mi.plan} providers={providers} /> : shown && <ScorecardView card={shown.scorecard} />}
+          {mi.plan && attemptList && attemptList.length > 1 && <CompareAttempts plan={mi.plan.plan} attempts={attemptList} />}
         </div>
         <Panel title="Transcript" className="min-[1200px]:sticky min-[1200px]:top-0">
           <TranscriptWithTips lines={mi.transcript} tips={mi.tips} canPlay={!!audioUrl} onSeek={seek} />
         </Panel>
       </div>
+      {retryJob && (
+        <InterviewSetupModal
+          job={retryJob}
+          retry={{ id: mi.id, kind: mi.kind, minutes: mi.minutes, startedAt: mi.startedAt }}
+          onClose={() => setRetryJob(undefined)}
+        />
+      )}
     </div>
   )
 }

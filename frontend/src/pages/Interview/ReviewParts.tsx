@@ -11,38 +11,47 @@ export function cardLabel(card: main.ScorecardResult, providers: main.AIProvider
   return card.model ? `${name} · ${card.model}` : name
 }
 
+/** The id ScorecardTabs uses for the plan tab (provider ids never clash with it). */
+export const PLAN_TAB = 'plan'
+
 export function ScorecardTabs({
   cards,
   selected,
   providers,
+  hasPlan = false,
   onSelect,
   onDelete,
 }: {
   cards: main.ScorecardResult[]
   selected: string
   providers: main.AIProvider[] | undefined
-  onSelect: (provider: string) => void
+  hasPlan?: boolean
+  onSelect: (tab: string) => void
   onDelete: (provider: string) => void
 }) {
+  const tabs = cards.map((c) => ({ id: c.provider, label: cardLabel(c, providers) }))
+  if (hasPlan) tabs.push({ id: PLAN_TAB, label: 'Plan' })
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {cards.length > 1 && (
+      {tabs.length > 1 && (
         <div className="flex flex-wrap rounded-lg border border-line bg-white/5 p-0.5">
-          {cards.map((c) => (
+          {tabs.map((t) => (
             <button
-              key={c.provider}
-              onClick={() => onSelect(c.provider)}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${c.provider === selected ? 'bg-accent/30 text-ink' : 'text-ink-2 hover:text-ink'}`}
+              key={t.id}
+              onClick={() => onSelect(t.id)}
+              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${t.id === selected ? 'bg-accent/30 text-ink' : 'text-ink-2 hover:text-ink'}`}
             >
-              {cardLabel(c, providers)}
+              {t.label}
             </button>
           ))}
         </div>
       )}
-      {cards.length === 1 && <span className="font-mono text-[11px] text-ink-3">Graded by {cardLabel(cards[0], providers)}</span>}
-      <button className="ml-auto flex items-center gap-1 text-xs text-ink-3 hover:text-danger" onClick={() => onDelete(selected)}>
-        <Trash2 size={12} /> Delete this scorecard
-      </button>
+      {cards.length === 1 && tabs.length === 1 && <span className="font-mono text-[11px] text-ink-3">Graded by {cardLabel(cards[0], providers)}</span>}
+      {selected !== PLAN_TAB && cards.length > 0 && (
+        <button className="ml-auto flex items-center gap-1 text-xs text-ink-3 hover:text-danger" onClick={() => onDelete(selected)}>
+          <Trash2 size={12} /> Delete this scorecard
+        </button>
+      )}
     </div>
   )
 }
