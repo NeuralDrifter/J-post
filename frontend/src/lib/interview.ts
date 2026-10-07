@@ -49,3 +49,14 @@ export function attachTips(lines: main.TranscriptLine[], tips: main.InterviewTip
   }
   return { byLine, unmatched }
 }
+
+/**
+ * Which grade buttons an interview offers. "Grade now" uses the default grader
+ * from Settings; "Grade with…" picks any provider, including when grading
+ * failed or never happened.
+ */
+export function gradeActions(status: string): { gradeNow: boolean; gradeWith: boolean } {
+  if (status === 'scoring') return { gradeNow: false, gradeWith: false }
+  if (status === 'done') return { gradeNow: false, gradeWith: true }
+  return { gradeNow: true, gradeWith: true }
+}

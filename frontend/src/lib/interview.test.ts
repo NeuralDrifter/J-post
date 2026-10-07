@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { main } from './backend'
-import { attachTips, holdSession, peekSession, releaseSession } from './interview'
+import { attachTips, gradeActions, holdSession, peekSession, releaseSession } from './interview'
 
 describe('pending live sessions', () => {
   it('can be read repeatedly (React may run state setup twice) until released', () => {
@@ -33,5 +33,15 @@ describe('attachTips', () => {
     const { byLine, unmatched } = attachTips(lines, [tip(99_000, 'Orphan tip'), tip(9000, 'Not on an interviewer line')])
     expect(byLine.size).toBe(0)
     expect(unmatched.map((t) => t.text)).toEqual(['Orphan tip', 'Not on an interviewer line'])
+  })
+})
+
+describe('gradeActions', () => {
+  it('lets you pick a provider whenever an interview can be graded', () => {
+    expect(gradeActions('failed')).toEqual({ gradeNow: true, gradeWith: true })
+    expect(gradeActions('unscored')).toEqual({ gradeNow: true, gradeWith: true })
+    expect(gradeActions('live')).toEqual({ gradeNow: true, gradeWith: true })
+    expect(gradeActions('done')).toEqual({ gradeNow: false, gradeWith: true })
+    expect(gradeActions('scoring')).toEqual({ gradeNow: false, gradeWith: false })
   })
 })

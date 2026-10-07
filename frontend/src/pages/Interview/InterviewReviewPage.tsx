@@ -16,7 +16,7 @@ import {
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
-import { averageScore } from '../../lib/interview'
+import { averageScore, gradeActions } from '../../lib/interview'
 import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { openMenu } from '../../lib/menu'
 import { toast } from '../../lib/toast'
@@ -67,7 +67,7 @@ export default function InterviewReviewPage() {
 
   const shown = mi.scorecards.find((c) => c.provider === selected) ?? mi.scorecards[0]
   const avg = averageScore(shown?.scorecard.overall)
-  const needsGrade = mi.status === 'failed' || mi.status === 'live' || mi.status === 'unscored'
+  const actions = gradeActions(mi.status)
 
   const regrade = async (provider: string) => {
     setRegrading(provider)
@@ -141,16 +141,15 @@ export default function InterviewReviewPage() {
             </div>
           )}
           <div className="flex gap-2">
-            {needsGrade ? (
-              <button className="btn btn-ghost" onClick={score} disabled={scoring}>
+            {actions.gradeNow && (
+              <button className="btn btn-ghost" onClick={score} disabled={scoring || !!regrading}>
                 <RefreshCw size={15} /> Grade now
               </button>
-            ) : (
-              mi.status === 'done' && (
-                <button className="btn btn-ghost" onClick={openRegradeMenu} disabled={!!regrading}>
-                  {regrading ? <LoaderCircle size={15} className="animate-spin" /> : <RefreshCw size={15} />} Re-grade with…
-                </button>
-              )
+            )}
+            {actions.gradeWith && (
+              <button className="btn btn-ghost" onClick={openRegradeMenu} disabled={scoring || !!regrading}>
+                {regrading ? <LoaderCircle size={15} className="animate-spin" /> : <RefreshCw size={15} />} {actions.gradeNow ? 'Grade with…' : 'Re-grade with…'}
+              </button>
             )}
             <button className="btn btn-danger" onClick={remove} aria-label="Delete interview" title="Delete interview">
               <Trash2 size={15} />
