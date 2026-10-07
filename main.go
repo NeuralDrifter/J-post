@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"fmt"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -12,6 +15,16 @@ import (
 var assets embed.FS
 
 func main() {
+	// Launched by headless Claude Code as a per-run MCP server: serve the task
+	// over stdin/stdout instead of opening the window.
+	if len(os.Args) == 3 && os.Args[1] == aiTaskMCPFlag {
+		if err := runAITaskMCP(context.Background(), os.Args[2], os.Stdin, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	app := NewApp(defaultDataDir())
 
 	// The window starts hidden at a conservative size; domReady resizes it to

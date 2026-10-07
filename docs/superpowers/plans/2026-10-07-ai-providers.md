@@ -18,7 +18,7 @@
 - Defaults: `gradingProvider` = `gemini-live`, `tipsProvider` = `gemini-live`, `anthropicModel` = `claude-opus-5-5`, `anthropicGradingEffort` = `high`, `anthropicTipsEffort` = `low`; efforts allowed: `low`, `medium`, `high`, `xhigh`, `max`.
 - Gemini stays on the Live model only (`liveStructured`); no Gemini text/TTS model calls.
 - The MCP server exists only for one headless run: never `claude mcp add`, never write to the user's Claude Code settings; temp folder deleted after every run (success or failure).
-- Claude Code runs with `--bare --strict-mcp-config`, no built-in tools, only `mcp__jobtrack__get_input` and `mcp__jobtrack__submit_result` allowed, `--no-session-persistence`, `--output-format json`, no console window, timeout 5 min (grading) / 60 s (tips).
+- Claude Code runs from the temp folder with stdin closed and `--setting-sources "" --strict-mcp-config --mcp-config <mcp.json> --tools "" --disable-slash-commands --allowedTools mcp__jobtrack__get_input mcp__jobtrack__submit_result --system-prompt <instruction> --no-session-persistence --output-format json` (+ `--model` when set); **never `--bare`** (it disables the OAuth login, so the user's subscription wouldn't be used); no console window; timeout 5 min (grading) / 60 s (tips). (Confirmed in Task 1's risk check.)
 - Anthropic: structured outputs (`output_config.format`), never forced `tool_choice`; thinking left unset (adaptive); refusal fallback `fallbacks: "default"` with beta `server-side-fallback-2026-07-01`; `max_tokens` 16000 grading / 1024 tips; API key never in errors.
 - One JSON Schema per task, standard form (lowercase types, `required`, `additionalProperties: false`); Gemini gets a converted copy.
 - Migrations are append-only: add migration 8; never edit 1–7.
@@ -163,7 +163,7 @@ Proves the Wails GUI executable can serve MCP over stdio when launched by `claud
 
 - [ ] **Step 1: Fake CLI** — `testdata/fakeclaude/main.go`, built by the test with `go build` into a temp dir. Behaviour by env var: `FAKE_MODE=ok` reads `--mcp-config`, parses the task file path from it, writes a canned result to `outputPath`, prints `{"is_error":false,"result":"done"}`; `FAKE_MODE=error` prints `{"is_error":true,"result":"Invalid API key · Please run /login"}` and exits 1; `FAKE_MODE=sleep` sleeps 10 s; it also writes its argv to a file named by `FAKE_ARGS`.
 - [ ] **Step 2: Failing tests:**
-  - `TestClaudeCodeArgs`: contains `-p`, `--bare`, `--strict-mcp-config`, `--mcp-config <path>`, the no-built-in-tools flag, both `--allowedTools` entries, `--no-session-persistence`, `--output-format json`, `--system-prompt <instruction>`; `--model x` only when set.
+  - `TestClaudeCodeArgs`: contains `-p`, `--setting-sources ""`, `--strict-mcp-config`, `--mcp-config <path>`, `--tools ""`, `--disable-slash-commands`, both `--allowedTools` entries, `--no-session-persistence`, `--output-format json`, `--system-prompt <instruction>`; never `--bare`; `--model x` only when set.
   - `TestClaudeCodeRunsAndReadsResult` (`ok`): result decoded; temp folder gone afterwards; mcp.json's server command is this test binary path + `--ai-task-mcp`.
   - `TestClaudeCodeSurfacesErrorResult` (`error`): error contains "Please run /login".
   - `TestClaudeCodeTimesOutAndCleansUp` (`sleep`, timeout 200 ms): error says it timed out; temp folder gone.
