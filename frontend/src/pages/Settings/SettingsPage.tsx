@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { ExternalLink, FolderOpen, LoaderCircle } from 'lucide-react'
+import { Link } from 'react-router'
+import { ExternalLink, FolderOpen, LoaderCircle, Scale } from 'lucide-react'
 import { CodePicker } from '../../components/comp/CodePicker'
 import { PackageEditor } from '../../components/comp/PackageEditor'
 import { Field } from '../../components/JobForm'
@@ -265,6 +266,12 @@ function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: s
             <FolderOpen size={15} /> Open
           </button>
         </div>
+      </Section>
+
+      <Section title="About" hint="Job Track is built on open-source libraries and public data. Their licenses and credits are listed here.">
+        <Link to="/licenses" className="btn btn-ghost w-fit">
+          <Scale size={15} /> Open-source licenses
+        </Link>
       </Section>
 
       <div className="flex justify-end">

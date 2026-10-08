@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { HashRouter, Route, Routes, useParams } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { ConfirmHost } from './components/ConfirmDialog'
@@ -16,6 +16,9 @@ import InterviewsPage from './pages/Interviews/InterviewsPage'
 import LiveInterviewPage from './pages/Interview/LiveInterviewPage'
 import PipelinePage from './pages/Pipeline/PipelinePage'
 import SettingsPage from './pages/Settings/SettingsPage'
+
+// Loaded on demand: it carries every license text (~440 KB).
+const LicensesPage = lazy(() => import('./pages/Licenses/LicensesPage'))
 
 // Remount the detail page per job so no state leaks between jobs.
 function JobDetailRoute() {
@@ -50,6 +53,14 @@ export default function App() {
           <Route path="interviews/:id/live" element={<LiveInterviewPage />} />
           <Route path="interviews/:id" element={<InterviewReviewRoute />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route
+            path="licenses"
+            element={
+              <Suspense fallback={null}>
+                <LicensesPage />
+              </Suspense>
+            }
+          />
         </Route>
       </Routes>
       <Toaster />
