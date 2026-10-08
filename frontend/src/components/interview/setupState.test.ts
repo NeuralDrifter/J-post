@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { main } from '../../lib/backend'
-import { initialSetup, preparingLabel } from './setupState'
+import { closeUnlessStarting, initialSetup, preparingLabel } from './setupState'
 
 const job = (status: string) => ({ id: 'j1', status }) as main.Job
 
@@ -31,5 +31,16 @@ describe('preparingLabel', () => {
   it('names the planner, or just starts a retry', () => {
     expect(preparingLabel('Claude Code', false)).toBe('Preparing your questions with Claude Code…')
     expect(preparingLabel('Claude Code', true)).toBe('Starting…')
+  })
+})
+
+describe('closeUnlessStarting', () => {
+  it('ignores close requests while the interview is being prepared', () => {
+    let closed = 0
+    const onClose = () => closed++
+    closeUnlessStarting(true, onClose)()
+    expect(closed).toBe(0)
+    closeUnlessStarting(false, onClose)()
+    expect(closed).toBe(1)
   })
 })

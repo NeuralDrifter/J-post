@@ -9,7 +9,7 @@ import { useInterviewOptions } from '../../lib/interviewOptions'
 import { useLoad } from '../../lib/useLoad'
 import { Field } from '../JobForm'
 import { Modal } from '../Modal'
-import { initialSetup, preparingLabel, type RetryInfo } from './setupState'
+import { closeUnlessStarting, initialSetup, preparingLabel, type RetryInfo } from './setupState'
 import { VoicePicker } from './VoicePicker'
 
 /** Sets up a mock interview; with retry, a new attempt at that interview's question plan. */
@@ -50,7 +50,7 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: main.Job; on
   }
 
   return (
-    <Modal title={retry ? `Retry · ${job.company}` : `Mock interview · ${job.company}`} onClose={onClose} width="max-w-2xl">
+    <Modal title={retry ? `Retry · ${job.company}` : `Mock interview · ${job.company}`} onClose={closeUnlessStarting(starting, onClose)} width="max-w-2xl">
       {noKey ? (
         <div className="space-y-4">
           <p className="text-sm text-ink-2">Mock interviews use Google Gemini. Add your Gemini API key in Settings → AI first.</p>
@@ -186,7 +186,7 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: main.Job; on
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-ink-3">Uses your microphone. Headphones give the best results.</p>
             <div className="flex gap-2">
-              <button type="button" className="btn btn-ghost" onClick={onClose}>
+              <button type="button" className="btn btn-ghost" onClick={onClose} disabled={starting}>
                 Cancel
               </button>
               <button className="btn btn-primary" disabled={starting}>
