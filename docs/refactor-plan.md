@@ -69,7 +69,7 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: process helpers -> internal/osproc
 - [x] prep: `dateLayout` and `lastLine` move into text.go; `clamp` moves to window.go
 - [x] extract-leaf-module: string and HTML helpers -> internal/textproc
-- [ ] prep: `httpErrorMessage` moves next to the HTTP client
+- [x] prep: `httpErrorMessage` and its test move next to the HTTP client
 - [ ] extract-leaf-module: HTTP client -> internal/httpapi
 - [ ] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
 - [ ] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)

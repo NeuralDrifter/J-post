@@ -42,3 +42,25 @@ func TestAPIRequestReturnsAnyStatus(t *testing.T) {
 		t.Fatalf("resp = %+v, err = %v", resp, err)
 	}
 }
+
+func TestHTTPErrorMessage(t *testing.T) {
+	html := `<!DOCTYPE html> <html> <!-- This file is managed by Chef --> <head><title>Uh oh, something isn't right</title>`
+	cases := []struct {
+		status int
+		body   string
+		want   string
+	}{
+		{503, html, "Adzuna is temporarily unavailable (503). Try again later."},
+		{502, "", "Adzuna is temporarily unavailable (502). Try again later."},
+		{401, html, "Adzuna rejected the API key (401). Check it in Settings."},
+		{403, "", "Adzuna rejected the API key (403). Check it in Settings."},
+		{429, html, "Adzuna is rate-limiting requests (429). Try again later."},
+		{404, "<html>not found</html>", "Adzuna returned an error (404)."},
+		{400, `{"error":"bad where parameter"}`, `Adzuna error 400: {"error":"bad where parameter"}`},
+	}
+	for _, c := range cases {
+		if got := httpErrorMessage("Adzuna", c.status, []byte(c.body)); got != c.want {
+			t.Errorf("%d: got %q, want %q", c.status, got, c.want)
+		}
+	}
+}

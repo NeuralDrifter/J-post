@@ -5,8 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -199,23 +197,4 @@ func jobicySearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]ra
 		out = append(out, j)
 	}
 	return out, nil
-}
-
-// httpErrorMessage turns a failed response into a short, readable message.
-// Many sites answer outages with an HTML page, which is useless in a toast.
-func httpErrorMessage(source string, status int, body []byte) string {
-	switch {
-	case status == http.StatusUnauthorized || status == http.StatusForbidden:
-		return fmt.Sprintf("%s rejected the API key (%d). Check it in Settings.", source, status)
-	case status == http.StatusTooManyRequests:
-		return fmt.Sprintf("%s is rate-limiting requests (%d). Try again later.", source, status)
-	case status >= 500:
-		return fmt.Sprintf("%s is temporarily unavailable (%d). Try again later.", source, status)
-	}
-	text := strings.TrimSpace(string(body))
-	lower := strings.ToLower(textproc.FirstN(text, 200))
-	if text == "" || strings.HasPrefix(lower, "<!doctype") || strings.HasPrefix(lower, "<html") || strings.Contains(lower, "<head") {
-		return fmt.Sprintf("%s returned an error (%d).", source, status)
-	}
-	return fmt.Sprintf("%s error %d: %s", source, status, textproc.Truncate(text, 200))
 }
