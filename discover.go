@@ -370,27 +370,6 @@ func mergeResults(lists ...[]DiscoverResult) []DiscoverResult {
 	return out
 }
 
-// markTracked flags results that are already on the board, by company+title or URL.
-func markTracked(results []DiscoverResult, jobs []Job) {
-	byKey := map[string]Job{}
-	byURL := map[string]Job{}
-	for _, j := range jobs {
-		byKey[dedupeKey(j.Company, j.Position)] = j
-		if j.URL != "" {
-			byURL[j.URL] = j
-		}
-	}
-	for i := range results {
-		j, ok := byKey[results[i].Key]
-		if !ok && results[i].URL != "" {
-			j, ok = byURL[results[i].URL]
-		}
-		if ok {
-			results[i].TrackedJobID, results[i].TrackedStatus = j.ID, j.Status
-		}
-	}
-}
-
 // runDiscover queries every requested source concurrently; one failing source
 // only adds an entry to Errors.
 func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor func(source string) fetchOptions) DiscoverResponse {

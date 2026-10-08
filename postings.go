@@ -282,3 +282,24 @@ func (r *Repo) ClearDismissed(olderThanDays int) (int, error) {
 	n, err := res.RowsAffected()
 	return int(n), err
 }
+
+// markTracked flags results that are already on the board, by company+title or URL.
+func markTracked(results []DiscoverResult, jobs []Job) {
+	byKey := map[string]Job{}
+	byURL := map[string]Job{}
+	for _, j := range jobs {
+		byKey[dedupeKey(j.Company, j.Position)] = j
+		if j.URL != "" {
+			byURL[j.URL] = j
+		}
+	}
+	for i := range results {
+		j, ok := byKey[results[i].Key]
+		if !ok && results[i].URL != "" {
+			j, ok = byURL[results[i].URL]
+		}
+		if ok {
+			results[i].TrackedJobID, results[i].TrackedStatus = j.ID, j.Status
+		}
+	}
+}

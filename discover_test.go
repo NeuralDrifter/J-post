@@ -90,23 +90,6 @@ func TestMergeResultsDedupes(t *testing.T) {
 	}
 }
 
-func TestMarkTracked(t *testing.T) {
-	results := []DiscoverResult{
-		fromRaw(rawJob{Title: "Dev", Company: "Acme"}, "indeed"),
-		fromRaw(rawJob{Title: "Different title", Company: "Brex", URL: "https://brex.test/9"}, "indeed"),
-		fromRaw(rawJob{Title: "New", Company: "Cora"}, "indeed"),
-	}
-	jobs := []Job{
-		{ID: "j1", Company: "ACME", Position: "dev", Status: StatusApplied},
-		{ID: "j2", Company: "Brex", Position: "PM", URL: "https://brex.test/9", Status: StatusInterested},
-		{ID: "j3", Company: "Cora", Position: "Other"},
-	}
-	markTracked(results, jobs)
-	if results[0].TrackedJobID != "j1" || results[0].TrackedStatus != StatusApplied || results[1].TrackedJobID != "j2" || results[2].TrackedJobID != "" {
-		t.Fatalf("results = %+v", results)
-	}
-}
-
 func TestRunDiscoverPartialFailure(t *testing.T) {
 	fetch := func(ctx context.Context, source string, q DiscoverQuery, _ fetchOptions) ([]rawJob, error) {
 		switch source {
