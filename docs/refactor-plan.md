@@ -81,7 +81,7 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: Gemini REST, Live sessions, voice sampling -> internal/gemini (+ geminitest helpers)
 - [x] prep: AI tests use neutral fixtures (ai_fixtures_test.go); real-task schema checks move to aitask_tasks_test.go; TestPlanningRoleLimits moves to aitask_test.go
 - [x] extract-leaf-module: AI task runner and providers -> internal/ai (+ aitest helpers, testdata/fakeclaude)
-- [ ] prep: split the CompPackage type from its Repo persistence in comp.go
+- [x] prep: CompPackage type, kinds, vesting and validation move to comp_package.go; columns() becomes compColumnsOf()
 - [ ] extract-pure-core: CompPackage + Evaluate -> internal/comp
 - [ ] prep: split fetchers from merge/Repo code in discover.go and sources.go
 - [ ] extract-leaf-module: job-site fetchers -> internal/discover (+ scraper.py)

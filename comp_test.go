@@ -10,14 +10,6 @@ import (
 	"testing"
 )
 
-func basePackage(jobID string) CompPackage {
-	return CompPackage{
-		JobID: jobID, Kind: "offer", Label: "Offer", BaseSalary: 150000, TargetBonusPct: 10,
-		EquityType: "rsu", RSUGrantValue: 200000, Vesting: "standard", TaxState: "CO", AreaCode: "19740",
-		OccupationCode: "15-1252", K401MatchPct: 50, K401MatchCapPct: 6, K401ContribPct: 6,
-	}
-}
-
 func mustSavePkg(t *testing.T, r *Repo, p CompPackage) CompPackage {
 	t.Helper()
 	saved, err := r.SaveCompPackage(p)
