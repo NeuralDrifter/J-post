@@ -16,6 +16,20 @@ export namespace main {
 	        this.unavailable = source["unavailable"];
 	    }
 	}
+	export class AIProviderTest {
+	    model: string;
+	    millis: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIProviderTest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.model = source["model"];
+	        this.millis = source["millis"];
+	    }
+	}
 	export class Attachment {
 	    id: string;
 	    jobId: string;
@@ -1505,6 +1519,19 @@ export namespace main {
 	    anthropicTipsEffort: string;
 	    claudeCodePath: string;
 	    claudeCodeModel: string;
+	    openaiKey: string;
+	    openaiModel: string;
+	    deepseekKey: string;
+	    deepseekModel: string;
+	    ollamaURL: string;
+	    ollamaModel: string;
+	    lmStudioURL: string;
+	    lmStudioKey: string;
+	    lmStudioModel: string;
+	    customAIBaseURL: string;
+	    customAIKey: string;
+	    customAIModel: string;
+	    customAIMode: string;
 	    discoverCacheHours: number;
 	
 	    static createFrom(source: any = {}) {
@@ -1534,6 +1561,19 @@ export namespace main {
 	        this.anthropicTipsEffort = source["anthropicTipsEffort"];
 	        this.claudeCodePath = source["claudeCodePath"];
 	        this.claudeCodeModel = source["claudeCodeModel"];
+	        this.openaiKey = source["openaiKey"];
+	        this.openaiModel = source["openaiModel"];
+	        this.deepseekKey = source["deepseekKey"];
+	        this.deepseekModel = source["deepseekModel"];
+	        this.ollamaURL = source["ollamaURL"];
+	        this.ollamaModel = source["ollamaModel"];
+	        this.lmStudioURL = source["lmStudioURL"];
+	        this.lmStudioKey = source["lmStudioKey"];
+	        this.lmStudioModel = source["lmStudioModel"];
+	        this.customAIBaseURL = source["customAIBaseURL"];
+	        this.customAIKey = source["customAIKey"];
+	        this.customAIModel = source["customAIModel"];
+	        this.customAIMode = source["customAIMode"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
 	    }
 	}

@@ -54,6 +54,8 @@ export function GetStartupError():Promise<string>;
 
 export function InboxCounts():Promise<main.InboxCounts>;
 
+export function ListAIModels(arg1:string,arg2:main.Settings):Promise<Array<string>>;
+
 export function ListAIProviders():Promise<Array<main.AIProvider>>;
 
 export function ListAllMockInterviews():Promise<Array<main.MockInterviewSummary>>;
@@ -135,6 +137,8 @@ export function SearchAreas(arg1:string):Promise<Array<main.Option>>;
 export function SearchOccupations(arg1:string):Promise<Array<main.Option>>;
 
 export function ShowAttachmentInFolder(arg1:string):Promise<void>;
+
+export function TestAIProvider(arg1:string,arg2:main.Settings):Promise<main.AIProviderTest>;
 
 export function TestClaudeCode(arg1:string):Promise<string>;
 

@@ -13,6 +13,12 @@ const (
 	providerGeminiLive = "gemini-live"
 	providerAnthropic  = "anthropic"
 	providerClaudeCode = "claude-code"
+	// OpenAI-style APIs, all served by openAIProvider (provider_openai.go).
+	providerOpenAI           = "openai"
+	providerDeepSeek         = "deepseek"
+	providerOllama           = "ollama"
+	providerLMStudio         = "lmstudio"
+	providerOpenAICompatible = "openai-compatible"
 )
 
 // aiRole picks per-role settings such as effort and timeouts.
@@ -49,7 +55,11 @@ type aiProvider interface {
 
 // aiProviders lists every provider in display order.
 func aiProviders() []aiProvider {
-	return []aiProvider{geminiProvider{}, anthropicProvider{}, claudeCodeProvider{}}
+	out := []aiProvider{geminiProvider{}, anthropicProvider{}, claudeCodeProvider{}}
+	for _, p := range openAIPresets {
+		out = append(out, openAIProvider{p})
+	}
+	return out
 }
 
 // AIProvider is a provider as Settings and the review page see it.

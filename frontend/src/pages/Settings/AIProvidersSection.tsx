@@ -5,6 +5,7 @@ import { api } from '../../lib/api'
 import { BrowserOpenURL, ListAIProviders, TestClaudeCode, type main } from '../../lib/backend'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import { ModelPicker, TestProviderButton } from './ModelPicker'
 import { Section } from './Section'
 
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
@@ -48,6 +49,9 @@ export function AIProvidersSection({ s, setS }: Props) {
       </p>
       <p className="mt-1 text-[11px] text-ink-3">
         Question plan: Gemini Live is fastest; Claude Code and the Anthropic API usually write deeper questions but take up to a minute.
+      </p>
+      <p className="mt-1 text-[11px] text-ink-3">
+        OpenAI, DeepSeek, Ollama or LM Studio on your own PC, or any OpenAI-compatible service can also grade, coach and plan. Set them up below.
       </p>
 
       <ProviderBlock title="Gemini Live" note="Runs the interview itself, so it's always needed for the voice.">
@@ -105,6 +109,83 @@ export function AIProvidersSection({ s, setS }: Props) {
             placeholder="Your plan's default"
           />
         </Field>
+      </ProviderBlock>
+
+      <ProviderBlock title="OpenAI" note="Pay-as-you-go with your own API key.">
+        <Field label="OpenAI API key" wide>
+          <input className="field" type="password" autoComplete="off" value={s.openaiKey} onChange={(e) => setS({ ...s, openaiKey: e.target.value })} />
+        </Field>
+        <Field label="Model" wide>
+          <ModelPicker providerId="openai" settings={s} value={s.openaiModel} onChange={(v) => setS({ ...s, openaiModel: v })} />
+        </Field>
+        <TestProviderButton providerId="openai" label="OpenAI" settings={s} />
+        <LinkButton url="https://platform.openai.com/api-keys">Get an OpenAI API key</LinkButton>
+      </ProviderBlock>
+
+      <ProviderBlock title="DeepSeek" note="Pay-as-you-go with your own API key. Low prices; repeated instructions are cached automatically.">
+        <Field label="DeepSeek API key" wide>
+          <input className="field" type="password" autoComplete="off" value={s.deepseekKey} onChange={(e) => setS({ ...s, deepseekKey: e.target.value })} />
+        </Field>
+        <Field label="Model" wide>
+          <ModelPicker providerId="deepseek" settings={s} value={s.deepseekModel} onChange={(v) => setS({ ...s, deepseekModel: v })} />
+        </Field>
+        <TestProviderButton providerId="deepseek" label="DeepSeek" settings={s} />
+        <LinkButton url="https://platform.deepseek.com/api_keys">Get a DeepSeek API key</LinkButton>
+        <p className="col-span-2 rounded-xl border border-warn/30 bg-warn/5 px-3 py-2 text-[11px] leading-relaxed text-amber-200/90">
+          Privacy: DeepSeek's privacy policy says it collects, processes and stores data in the People's Republic of China. Keep that in mind before sending
+          your resume and interview transcripts.
+        </p>
+      </ProviderBlock>
+
+      <ProviderBlock title="Ollama (local)" note="Runs models on your own computer: free, and nothing leaves your PC. Install Ollama and download a model first.">
+        <Field label="Server address" wide>
+          <input className="field font-mono text-xs" value={s.ollamaURL} onChange={(e) => setS({ ...s, ollamaURL: e.target.value })} />
+        </Field>
+        <Field label="Model" wide>
+          <ModelPicker providerId="ollama" settings={s} value={s.ollamaModel} onChange={(v) => setS({ ...s, ollamaModel: v })} />
+        </Field>
+        <TestProviderButton providerId="ollama" label="Ollama" settings={s} />
+        <LinkButton url="https://ollama.com/download">Download Ollama</LinkButton>
+      </ProviderBlock>
+
+      <ProviderBlock title="LM Studio (local)" note="Runs models on your own computer: free, and nothing leaves your PC. Load a model and start the server in LM Studio's Developer tab.">
+        <Field label="Server address" wide>
+          <input className="field font-mono text-xs" value={s.lmStudioURL} onChange={(e) => setS({ ...s, lmStudioURL: e.target.value })} />
+        </Field>
+        <Field label="API token (only if Require Authentication is on)" wide>
+          <input className="field" type="password" autoComplete="off" value={s.lmStudioKey} onChange={(e) => setS({ ...s, lmStudioKey: e.target.value })} />
+        </Field>
+        <Field label="Model" wide>
+          <ModelPicker providerId="lmstudio" settings={s} value={s.lmStudioModel} onChange={(v) => setS({ ...s, lmStudioModel: v })} />
+        </Field>
+        <TestProviderButton providerId="lmstudio" label="LM Studio" settings={s} />
+        <LinkButton url="https://lmstudio.ai/download">Download LM Studio</LinkButton>
+      </ProviderBlock>
+
+      <ProviderBlock title="OpenAI-compatible (custom)" note="Any other service that speaks OpenAI's format. Not tested by Job Track; use Test to check it.">
+        <Field label="Server address" wide>
+          <input
+            className="field font-mono text-xs"
+            value={s.customAIBaseURL}
+            onChange={(e) => setS({ ...s, customAIBaseURL: e.target.value })}
+            placeholder="https://example.com/v1"
+          />
+        </Field>
+        <Field label="API key (if needed)" wide>
+          <input className="field" type="password" autoComplete="off" value={s.customAIKey} onChange={(e) => setS({ ...s, customAIKey: e.target.value })} />
+        </Field>
+        <Field label="Model" wide>
+          <ModelPicker providerId="openai-compatible" settings={s} value={s.customAIModel} onChange={(v) => setS({ ...s, customAIModel: v })} />
+        </Field>
+        <Field label="Answer mode" wide>
+          <select className="field" value={s.customAIMode} onChange={(e) => setS({ ...s, customAIMode: e.target.value })}>
+            <option value="plain">plain — works with any server</option>
+            <option value="json_object">json_object — JSON mode</option>
+            <option value="json_schema">json_schema — strict schema</option>
+          </select>
+        </Field>
+        <p className="col-span-2 text-[11px] text-ink-3">Use plain if the server rejects the others.</p>
+        <TestProviderButton providerId="openai-compatible" label="the custom server" settings={s} />
       </ProviderBlock>
     </Section>
   )
