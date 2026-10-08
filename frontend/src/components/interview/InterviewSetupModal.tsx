@@ -20,16 +20,21 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: main.Job; on
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
   const [setup, setSetup] = useState<main.InterviewSetup>(() => initialSetup(job, retry))
   const [starting, setStarting] = useState(false)
+  // What was actually submitted (Start without a plan differs from the form), for the button label.
+  const [startingWith, setStartingWith] = useState<main.InterviewSetup>(setup)
   const [failure, setFailure] = useState('')
   const options = useInterviewOptions()
 
   const noKey = settings && !settings.geminiKey
   const noResume = profile && !profile.resumeText.trim()
-  const planner = setup.planProvider || settings?.planProvider || ''
-  const plannerLabel = providers?.find((p) => p.id === planner)?.label ?? planner
+  const plannerLabel = (s: main.InterviewSetup) => {
+    const id = s.planProvider || settings?.planProvider || ''
+    return providers?.find((p) => p.id === id)?.label ?? id
+  }
 
   const begin = async (s: main.InterviewSetup) => {
     setStarting(true)
+    setStartingWith(s)
     setFailure('')
     try {
       const live = await PrepareInterview(job.id, s)
@@ -191,7 +196,7 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: main.Job; on
               </button>
               <button className="btn btn-primary" disabled={starting}>
                 {starting ? <LoaderCircle size={15} className="animate-spin" /> : <Mic size={15} />}{' '}
-                {starting ? preparingLabel(plannerLabel, !!retry || setup.planProvider === 'none') : 'Start'}
+                {starting ? preparingLabel(plannerLabel(startingWith), startingWith) : 'Start'}
               </button>
             </div>
           </div>
