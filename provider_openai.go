@@ -143,7 +143,7 @@ func (o openAIProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult
 	switch c.mode {
 	case modeJSONSchema:
 		params.ResponseFormat.OfJSONSchema = &shared.ResponseFormatJSONSchemaParam{
-			JSONSchema: shared.ResponseFormatJSONSchemaJSONSchemaParam{Name: t.name, Strict: openai.Bool(true), Schema: t.schema},
+			JSONSchema: shared.ResponseFormatJSONSchemaJSONSchemaParam{Name: t.name, Strict: openai.Bool(strictCompatible(t.schema)), Schema: t.schema},
 		}
 	case modeJSONObject:
 		params.ResponseFormat.OfJSONObject = &shared.ResponseFormatJSONObjectParam{}
@@ -175,6 +175,27 @@ func (o openAIProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult
 			openai.AssistantMessage(content),
 			openai.UserMessage("That answer wasn't valid: "+err.Error()+". Reply again with only the corrected json object."))
 	}
+}
+
+// strictCompatible reports whether OpenAI's strict mode accepts schema: every
+// object property must be required. Otherwise the schema is sent as guidance
+// and validateAnswer enforces it.
+func strictCompatible(schema map[string]any) bool {
+	switch schema["type"] {
+	case "object":
+		props, _ := schema["properties"].(map[string]any)
+		required, _ := schema["required"].([]string)
+		for name, p := range props {
+			sub, _ := p.(map[string]any)
+			if !slices.Contains(required, name) || !strictCompatible(sub) {
+				return false
+			}
+		}
+	case "array":
+		items, _ := schema["items"].(map[string]any)
+		return strictCompatible(items)
+	}
+	return true
 }
 
 // logOpenAIUsage logs token use; DeepSeek adds prompt-cache hit/miss counts.
