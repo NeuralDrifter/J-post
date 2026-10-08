@@ -12,18 +12,6 @@ import (
 // The AI task layer: every AI job in the app (interview grading, coaching tips,
 // later job ranking) is an aiTask, and any aiProvider can run it.
 
-const (
-	providerGeminiLive = "gemini-live"
-	providerAnthropic  = "anthropic"
-	providerClaudeCode = "claude-code"
-	// OpenAI-style APIs, all served by openAIProvider (provider_openai.go).
-	providerOpenAI           = "openai"
-	providerDeepSeek         = "deepseek"
-	providerOllama           = "ollama"
-	providerLMStudio         = "lmstudio"
-	providerOpenAICompatible = "openai-compatible"
-)
-
 // aiRole picks per-role settings such as effort and timeouts.
 type aiRole int
 

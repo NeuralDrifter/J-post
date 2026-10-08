@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -108,5 +109,15 @@ func TestListAIProvidersReadiness(t *testing.T) {
 	}
 	if ListAIProviders(Settings{GeminiKey: "k"})[0].Unavailable != "" {
 		t.Fatal("Gemini with a key should be ready")
+	}
+}
+
+func TestProviderIDsMatchRegistry(t *testing.T) {
+	var ids []string
+	for _, p := range aiProviders() {
+		ids = append(ids, p.id())
+	}
+	if !slices.Equal(ids, aiProviderIDs) {
+		t.Fatalf("aiProviders() = %v, but settings accept %v", ids, aiProviderIDs)
 	}
 }

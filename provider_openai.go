@@ -24,25 +24,6 @@ import (
 // its own provider; they share this one implementation.
 type openAIProvider struct{ p openAIPreset }
 
-// answerMode is how a request asks for a structured answer (response_format).
-type answerMode string
-
-const (
-	modeJSONSchema answerMode = "json_schema" // strict schema; the server enforces the shape
-	modeJSONObject answerMode = "json_object" // JSON mode; the schema goes in the instruction
-	modePlain      answerMode = "plain"       // no response_format; the schema goes in the instruction
-)
-
-var answerModes = []answerMode{modeJSONSchema, modeJSONObject, modePlain}
-
-func answerModeNames() []string {
-	names := make([]string, len(answerModes))
-	for i, m := range answerModes {
-		names[i] = string(m)
-	}
-	return names
-}
-
 // openAIConn is everything one run needs to reach a server.
 type openAIConn struct {
 	baseURL, key, model string

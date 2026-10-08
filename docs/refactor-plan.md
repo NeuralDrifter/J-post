@@ -73,7 +73,7 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: HTTP client -> internal/httpapi (fakeServer test helper copied: 4 lines)
 - [x] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
 - [x] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
-- [ ] prep: provider IDs and answer modes move to settings.go (break settings <-> ai)
+- [x] prep: provider IDs and answer modes move to settings.go (break settings <-> ai); Save checks a fixed ID list, guarded by TestProviderIDsMatchRegistry
 - [ ] extract-data-types: settings and window state store -> internal/settings
 - [ ] extract-leaf-module: Gemini API, Live, voices -> internal/gemini
 - [ ] extract-leaf-module: AI task runner and providers -> internal/ai (+ testdata/fakeclaude)

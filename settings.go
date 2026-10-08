@@ -29,6 +29,26 @@ const (
 	defaultLMStudioURL        = "http://localhost:1234/v1"
 )
 
+// AI provider IDs, as stored in the *Provider settings.
+const (
+	providerGeminiLive = "gemini-live"
+	providerAnthropic  = "anthropic"
+	providerClaudeCode = "claude-code"
+	// OpenAI-style APIs, all served by openAIProvider (provider_openai.go).
+	providerOpenAI           = "openai"
+	providerDeepSeek         = "deepseek"
+	providerOllama           = "ollama"
+	providerLMStudio         = "lmstudio"
+	providerOpenAICompatible = "openai-compatible"
+)
+
+// aiProviderIDs lists every provider a setting may name, in display order.
+// aiProviders() offers exactly these (TestProviderIDsMatchRegistry).
+var aiProviderIDs = []string{
+	providerGeminiLive, providerAnthropic, providerClaudeCode,
+	providerOpenAI, providerDeepSeek, providerOllama, providerLMStudio, providerOpenAICompatible,
+}
+
 type Settings struct {
 	AdzunaAppID  string `json:"adzunaAppId"`
 	AdzunaAppKey string `json:"adzunaAppKey"`
@@ -77,6 +97,25 @@ type Settings struct {
 
 // anthropicEfforts are the effort levels the Anthropic API accepts.
 var anthropicEfforts = []string{"low", "medium", "high", "xhigh", "max"}
+
+// answerMode is how a request asks for a structured answer (response_format).
+type answerMode string
+
+const (
+	modeJSONSchema answerMode = "json_schema" // strict schema; the server enforces the shape
+	modeJSONObject answerMode = "json_object" // JSON mode; the schema goes in the instruction
+	modePlain      answerMode = "plain"       // no response_format; the schema goes in the instruction
+)
+
+var answerModes = []answerMode{modeJSONSchema, modeJSONObject, modePlain}
+
+func answerModeNames() []string {
+	names := make([]string, len(answerModes))
+	for i, m := range answerModes {
+		names[i] = string(m)
+	}
+	return names
+}
 
 type SettingsStore struct {
 	mu       sync.Mutex
@@ -172,7 +211,7 @@ func (s *SettingsStore) Save(settings Settings) error {
 		return errors.New("follow-up threshold must be between 1 and 365 days")
 	}
 	for _, id := range []string{settings.GradingProvider, settings.TipsProvider, settings.PlanProvider} {
-		if _, ok := providerByID(id); !ok {
+		if !slices.Contains(aiProviderIDs, id) {
 			return fmt.Errorf("unknown AI provider %q", id)
 		}
 	}
