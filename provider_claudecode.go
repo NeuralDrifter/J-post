@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"jobtrack/internal/osproc"
 )
 
 // claudeCodeProvider runs tasks with headless Claude Code (`claude -p`) on the
@@ -134,10 +136,10 @@ func (claudeCodeProvider) run(ctx context.Context, s Settings, t aiTask) (aiResu
 	defer cancel()
 	cmd := exec.CommandContext(ctx, claude, claudeCodeArgs(t, mcpPath, s)...)
 	cmd.Dir = dir // keeps any project's CLAUDE.md out of the run
-	hideConsole(cmd)
+	osproc.HideConsole(cmd)
 	// On timeout or cancel, end claude and everything under it, and stop waiting
 	// for pipes a leftover process might still hold.
-	cmd.Cancel = func() error { return killProcessTree(cmd.Process) }
+	cmd.Cancel = func() error { return osproc.KillProcessTree(cmd.Process) }
 	cmd.WaitDelay = 2 * time.Second
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr // stdin stays closed, so it never waits for input
@@ -178,7 +180,7 @@ func claudeCodeVersion(ctx context.Context, s Settings) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, claude, "--version")
-	hideConsole(cmd)
+	osproc.HideConsole(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("Claude Code didn't start: %v", err)

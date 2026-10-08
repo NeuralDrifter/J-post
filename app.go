@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"jobtrack/internal/osproc"
 )
 
 // App is the thin layer bound to the frontend. Every exported method is
@@ -199,7 +201,7 @@ func (a *App) OpenAttachment(id string) error {
 	if _, err := os.Stat(att.StoredPath); err != nil {
 		return fmt.Errorf("the stored copy of %s is missing", att.FileName)
 	}
-	return openWithOS(att.StoredPath)
+	return osproc.OpenWithOS(att.StoredPath)
 }
 
 func (a *App) RenameAttachment(id, label string) error {
@@ -212,7 +214,7 @@ func (a *App) ShowAttachmentInFolder(id string) error {
 	if err != nil {
 		return err
 	}
-	return revealInFolder(att.StoredPath)
+	return osproc.RevealInFolder(att.StoredPath)
 }
 
 func (a *App) DeleteAttachment(id string) error {
@@ -312,7 +314,7 @@ func (a *App) TestPython(path string) (string, error) {
 
 func (a *App) DataDir() string { return a.dataDir }
 
-func (a *App) OpenDataDir() error { return openWithOS(a.dataDir) }
+func (a *App) OpenDataDir() error { return osproc.OpenWithOS(a.dataDir) }
 
 // ---- Compensation ----
 

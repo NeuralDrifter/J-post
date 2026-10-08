@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package main
+package osproc
 
 import (
 	"os"
@@ -12,11 +12,11 @@ import (
 	"runtime"
 )
 
-func hideConsole(cmd *exec.Cmd) {}
+func HideConsole(cmd *exec.Cmd) {}
 
-func killProcessTree(p *os.Process) error { return p.Kill() }
+func KillProcessTree(p *os.Process) error { return p.Kill() }
 
-func openWithOS(path string) error {
+func OpenWithOS(path string) error {
 	opener := "xdg-open"
 	if runtime.GOOS == "darwin" {
 		opener = "open"
@@ -24,4 +24,4 @@ func openWithOS(path string) error {
 	return exec.Command(opener, path).Start()
 }
 
-func revealInFolder(path string) error { return openWithOS(filepath.Dir(path)) }
+func RevealInFolder(path string) error { return OpenWithOS(filepath.Dir(path)) }

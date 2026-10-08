@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"jobtrack/internal/osproc"
 )
 
 //go:embed scripts/scraper.py
@@ -161,7 +163,7 @@ func runScraperScript(ctx context.Context, python string, timeout time.Duration,
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, python, append([]string{f.Name()}, args...)...)
-	hideConsole(cmd)
+	osproc.HideConsole(cmd)
 	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr

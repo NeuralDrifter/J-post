@@ -66,7 +66,7 @@ moves in the same commit as the code it tests.
 ## Move Checklist
 Each line is one commit, green before the next.
 - [x] plan: add this file and `tools/verify.sh`
-- [ ] extract-leaf-module: process helpers -> internal/osproc
+- [x] extract-leaf-module: process helpers -> internal/osproc
 - [ ] prep: `datePart` stops depending on db.go's `dateLayout`
 - [ ] extract-leaf-module: string and HTML helpers -> internal/text
 - [ ] prep: `httpErrorMessage` moves next to the HTTP client; `lastLine` to text
