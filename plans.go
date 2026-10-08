@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 // Storage for question plans. An interview points at its plan with plan_id;
@@ -179,4 +183,46 @@ func (r *Repo) createPlannedInterview(jobID string, s InterviewSetup, plan *Inte
 		return mi, nil
 	}
 	return r.CreateMockInterview(jobID, s, planID)
+}
+
+// keptPlanTTL is how long a plan written for a start that then failed (e.g. the
+// Live token was refused) is kept for Try again.
+const keptPlanTTL = 30 * time.Minute
+
+// keptPlans holds plans that were written but never used because the start
+// failed afterwards, so Try again doesn't wait for (and pay for) a new one.
+// Each is used at most once and only for an identical setup.
+type keptPlans struct {
+	mu    sync.Mutex
+	plans map[string]keptPlan
+}
+
+type keptPlan struct {
+	plan  *InterviewPlanRecord
+	until time.Time
+}
+
+func keptPlanKey(jobID, provider string, s InterviewSetup) string {
+	return strings.Join([]string{jobID, provider, s.Kind, strconv.Itoa(s.Minutes), s.Persona, s.Focus}, "\x00")
+}
+
+func (k *keptPlans) keep(key string, p *InterviewPlanRecord, now time.Time) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if k.plans == nil {
+		k.plans = map[string]keptPlan{}
+	}
+	k.plans[key] = keptPlan{plan: p, until: now.Add(keptPlanTTL)}
+}
+
+// take returns and forgets the plan kept for key, or nil when there is none or it expired.
+func (k *keptPlans) take(key string, now time.Time) *InterviewPlanRecord {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	kp, ok := k.plans[key]
+	delete(k.plans, key)
+	if !ok || now.After(kp.until) {
+		return nil
+	}
+	return kp.plan
 }

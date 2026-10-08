@@ -16,9 +16,9 @@ export function initialSetup(job: main.Job, retry?: RetryInfo): main.InterviewSe
   }
 }
 
-/** The Start button while the session is being prepared. No plan is written for a retry. */
-export function preparingLabel(providerLabel: string, retry: boolean): string {
-  return retry ? 'Starting…' : `Preparing your questions with ${providerLabel}…`
+/** The Start button while s is being prepared. A retry or "none" writes no plan, so it just starts. */
+export function preparingLabel(providerLabel: string, s: main.InterviewSetup): string {
+  return s.retryOf || s.planProvider === 'none' ? 'Starting…' : `Preparing your questions with ${providerLabel}…`
 }
 
 /**

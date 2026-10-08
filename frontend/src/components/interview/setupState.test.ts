@@ -28,9 +28,13 @@ describe('initialSetup', () => {
 })
 
 describe('preparingLabel', () => {
-  it('names the planner, or just starts a retry', () => {
-    expect(preparingLabel('Claude Code', false)).toBe('Preparing your questions with Claude Code…')
-    expect(preparingLabel('Claude Code', true)).toBe('Starting…')
+  const base = initialSetup({ id: 'j1', status: 'applied' } as main.Job)
+  it('names the planner while questions are being written', () => {
+    expect(preparingLabel('Claude Code', base)).toBe('Preparing your questions with Claude Code…')
+  })
+  it('just starts when no plan is being written', () => {
+    expect(preparingLabel('Claude Code', { ...base, retryOf: 'm1' })).toBe('Starting…')
+    expect(preparingLabel('Gemini Live', { ...base, planProvider: 'none' })).toBe('Starting…')
   })
 })
 
