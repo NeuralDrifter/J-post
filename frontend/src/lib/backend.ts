@@ -5,4 +5,4 @@
 // model types and runtime helpers from here, never from ../../wailsjs directly.
 export * from '../../wailsjs/go/app/App'
 export { ai, app, comp, marketdata, settings, taxes } from '../../wailsjs/go/models'
-export { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
+export { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime'
