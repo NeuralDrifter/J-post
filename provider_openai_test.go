@@ -91,7 +91,7 @@ func TestOpenAIJSONSchemaRequest(t *testing.T) {
 	if rf["type"] != "json_schema" || js["strict"] != true || js["name"] != "nudge" || js["schema"] == nil {
 		t.Fatalf("response_format = %v", rf)
 	}
-	if got := systemMessage(f.bodies[0]); got != nudgeInstruction {
+	if got := systemMessage(f.bodies[0]); got != testNudgeInstruction {
 		t.Fatalf("system message should be the instruction alone, got %q", got)
 	}
 	var out struct{ Nudge, Kind string }
@@ -113,7 +113,7 @@ func TestOpenAIJSONObjectRequest(t *testing.T) {
 		t.Fatalf("response_format = %v", rf)
 	}
 	sys := systemMessage(f.bodies[0])
-	if !strings.HasPrefix(sys, nudgeInstruction) || !strings.Contains(sys, "json") || !strings.Contains(sys, `"additionalProperties"`) {
+	if !strings.HasPrefix(sys, testNudgeInstruction) || !strings.Contains(sys, "json") || !strings.Contains(sys, `"additionalProperties"`) {
 		t.Fatalf("system message should be the instruction plus the schema, got %q", sys)
 	}
 	// The cacheable prefix must not change between runs.

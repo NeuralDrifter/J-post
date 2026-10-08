@@ -91,7 +91,7 @@ func runProvider(t *testing.T, id string, s settings.Settings) (aiResult, error)
 	if !ok {
 		t.Fatalf("no provider %q", id)
 	}
-	return p.run(context.Background(), s, nudgeTask("Why us?", "Because."))
+	return p.run(context.Background(), s, testNudgeTask("Why us?", "Because."))
 }
 
 func systemMessage(body map[string]any) string {

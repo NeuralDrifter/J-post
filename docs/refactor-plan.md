@@ -78,7 +78,8 @@ Each line is one commit, green before the next.
 - [x] extract-data-types: settings and window state store -> internal/settings
 - [x] prep: voice sampling (voice_sample.go) splits from the voice catalog; interview-typed Live tests move to interviews_ai_test.go
 - [x] extract-leaf-module: Gemini REST, Live sessions, voice sampling -> internal/gemini (+ geminitest helpers)
-- [ ] extract-leaf-module: AI task runner and providers -> internal/ai (+ testdata/fakeclaude)
+- [x] prep: AI tests use neutral fixtures (ai_fixtures_test.go); real-task schema checks move to aitask_tasks_test.go; TestPlanningRoleLimits moves to aitask_test.go
+- [ ] extract-leaf-module: AI task runner and providers -> internal/ai (+ aitest helpers, testdata/fakeclaude)
 - [ ] prep: split the CompPackage type from its Repo persistence in comp.go
 - [ ] extract-pure-core: CompPackage + Evaluate -> internal/comp
 - [ ] prep: split fetchers from merge/Repo code in discover.go and sources.go
@@ -108,6 +109,10 @@ Each line is one commit, green before the next.
   `gemini.SetTestEndpoints` and the `gemini/geminitest` helpers (the
   net/http/httptest pattern). gemini's own tests keep their small unexported
   copies of those helpers, since gemini cannot import geminitest.
+- 2026-10-08 (user chose option A): AI provider tests used the interview
+  tasks as sample input. They now use neutral fixtures shaped like the nudge
+  and scorecard tasks; tests of the real tasks stay with the interview code.
+  This is the one place the campaign rewrote tests rather than moving them.
 
 ## Deferred: hand off to the next campaign
 - [ ] Split `Repo` into a `store` package plus feature packages (jobs,

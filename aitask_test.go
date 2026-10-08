@@ -9,42 +9,12 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"jobtrack/internal/gemini"
 	"jobtrack/internal/gemini/geminitest"
 	"jobtrack/internal/settings"
 )
-
-// checkStandardSchema walks a JSON Schema and reports anything a provider
-// other than Gemini would reject or misread.
-func checkStandardSchema(t *testing.T, path string, s map[string]any) {
-	t.Helper()
-	typ, _ := s["type"].(string)
-	if typ != strings.ToLower(typ) || typ == "" {
-		t.Errorf("%s: type %q must be a lowercase JSON Schema type", path, typ)
-	}
-	if typ == "object" {
-		if _, ok := s["required"]; !ok {
-			t.Errorf("%s: object without required", path)
-		}
-		if s["additionalProperties"] != false {
-			t.Errorf("%s: object must set additionalProperties: false", path)
-		}
-		props, _ := s["properties"].(map[string]any)
-		for name, p := range props {
-			checkStandardSchema(t, path+"."+name, p.(map[string]any))
-		}
-	}
-	if typ == "array" {
-		checkStandardSchema(t, path+"[]", s["items"].(map[string]any))
-	}
-}
-
-func TestTaskSchemasAreStandardJSONSchema(t *testing.T) {
-	checkStandardSchema(t, "scorecard", scorecardTask(Job{}, MockInterview{}, "").schema)
-	checkStandardSchema(t, "nudge", nudgeTask("q", "a").schema)
-	checkStandardSchema(t, "interviewPlan", planSchema)
-}
 
 func TestGeminiSchemaConversion(t *testing.T) {
 	in := map[string]any{
@@ -73,12 +43,12 @@ func TestGeminiSchemaConversion(t *testing.T) {
 }
 
 func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
-	var n Nudge
-	if _, err := runAITask(context.Background(), settings.Settings{}, "nope", nudgeTask("q", "a"), &n); err == nil {
+	var n testNudge
+	if _, err := runAITask(context.Background(), settings.Settings{}, "nope", testNudgeTask("q", "a"), &n); err == nil {
 		t.Fatal("unknown provider should fail")
 	}
 	gemini.SetTestEndpoints(t, "", "ws://127.0.0.1:1") // a dial here would fail with a connection error
-	_, err := runAITask(context.Background(), settings.Settings{}, settings.ProviderGeminiLive, nudgeTask("q", "a"), &n)
+	_, err := runAITask(context.Background(), settings.Settings{}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Gemini API key") || strings.Contains(err.Error(), "reach") {
 		t.Fatalf("an unconfigured provider should fail with its setup reason before connecting: %v", err)
 	}
@@ -86,8 +56,8 @@ func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 
 func TestRunAITaskReturnsModel(t *testing.T) {
 	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
-	var n Nudge
-	model, err := runAITask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.ProviderGeminiLive, nudgeTask("q", "a"), &n)
+	var n testNudge
+	model, err := runAITask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "gemini-3.8-live" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -121,5 +91,11 @@ func TestProviderIDsMatchRegistry(t *testing.T) {
 	}
 	if !slices.Equal(ids, settings.AIProviderIDs) {
 		t.Fatalf("aiProviders() = %v, but settings accept %v", ids, settings.AIProviderIDs)
+	}
+}
+
+func TestPlanningRoleLimits(t *testing.T) {
+	if claudeCodeTimeout[rolePlanning] != 3*time.Minute || anthropicTimeout[rolePlanning] != 2*time.Minute || anthropicMaxTokens[rolePlanning] != 16000 {
+		t.Fatalf("claude code %v, anthropic %v / %d", claudeCodeTimeout[rolePlanning], anthropicTimeout[rolePlanning], anthropicMaxTokens[rolePlanning])
 	}
 }

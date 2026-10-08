@@ -95,7 +95,7 @@ func TestTaskMCPSubmitResultWritesOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var n Nudge
+	var n testNudge
 	if err := json.Unmarshal(raw, &n); err != nil || n.Nudge != "Lead with the result" || n.Kind != "tip" {
 		t.Fatalf("written = %s (%v)", raw, err)
 	}

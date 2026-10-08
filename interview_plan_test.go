@@ -101,12 +101,6 @@ func TestPlanValidate(t *testing.T) {
 	}
 }
 
-func TestPlanningRoleLimits(t *testing.T) {
-	if claudeCodeTimeout[rolePlanning] != 3*time.Minute || anthropicTimeout[rolePlanning] != 2*time.Minute || anthropicMaxTokens[rolePlanning] != 16000 {
-		t.Fatalf("claude code %v, anthropic %v / %d", claudeCodeTimeout[rolePlanning], anthropicTimeout[rolePlanning], anthropicMaxTokens[rolePlanning])
-	}
-}
-
 var planJob = Job{Company: "Acme", Position: "Staff Engineer", Description: "Build APIs"}
 var planSetup = InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough"}
 

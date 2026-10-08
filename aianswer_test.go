@@ -53,26 +53,26 @@ func TestExtractJSONBadSyntax(t *testing.T) {
 }
 
 func TestValidateAnswerOK(t *testing.T) {
-	if err := validateAnswer(json.RawMessage(`{"nudge": "Slow down", "kind": "tip"}`), nudgeSchema); err != nil {
+	if err := validateAnswer(json.RawMessage(`{"nudge": "Slow down", "kind": "tip"}`), testNudgeSchema); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestValidateAnswerMissingRequired(t *testing.T) {
-	err := validateAnswer(json.RawMessage(`{"kind": "tip"}`), nudgeSchema)
+	err := validateAnswer(json.RawMessage(`{"kind": "tip"}`), testNudgeSchema)
 	if err == nil || !strings.Contains(err.Error(), "nudge") {
 		t.Fatalf("err = %v, want it to name the missing nudge", err)
 	}
 }
 
 func TestValidateAnswerExtraProperty(t *testing.T) {
-	if err := validateAnswer(json.RawMessage(`{"nudge": "x", "kind": "tip", "score": 9}`), nudgeSchema); err == nil {
+	if err := validateAnswer(json.RawMessage(`{"nudge": "x", "kind": "tip", "score": 9}`), testNudgeSchema); err == nil {
 		t.Fatal("extra property should be rejected (additionalProperties: false)")
 	}
 }
 
 func TestValidateAnswerBadEnum(t *testing.T) {
-	if err := validateAnswer(json.RawMessage(`{"nudge": "x", "kind": "great"}`), nudgeSchema); err == nil {
+	if err := validateAnswer(json.RawMessage(`{"nudge": "x", "kind": "great"}`), testNudgeSchema); err == nil {
 		t.Fatal("kind outside the enum should be rejected")
 	}
 }

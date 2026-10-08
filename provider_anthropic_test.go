@@ -45,7 +45,7 @@ func TestAnthropicRequestShape(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(anthropicReply("claude-opus-5-5", `{"nudge":"x","kind":"tip"}`, "end_turn"))
 	})
-	task := scorecardTask(Job{Company: "Acme"}, MockInterview{}, "")
+	task := testGradingTask()
 	if _, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, task); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestAnthropicTipsUseTipsEffortAndSmallBudget(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(anthropicReply("claude-opus-5-5", `{"nudge":"x","kind":"tip"}`, "end_turn"))
 	})
-	if _, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, nudgeTask("q", "a")); err != nil {
+	if _, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, testNudgeTask("q", "a")); err != nil {
 		t.Fatal(err)
 	}
 	if body["max_tokens"] != float64(1024) || body["output_config"].(map[string]any)["effort"] != "low" {
@@ -86,8 +86,8 @@ func TestAnthropicReturnsResultAndModel(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(anthropicReply("claude-opus-5-5", `{"nudge":"Lead with the result","kind":"tip"}`, "end_turn"))
 	})
-	var n Nudge
-	model, err := runAITask(context.Background(), anthropicSettings, settings.ProviderAnthropic, nudgeTask("q", "a"), &n)
+	var n testNudge
+	model, err := runAITask(context.Background(), anthropicSettings, settings.ProviderAnthropic, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "claude-opus-5-5" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -98,7 +98,7 @@ func TestAnthropicRefusal(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(anthropicReply("claude-opus-5-5", "", "refusal"))
 	})
-	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, nudgeTask("q", "a"))
+	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, testNudgeTask("q", "a"))
 	if err == nil || !strings.Contains(err.Error(), "declined") {
 		t.Fatalf("err = %v", err)
 	}
@@ -124,7 +124,7 @@ func TestAnthropicErrorsAreReadableAndHideKey(t *testing.T) {
 			w.WriteHeader(c.status)
 			w.Write([]byte(`{"type":"error","error":{"type":"x","message":"sk-ant-s3cret is bad"}}`))
 		})
-		_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, nudgeTask("q", "a"))
+		_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, testNudgeTask("q", "a"))
 		if err == nil || !strings.Contains(err.Error(), c.want) || strings.Contains(err.Error(), "sk-ant-s3cret") {
 			t.Errorf("%d: err = %v", c.status, err)
 		}
@@ -146,7 +146,7 @@ func TestAnthropicOtherErrorsKeepTheAPIMessage(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(`{"type":"error","error":{"type":"not_found_error","message":"model: claude-opus-9 (key sk-ant-s3cret)"}}`))
 	})
-	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, nudgeTask("q", "a"))
+	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, testNudgeTask("q", "a"))
 	if err == nil || !strings.Contains(err.Error(), "claude-opus-9") || strings.Contains(err.Error(), "sk-ant-s3cret") {
 		t.Fatalf("err = %v", err)
 	}
@@ -163,7 +163,7 @@ func TestAnthropicStopsAtTheRoleTimeout(t *testing.T) {
 	anthropicTimeout[roleTips] = 300 * time.Millisecond
 	t.Cleanup(func() { anthropicTimeout[roleTips] = old })
 	start := time.Now()
-	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, nudgeTask("q", "a"))
+	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, testNudgeTask("q", "a"))
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 5*time.Second {
 		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
