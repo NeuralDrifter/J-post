@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { SourceMark } from '../../components/SourceMark'
-import type { main } from '../../lib/backend'
+import type { main, comp } from '../../lib/backend'
 import { formatDelta, formatMoneyFull, percentileLabel } from '../../lib/comp'
 import { formatMoney } from '../../lib/format'
 import { baselineDetail, colDetail, marketDetail, taxDetail } from '../../lib/sources'
 
-type Row = { label: string; value: (r: main.PackageResult) => number; sub?: boolean; tax?: boolean; strong?: boolean }
+type Row = { label: string; value: (r: comp.PackageResult) => number; sub?: boolean; tax?: boolean; strong?: boolean }
 
 const ROWS: Row[] = [
   { label: 'Base salary', value: (r) => r.years[0].base },

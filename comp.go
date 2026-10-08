@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"jobtrack/internal/comp"
 )
 
 // compColumn pairs a comp_packages column with the CompPackage field it holds.
@@ -19,7 +21,7 @@ type compColumn struct {
 
 // compColumnsOf is the single source of truth for how CompPackage maps to the table;
 // SELECT, INSERT, UPDATE and scanning are all built from it.
-func compColumnsOf(p *CompPackage) []compColumn {
+func compColumnsOf(p *comp.CompPackage) []compColumn {
 	return []compColumn{
 		{"id", &p.ID},
 		{"job_id", optionalString{&p.JobID}},
@@ -58,7 +60,7 @@ func compColumnsOf(p *CompPackage) []compColumn {
 // Columns an UPDATE never changes.
 var compImmutableColumns = map[string]bool{"id": true, "created_at": true}
 
-var compColumns = strings.Join(columnNames(compColumnsOf(&CompPackage{})), ", ")
+var compColumns = strings.Join(columnNames(compColumnsOf(&comp.CompPackage{})), ", ")
 
 func columnNames(cols []compColumn) []string {
 	names := make([]string, len(cols))
@@ -106,7 +108,7 @@ func insertCompSQL(cols []compColumn) string {
 }
 
 // updateComp returns the UPDATE statement and its arguments for every mutable column.
-func updateComp(p *CompPackage) (string, []any) {
+func updateComp(p *comp.CompPackage) (string, []any) {
 	var sets []string
 	var args []any
 	for _, c := range compColumnsOf(p) {
@@ -138,21 +140,21 @@ func nullStr(s string) any {
 	return s
 }
 
-func scanComp(s rowScanner) (CompPackage, error) {
-	var p CompPackage
+func scanComp(s rowScanner) (comp.CompPackage, error) {
+	var p comp.CompPackage
 	err := s.Scan(columnDests(compColumnsOf(&p))...)
 	return p, err
 }
 
-func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
+func (r *Repo) SaveCompPackage(p comp.CompPackage) (comp.CompPackage, error) {
 	if p.EquityType == "" {
-		p.EquityType = EquityNone
+		p.EquityType = comp.EquityNone
 	}
 	if p.Vesting == "" {
-		p.Vesting = VestingStandard
+		p.Vesting = comp.VestingStandard
 	}
 	p.Label = strings.TrimSpace(p.Label)
-	if err := ValidateCompPackage(p); err != nil {
+	if err := comp.ValidateCompPackage(p); err != nil {
 		return p, err
 	}
 	if p.JobID != "" {
@@ -160,9 +162,9 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 			return p, err
 		}
 	}
-	if p.Kind == PackageCurrent {
+	if p.Kind == comp.PackageCurrent {
 		var existing string
-		err := r.db.QueryRow(`SELECT id FROM comp_packages WHERE kind = ?`, PackageCurrent).Scan(&existing)
+		err := r.db.QueryRow(`SELECT id FROM comp_packages WHERE kind = ?`, comp.PackageCurrent).Scan(&existing)
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
 		case err != nil:
@@ -190,7 +192,7 @@ func (r *Repo) SaveCompPackage(p CompPackage) (CompPackage, error) {
 	return p, expectOneRow(res, err, "package", p.ID)
 }
 
-func (r *Repo) GetCompPackage(id string) (CompPackage, error) {
+func (r *Repo) GetCompPackage(id string) (comp.CompPackage, error) {
 	p, err := scanComp(r.db.QueryRow(`SELECT `+compColumns+` FROM comp_packages WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, fmt.Errorf("package %s: %w", id, ErrNotFound)
@@ -198,18 +200,18 @@ func (r *Repo) GetCompPackage(id string) (CompPackage, error) {
 	return p, err
 }
 
-func (r *Repo) listComp(where string, args ...any) ([]CompPackage, error) {
-	return queryAll(r.db, scanComp, `SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = ? DESC, created_at, rowid`, append(args, PackageCurrent)...)
+func (r *Repo) listComp(where string, args ...any) ([]comp.CompPackage, error) {
+	return queryAll(r.db, scanComp, `SELECT `+compColumns+` FROM comp_packages `+where+` ORDER BY kind = ? DESC, created_at, rowid`, append(args, comp.PackageCurrent)...)
 }
 
-func (r *Repo) ListCompPackages() ([]CompPackage, error) { return r.listComp("") }
+func (r *Repo) ListCompPackages() ([]comp.CompPackage, error) { return r.listComp("") }
 
-func (r *Repo) ListCompPackagesForJob(jobID string) ([]CompPackage, error) {
+func (r *Repo) ListCompPackagesForJob(jobID string) ([]comp.CompPackage, error) {
 	return r.listComp("WHERE job_id = ?", jobID)
 }
 
-func (r *Repo) CurrentCompPackage() (*CompPackage, error) {
-	list, err := r.listComp("WHERE kind = ?", PackageCurrent)
+func (r *Repo) CurrentCompPackage() (*comp.CompPackage, error) {
+	list, err := r.listComp("WHERE kind = ?", comp.PackageCurrent)
 	if err != nil || len(list) == 0 {
 		return nil, err
 	}
@@ -223,10 +225,10 @@ func (r *Repo) DeleteCompPackage(id string) error {
 
 // withOfferTotals sets each summary's year-1 value from the job's latest offer
 // (packages are in creation order). Offers that can't be evaluated are skipped.
-func withOfferTotals(summaries []JobSummary, packages []CompPackage, evaluate func(CompPackage) (PackageResult, error)) {
-	latestOffer := map[string]CompPackage{}
+func withOfferTotals(summaries []JobSummary, packages []comp.CompPackage, evaluate func(comp.CompPackage) (comp.PackageResult, error)) {
+	latestOffer := map[string]comp.CompPackage{}
 	for _, p := range packages {
-		if p.Kind == PackageOffer {
+		if p.Kind == comp.PackageOffer {
 			latestOffer[p.JobID] = p
 		}
 	}
@@ -243,16 +245,16 @@ func withOfferTotals(summaries []JobSummary, packages []CompPackage, evaluate fu
 }
 
 // DraftCounter copies an offer (or estimate) as a "what if they meet my counter" package.
-func (r *Repo) DraftCounter(offerID string) (CompPackage, error) {
+func (r *Repo) DraftCounter(offerID string) (comp.CompPackage, error) {
 	src, err := r.GetCompPackage(offerID)
 	if err != nil {
-		return CompPackage{}, err
+		return comp.CompPackage{}, err
 	}
-	if src.Kind != PackageOffer && src.Kind != PackageEstimate {
-		return CompPackage{}, errors.New("only offers and estimates can be countered")
+	if src.Kind != comp.PackageOffer && src.Kind != comp.PackageEstimate {
+		return comp.CompPackage{}, errors.New("only offers and estimates can be countered")
 	}
 	c := src
-	c.ID, c.Kind, c.ParentID = "", PackageCounter, src.ID
+	c.ID, c.Kind, c.ParentID = "", comp.PackageCounter, src.ID
 	label := src.Label
 	if label == "" {
 		label = "Offer"
@@ -262,9 +264,9 @@ func (r *Repo) DraftCounter(offerID string) (CompPackage, error) {
 }
 
 // NewEstimateForJob prefills (but doesn't save) an expected-offer package from a job's posted range.
-func NewEstimateForJob(j Job, occ, area, state string) CompPackage {
-	p := CompPackage{
-		JobID: j.ID, Kind: PackageEstimate, Label: "Estimate", EquityType: EquityNone, Vesting: VestingStandard,
+func NewEstimateForJob(j Job, occ, area, state string) comp.CompPackage {
+	p := comp.CompPackage{
+		JobID: j.ID, Kind: comp.PackageEstimate, Label: "Estimate", EquityType: comp.EquityNone, Vesting: comp.VestingStandard,
 		OccupationCode: occ, AreaCode: area, TaxState: state,
 	}
 	switch {

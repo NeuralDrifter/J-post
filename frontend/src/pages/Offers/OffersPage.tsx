@@ -9,7 +9,7 @@ import { PackageEditor } from '../../components/comp/PackageEditor'
 import { PageTitle } from '../../components/PageTitle'
 import { SourcesFooter } from '../../components/SourcesFooter'
 import { api, apiOk } from '../../lib/api'
-import { DeleteCompPackage, DraftCounter, ListComparisons, type main } from '../../lib/backend'
+import { DeleteCompPackage, DraftCounter, ListComparisons, type main, type comp } from '../../lib/backend'
 import { blankPackage } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
 import { readPref, writePref } from '../../lib/prefs'
@@ -34,7 +34,7 @@ export default function OffersPage() {
   const sources = useSources()
   // Remember what's deselected, so new packages show up selected by default.
   const [hidden, setHidden] = useState(readHidden)
-  const [editing, setEditing] = useState<main.CompPackage | null>(null)
+  const [editing, setEditing] = useState<comp.CompPackage | null>(null)
 
   const selected = useMemo(() => (items ?? []).filter((it) => !hidden.has(it.package.id)), [items, hidden])
 

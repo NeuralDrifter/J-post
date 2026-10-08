@@ -16,6 +16,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"jobtrack/internal/ai"
+	"jobtrack/internal/comp"
 	"jobtrack/internal/marketdata"
 	"jobtrack/internal/osproc"
 	"jobtrack/internal/settings"
@@ -114,8 +115,8 @@ func (a *App) ListJobSummaries() ([]JobSummary, error) {
 		return nil, err
 	}
 	md := a.market
-	withOfferTotals(summaries, packages, func(p CompPackage) (PackageResult, error) {
-		return Evaluate(p, settings, md, nil)
+	withOfferTotals(summaries, packages, func(p comp.CompPackage) (comp.PackageResult, error) {
+		return comp.Evaluate(p, settings, md, nil)
 	})
 	return summaries, nil
 }
@@ -324,11 +325,11 @@ func (a *App) OpenDataDir() error { return osproc.OpenWithOS(a.dataDir) }
 
 // ComparisonItem is one package with its computed result, for the Offers page.
 type ComparisonItem struct {
-	Package   CompPackage   `json:"package"`
-	Result    PackageResult `json:"result"`
-	Company   string        `json:"company"`
-	Position  string        `json:"position"`
-	JobStatus string        `json:"jobStatus"`
+	Package   comp.CompPackage   `json:"package"`
+	Result    comp.PackageResult `json:"result"`
+	Company   string             `json:"company"`
+	Position  string             `json:"position"`
+	JobStatus string             `json:"jobStatus"`
 }
 
 // DataSources describes the external datasets behind marked (✦) figures.
@@ -339,15 +340,15 @@ type DataSources struct {
 	Built string                `json:"built"`
 }
 
-func (a *App) evaluate(p CompPackage, current *CompPackage) (PackageResult, error) {
+func (a *App) evaluate(p comp.CompPackage, current *comp.CompPackage) (comp.PackageResult, error) {
 	s, err := a.settings.Load()
 	if err != nil {
-		return PackageResult{}, err
+		return comp.PackageResult{}, err
 	}
-	return Evaluate(p, s, a.market, current)
+	return comp.Evaluate(p, s, a.market, current)
 }
 
-func (a *App) comparisonItems(list []CompPackage) ([]ComparisonItem, error) {
+func (a *App) comparisonItems(list []comp.CompPackage) ([]ComparisonItem, error) {
 	current, err := a.repo.CurrentCompPackage()
 	if err != nil {
 		return nil, err
@@ -387,11 +388,11 @@ func (a *App) ListCompForJob(jobID string) ([]ComparisonItem, error) {
 	return a.comparisonItems(list)
 }
 
-func (a *App) GetCurrentComp() (*CompPackage, error) {
+func (a *App) GetCurrentComp() (*comp.CompPackage, error) {
 	return a.repo.CurrentCompPackage()
 }
 
-func (a *App) SaveCompPackage(p CompPackage) (CompPackage, error) {
+func (a *App) SaveCompPackage(p comp.CompPackage) (comp.CompPackage, error) {
 	return a.repo.SaveCompPackage(p)
 }
 
@@ -399,19 +400,19 @@ func (a *App) DeleteCompPackage(id string) error {
 	return a.repo.DeleteCompPackage(id)
 }
 
-func (a *App) DraftCounter(offerID string) (CompPackage, error) {
+func (a *App) DraftCounter(offerID string) (comp.CompPackage, error) {
 	return a.repo.DraftCounter(offerID)
 }
 
 // NewEstimate returns an unsaved estimate prefilled from the job's posted range and location.
-func (a *App) NewEstimate(jobID string) (CompPackage, error) {
+func (a *App) NewEstimate(jobID string) (comp.CompPackage, error) {
 	j, err := a.repo.GetJob(jobID)
 	if err != nil {
-		return CompPackage{}, err
+		return comp.CompPackage{}, err
 	}
 	s, err := a.settings.Load()
 	if err != nil {
-		return CompPackage{}, err
+		return comp.CompPackage{}, err
 	}
 	area, state := "", ""
 	if md := a.market; md != nil {
@@ -421,10 +422,10 @@ func (a *App) NewEstimate(jobID string) (CompPackage, error) {
 }
 
 // PreviewComp evaluates an unsaved package for the editor's live preview.
-func (a *App) PreviewComp(p CompPackage) (PackageResult, error) {
+func (a *App) PreviewComp(p comp.CompPackage) (comp.PackageResult, error) {
 	current, err := a.repo.CurrentCompPackage()
 	if err != nil {
-		return PackageResult{}, err
+		return comp.PackageResult{}, err
 	}
 	return a.evaluate(p, current)
 }

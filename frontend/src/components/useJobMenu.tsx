@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router'
 import { ArrowRightLeft, BadgeDollarSign, Copy, ExternalLink, FolderOpen, Mic, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { InterviewSetupModal } from './interview/InterviewSetupModal'
 import { apiOk, api } from '../lib/api'
-import { BrowserOpenURL, DeleteJob, NewEstimate, type main } from '../lib/backend'
+import { BrowserOpenURL, DeleteJob, NewEstimate, type main, type comp } from '../lib/backend'
 import { notifyDataChanged } from '../lib/events'
 import { STATUSES, STATUS_LABEL, type Status } from '../lib/format'
 import type { MenuEntry } from '../lib/menu'
@@ -23,7 +23,7 @@ import { useStatusChange } from './useStatusChange'
 export function useJobMenu(move?: (jobId: string, status: Status) => void) {
   const navigate = useNavigate()
   const { request, picker } = useStatusChange()
-  const [editor, setEditor] = useState<main.CompPackage | null>(null)
+  const [editor, setEditor] = useState<comp.CompPackage | null>(null)
   const [interviewFor, setInterviewFor] = useState<main.Job | null>(null)
 
   const addComp = async (job: main.Job, kind: 'estimate' | 'offer') => {

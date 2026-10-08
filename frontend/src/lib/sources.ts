@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { MarketSources, type main, type marketdata, type taxes } from './backend'
+import { MarketSources, type main, type marketdata, type taxes, type comp } from './backend'
 import { useStaticData } from './staticData'
 
 // Every figure derived from an outside dataset carries a numbered ✦ mark.
@@ -18,12 +18,12 @@ export function marketDetail(m: marketdata.MarketResult, sources?: main.DataSour
   return LEVEL_NOTE[m.level] ? `${base} — ${LEVEL_NOTE[m.level]}` : base
 }
 
-export function baselineDetail(b: main.MarketBaseline, sources?: main.DataSources): string {
+export function baselineDetail(b: comp.MarketBaseline, sources?: main.DataSources): string {
   const base = `BLS OEWS ${sources?.bls.release ?? ''} · median pay $${b.median.toLocaleString('en-US')} for ${b.occTitle} · ${b.areaTitle} · base salary only`
   return LEVEL_NOTE[b.level] ? `${base} — ${LEVEL_NOTE[b.level]}` : base
 }
 
-export function colDetail(r: main.PackageResult, sources?: main.DataSources): string {
+export function colDetail(r: comp.PackageResult, sources?: main.DataSources): string {
   const base = `BEA Regional Price Parities ${sources?.bea.release ?? ''} · ${r.colAreaTitle} ${r.colIndex} vs ${r.homeAreaTitle} ${r.homeColIndex} (US average = 100)`
   return r.colLevel && r.colLevel !== 'metro' && r.colLevel !== 'national' ? `${base} — ${r.colLevel} index used` : base
 }

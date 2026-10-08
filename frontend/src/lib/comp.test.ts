@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main, marketdata, taxes } from './backend'
+import type { main, marketdata, taxes, comp } from './backend'
 import { blankPackage, formatDelta, formatMoneyFull, ordinal, percentileLabel } from './comp'
 import { baselineDetail, colDetail, marketDetail, taxDetail } from './sources'
 
@@ -52,7 +52,7 @@ describe('source details', () => {
   })
 
   it('explains cost-of-living indexes', () => {
-    const r = { colAreaTitle: 'Denver', colIndex: 108.5, homeAreaTitle: 'U.S.', homeColIndex: 100, colLevel: 'metro' } as main.PackageResult
+    const r = { colAreaTitle: 'Denver', colIndex: 108.5, homeAreaTitle: 'U.S.', homeColIndex: 100, colLevel: 'metro' } as comp.PackageResult
     expect(colDetail(r, sources)).toBe('BEA Regional Price Parities 2024 · Denver 108.5 vs U.S. 100 (US average = 100)')
   })
 
@@ -66,8 +66,8 @@ describe('source details', () => {
 describe('baselineDetail', () => {
   it('names the median, occupation, area and fallback level', () => {
     const sources = { bls: { release: 'May 2025' } } as main.DataSources
-    const b = { occTitle: 'Software Developers', areaTitle: 'Denver-Aurora-Centennial, CO', level: 'area', median: 150000, baseDelta: 10000 } as main.MarketBaseline
+    const b = { occTitle: 'Software Developers', areaTitle: 'Denver-Aurora-Centennial, CO', level: 'area', median: 150000, baseDelta: 10000 } as comp.MarketBaseline
     expect(baselineDetail(b, sources)).toBe('BLS OEWS May 2025 · median pay $150,000 for Software Developers · Denver-Aurora-Centennial, CO · base salary only')
-    expect(baselineDetail({ ...b, level: 'national', areaTitle: 'U.S.' } as main.MarketBaseline, sources)).toContain('national figures')
+    expect(baselineDetail({ ...b, level: 'national', areaTitle: 'U.S.' } as comp.MarketBaseline, sources)).toContain('national figures')
   })
 })

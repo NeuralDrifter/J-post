@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"jobtrack/internal/comp"
 )
 
-func mustSavePkg(t *testing.T, r *Repo, p CompPackage) CompPackage {
+func mustSavePkg(t *testing.T, r *Repo, p comp.CompPackage) comp.CompPackage {
 	t.Helper()
 	saved, err := r.SaveCompPackage(p)
 	if err != nil {
@@ -51,7 +53,7 @@ func TestCompPackageRoundTripsEveryField(t *testing.T) {
 	r := newTestRepo(t)
 	j := mustCreate(t, r, Job{Company: "Acme", Position: "Dev", Status: StatusOffer})
 	offer := mustSavePkg(t, r, basePackage(j.ID))
-	p := CompPackage{
+	p := comp.CompPackage{
 		JobID: j.ID, Kind: "counter", Label: "Counter", ParentID: offer.ID, BaseSalary: 101, SigningBonus: 102,
 		SigningClawbackMonths: 3, TargetBonusPct: 4.5, AnnualRaisePct: 5.5, EquityType: "options", RSUGrantValue: 106,
 		OptionShares: 107, OptionStrike: 8.5, ShareValue: 9.5, Vesting: "custom", VestingCustom: "10,20,30,40",
@@ -67,7 +69,7 @@ func TestCompPackageRoundTripsEveryField(t *testing.T) {
 	assertSamePackage(t, r, updated)
 }
 
-func assertSamePackage(t *testing.T, r *Repo, want CompPackage) {
+func assertSamePackage(t *testing.T, r *Repo, want comp.CompPackage) {
 	t.Helper()
 	got, err := r.GetCompPackage(want.ID)
 	if err != nil {
@@ -80,7 +82,7 @@ func assertSamePackage(t *testing.T, r *Repo, want CompPackage) {
 
 func TestOnlyOneCurrent(t *testing.T) {
 	r := newTestRepo(t)
-	cur := CompPackage{Kind: "current", Label: "Current job", BaseSalary: 120000, Vesting: "standard", EquityType: "none", TaxState: "CO"}
+	cur := comp.CompPackage{Kind: "current", Label: "Current job", BaseSalary: 120000, Vesting: "standard", EquityType: "none", TaxState: "CO"}
 	first := mustSavePkg(t, r, cur)
 	if _, err := r.SaveCompPackage(cur); err == nil {
 		t.Fatal("a second current package should be rejected")
@@ -129,7 +131,7 @@ func TestDraftCounter(t *testing.T) {
 	if c.ID == offer.ID || c.Kind != "counter" || c.ParentID != offer.ID || c.Label != "Counter: Offer" || c.BaseSalary != offer.BaseSalary || c.JobID != j.ID {
 		t.Fatalf("counter = %+v", c)
 	}
-	cur := mustSavePkg(t, r, CompPackage{Kind: "current", Vesting: "standard", EquityType: "none", TaxState: "CO"})
+	cur := mustSavePkg(t, r, comp.CompPackage{Kind: "current", Vesting: "standard", EquityType: "none", TaxState: "CO"})
 	if _, err := r.DraftCounter(cur.ID); err == nil {
 		t.Fatal("only offers and estimates can be countered")
 	}
@@ -138,17 +140,17 @@ func TestDraftCounter(t *testing.T) {
 func TestCompValidation(t *testing.T) {
 	r := newTestRepo(t)
 	j := mustCreate(t, r, Job{Company: "Acme", Position: "Dev"})
-	bad := map[string]func(p *CompPackage){
-		"bad kind":          func(p *CompPackage) { p.Kind = "dream" },
-		"offer without job": func(p *CompPackage) { p.JobID = "" },
-		"counter no parent": func(p *CompPackage) { p.Kind = "counter" },
-		"negative base":     func(p *CompPackage) { p.BaseSalary = -1 },
-		"bonus over 100":    func(p *CompPackage) { p.TargetBonusPct = 101 },
-		"bad vesting":       func(p *CompPackage) { p.Vesting = "whenever" },
-		"custom not 100":    func(p *CompPackage) { p.Vesting = "custom"; p.VestingCustom = "25,25,25,20" },
-		"custom malformed":  func(p *CompPackage) { p.Vesting = "custom"; p.VestingCustom = "50,50" },
-		"bad equity type":   func(p *CompPackage) { p.EquityType = "crypto" },
-		"unknown job":       func(p *CompPackage) { p.JobID = "nope" },
+	bad := map[string]func(p *comp.CompPackage){
+		"bad kind":          func(p *comp.CompPackage) { p.Kind = "dream" },
+		"offer without job": func(p *comp.CompPackage) { p.JobID = "" },
+		"counter no parent": func(p *comp.CompPackage) { p.Kind = "counter" },
+		"negative base":     func(p *comp.CompPackage) { p.BaseSalary = -1 },
+		"bonus over 100":    func(p *comp.CompPackage) { p.TargetBonusPct = 101 },
+		"bad vesting":       func(p *comp.CompPackage) { p.Vesting = "whenever" },
+		"custom not 100":    func(p *comp.CompPackage) { p.Vesting = "custom"; p.VestingCustom = "25,25,25,20" },
+		"custom malformed":  func(p *comp.CompPackage) { p.Vesting = "custom"; p.VestingCustom = "50,50" },
+		"bad equity type":   func(p *comp.CompPackage) { p.EquityType = "crypto" },
+		"unknown job":       func(p *comp.CompPackage) { p.JobID = "nope" },
 	}
 	for name, mutate := range bad {
 		p := basePackage(j.ID)
@@ -195,15 +197,23 @@ func TestMigration2OnPhase1DB(t *testing.T) {
 
 func TestWithOfferTotals(t *testing.T) {
 	summaries := []JobSummary{{Job: Job{ID: "a"}}, {Job: Job{ID: "b"}}}
-	packages := []CompPackage{
+	packages := []comp.CompPackage{
 		{JobID: "a", Kind: "offer", BaseSalary: 100},
 		{JobID: "a", Kind: "offer", BaseSalary: 200}, // the later offer wins
 		{JobID: "b", Kind: "estimate", BaseSalary: 300},
 	}
-	withOfferTotals(summaries, packages, func(p CompPackage) (PackageResult, error) {
-		return PackageResult{Year1Total: p.BaseSalary}, nil
+	withOfferTotals(summaries, packages, func(p comp.CompPackage) (comp.PackageResult, error) {
+		return comp.PackageResult{Year1Total: p.BaseSalary}, nil
 	})
 	if summaries[0].OfferYear1Total == nil || *summaries[0].OfferYear1Total != 200 || summaries[1].OfferYear1Total != nil {
 		t.Fatalf("summaries = %+v", summaries)
+	}
+}
+
+func basePackage(jobID string) comp.CompPackage {
+	return comp.CompPackage{
+		JobID: jobID, Kind: "offer", Label: "Offer", BaseSalary: 150000, TargetBonusPct: 10,
+		EquityType: "rsu", RSUGrantValue: 200000, Vesting: "standard", TaxState: "CO", AreaCode: "19740",
+		OccupationCode: "15-1252", K401MatchPct: 50, K401MatchCapPct: 6, K401ContribPct: 6,
 	}
 }

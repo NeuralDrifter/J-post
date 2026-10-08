@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main, marketdata } from './backend'
+import type { marketdata, comp } from './backend'
 
 export const PACKAGE_KINDS = ['offer', 'estimate', 'counter', 'current'] as const
 export type PackageKind = (typeof PACKAGE_KINDS)[number]
@@ -55,7 +55,7 @@ export const PART_COLORS = {
   benefits: '#10b981',
 } as const
 
-export function blankPackage(kind: PackageKind, jobId = ''): main.CompPackage {
+export function blankPackage(kind: PackageKind, jobId = ''): comp.CompPackage {
   return {
     id: '',
     jobId,

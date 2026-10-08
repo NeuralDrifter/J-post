@@ -82,7 +82,7 @@ Each line is one commit, green before the next.
 - [x] prep: AI tests use neutral fixtures (ai_fixtures_test.go); real-task schema checks move to aitask_tasks_test.go; TestPlanningRoleLimits moves to aitask_test.go
 - [x] extract-leaf-module: AI task runner and providers -> internal/ai (+ aitest helpers, testdata/fakeclaude)
 - [x] prep: CompPackage type, kinds, vesting and validation move to comp_package.go; columns() becomes compColumnsOf()
-- [ ] extract-pure-core: CompPackage + Evaluate -> internal/comp
+- [x] extract-pure-core: CompPackage + Evaluate -> internal/comp (basePackage fixture copied to comp_test.go)
 - [ ] prep: split fetchers from merge/Repo code in discover.go and sources.go
 - [ ] extract-leaf-module: job-site fetchers -> internal/discover (+ scraper.py)
 - [ ] prep: `keptPlans` dependency of db.go (if still needed once in app)
