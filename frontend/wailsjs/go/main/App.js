@@ -106,6 +106,10 @@ export function InboxCounts() {
   return window['go']['main']['App']['InboxCounts']();
 }
 
+export function ListAIModels(arg1, arg2) {
+  return window['go']['main']['App']['ListAIModels'](arg1, arg2);
+}
+
 export function ListAIProviders() {
   return window['go']['main']['App']['ListAIProviders']();
 }
@@ -268,6 +272,10 @@ export function SearchOccupations(arg1) {
 
 export function ShowAttachmentInFolder(arg1) {
   return window['go']['main']['App']['ShowAttachmentInFolder'](arg1);
+}
+
+export function TestAIProvider(arg1, arg2) {
+  return window['go']['main']['App']['TestAIProvider'](arg1, arg2);
 }
 
 export function TestClaudeCode(arg1) {

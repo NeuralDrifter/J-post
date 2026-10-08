@@ -624,6 +624,18 @@ func (a *App) TestClaudeCode(path string) (string, error) {
 	return claudeCodeVersion(a.aiContext(), s)
 }
 
+// ListAIModels lists the models an OpenAI-style provider offers, using the
+// settings as entered on the page (Settings "Load models" button).
+func (a *App) ListAIModels(providerID string, s Settings) ([]string, error) {
+	return listAIModels(a.aiContext(), providerID, s)
+}
+
+// TestAIProvider runs a tiny task on a provider with the settings as entered
+// on the page (Settings "Test" button).
+func (a *App) TestAIProvider(providerID string, s Settings) (AIProviderTest, error) {
+	return testAIProvider(a.aiContext(), providerID, s)
+}
+
 // ListInterviewOptions returns the interview types, interviewer styles and lengths.
 func (a *App) ListInterviewOptions() InterviewOptions { return interviewOptions }
 

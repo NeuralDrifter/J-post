@@ -16,6 +16,20 @@ export namespace main {
 	        this.unavailable = source["unavailable"];
 	    }
 	}
+	export class AIProviderTest {
+	    model: string;
+	    millis: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIProviderTest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.model = source["model"];
+	        this.millis = source["millis"];
+	    }
+	}
 	export class Attachment {
 	    id: string;
 	    jobId: string;

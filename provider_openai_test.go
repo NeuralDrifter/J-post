@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -225,5 +226,61 @@ func TestOpenAIIgnoresOpenAIEnvironment(t *testing.T) {
 	h := f.headers[0]
 	if strings.Contains(h.Get("Authorization"), "sk-env-leak") || h.Get("OpenAI-Organization") != "" || h.Get("X-Leak") != "" {
 		t.Fatalf("environment leaked into the request: %v", h)
+	}
+}
+
+func TestListModelsSorted(t *testing.T) {
+	f, srv := newFakeOpenAI(t, fakeReply{body: `{"object":"list","data":[{"id":"zeta","object":"model","created":1,"owned_by":"x"},{"id":"alpha","object":"model","created":1,"owned_by":"x"},{"id":"mid","object":"model","created":1,"owned_by":"x"}]}`})
+	models, err := listAIModels(context.Background(), providerOpenAICompatible, customSettings(srv, modePlain))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(models, ",") != "alpha,mid,zeta" || f.paths[0] != "/v1/models" {
+		t.Fatalf("models = %v, path = %s", models, f.paths[0])
+	}
+}
+
+func TestListModelsBadKey(t *testing.T) {
+	_, srv := newFakeOpenAI(t, errorReply(401, "bad key"))
+	_, err := listAIModels(context.Background(), providerOpenAICompatible, customSettings(srv, modePlain))
+	if err == nil || !strings.Contains(err.Error(), "rejected the API key") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+// Loading models needs the address and key, but not a model yet.
+func TestListModelsWithoutModelChosen(t *testing.T) {
+	_, srv := newFakeOpenAI(t, fakeReply{body: `{"object":"list","data":[{"id":"a","object":"model","created":1,"owned_by":"x"}]}`})
+	s := customSettings(srv, modePlain)
+	s.CustomAIModel = ""
+	if _, err := listAIModels(context.Background(), providerOpenAICompatible, s); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestListModelsRejectsOtherProviders(t *testing.T) {
+	if _, err := listAIModels(context.Background(), providerAnthropic, Settings{}); err == nil {
+		t.Fatal("Anthropic isn't an OpenAI-style provider")
+	}
+}
+
+func TestTestAIProviderReportsModelAndTime(t *testing.T) {
+	f, srv := newFakeOpenAI(t, chatReply("m1-real", `{"ok": true}`))
+	res, err := testAIProvider(context.Background(), providerOpenAICompatible, customSettings(srv, modePlain))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Model != "m1-real" || res.Millis < 0 || f.requests() != 1 {
+		t.Fatalf("res = %+v, requests = %d", res, f.requests())
+	}
+}
+
+func TestTestAIProviderUnavailable(t *testing.T) {
+	f, srv := newFakeOpenAI(t, chatReply("m", `{"ok": true}`))
+	s := customSettings(srv, modePlain)
+	s.CustomAIModel = ""
+	_, err := testAIProvider(context.Background(), providerOpenAICompatible, s)
+	if err == nil || !strings.Contains(err.Error(), "Choose a model") || f.requests() != 0 {
+		t.Fatalf("err = %v, requests = %d", err, f.requests())
 	}
 }

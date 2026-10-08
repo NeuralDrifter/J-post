@@ -4,9 +4,11 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/openai/openai-go/v3"
@@ -189,4 +191,67 @@ func logOpenAIUsage(label string, resp *openai.ChatCompletion) {
 		line += fmt.Sprintf(" (cache hit %d, miss %d)", *extra.Usage.Hit, *extra.Usage.Miss)
 	}
 	log.Print(line)
+}
+
+// listModels asks the server which models it offers (GET /models), sorted.
+func (o openAIProvider) listModels(ctx context.Context, s Settings) ([]string, error) {
+	c := o.p.conn(s)
+	if o.p.needsKey && c.key == "" {
+		return nil, fmt.Errorf("Add your %s API key first", o.p.label)
+	}
+	if c.baseURL == "" {
+		return nil, errors.New("Enter the server address first")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	models := openai.NewModelService(openAIOptions(c)...)
+	page, err := models.List(ctx)
+	if err != nil {
+		return nil, openAIError(err, o.p.label, c)
+	}
+	ids := make([]string, 0, len(page.Data))
+	for _, m := range page.Data {
+		ids = append(ids, m.ID)
+	}
+	slices.Sort(ids)
+	return ids, nil
+}
+
+// listAIModels lists the models of an OpenAI-style provider, using the
+// settings as currently entered (not necessarily saved).
+func listAIModels(ctx context.Context, providerID string, s Settings) ([]string, error) {
+	p, ok := providerByID(providerID)
+	op, isOpenAI := p.(openAIProvider)
+	if !ok || !isOpenAI {
+		return nil, fmt.Errorf("%q can't list models", providerID)
+	}
+	applySettingsDefaults(&s)
+	return op.listModels(ctx, s)
+}
+
+// AIProviderTest is the result of the Settings "Test" button.
+type AIProviderTest struct {
+	Model  string `json:"model"`
+	Millis int64  `json:"millis"`
+}
+
+var providerTestSchema = map[string]any{
+	"type":                 "object",
+	"properties":           map[string]any{"ok": map[string]any{"type": "boolean"}},
+	"required":             []string{"ok"},
+	"additionalProperties": false,
+}
+
+// testAIProvider runs a tiny task on any provider, with the settings as
+// currently entered, and reports which model answered and how long it took.
+func testAIProvider(ctx context.Context, providerID string, s Settings) (AIProviderTest, error) {
+	applySettingsDefaults(&s)
+	t := aiTask{name: "test", instruction: `Reply with a json object {"ok": true}.`, input: "ping", schema: providerTestSchema, role: roleTips}
+	start := time.Now()
+	var out struct{ OK bool }
+	model, err := runAITask(ctx, s, providerID, t, &out)
+	if err != nil {
+		return AIProviderTest{}, err
+	}
+	return AIProviderTest{Model: model, Millis: time.Since(start).Milliseconds()}, nil
 }
