@@ -94,9 +94,6 @@ type rawJob struct {
 	Site        string   `json:"site"`
 }
 
-// sourceFunc fetches raw postings from one source; injected so tests can fake it.
-type sourceFunc func(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error)
-
 // ---- Python / JobSpy ----
 
 func resolvePython(override, exeDir, cwd string) (string, error) {
@@ -382,48 +379,4 @@ func mergeResults(lists ...[]DiscoverResult) []DiscoverResult {
 		}
 	}
 	return out
-}
-
-// runDiscover queries every requested source concurrently; one failing source
-// only adds an entry to Errors.
-func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor func(source string) fetchOptions) DiscoverResponse {
-	var sources []string
-	for _, s := range q.Sources {
-		if isKnownSource(s) && !slices.Contains(sources, s) {
-			sources = append(sources, s)
-		}
-	}
-	type outcome struct {
-		source string
-		jobs   []rawJob
-		err    error
-	}
-	ch := make(chan outcome, len(sources))
-	for _, s := range sources {
-		go func(s string) {
-			jobs, err := fetch(ctx, s, q, optsFor(s))
-			ch <- outcome{s, jobs, err}
-		}(s)
-	}
-	resp := DiscoverResponse{Results: []DiscoverResult{}, Errors: map[string]string{}}
-	perSource := map[string][]DiscoverResult{}
-	for range sources {
-		o := <-ch
-		if o.err != nil {
-			resp.Errors[o.source] = o.err.Error()
-			continue
-		}
-		for _, rj := range o.jobs {
-			if strings.TrimSpace(rj.Title) == "" {
-				continue
-			}
-			perSource[o.source] = append(perSource[o.source], fromRaw(rj, o.source))
-		}
-	}
-	lists := make([][]DiscoverResult, 0, len(sources))
-	for _, s := range sources {
-		lists = append(lists, perSource[s])
-	}
-	resp.Results = mergeResults(lists...)
-	return resp
 }

@@ -90,26 +90,6 @@ func TestMergeResultsDedupes(t *testing.T) {
 	}
 }
 
-func TestRunDiscoverPartialFailure(t *testing.T) {
-	fetch := func(ctx context.Context, source string, q DiscoverQuery, _ fetchOptions) ([]rawJob, error) {
-		switch source {
-		case "linkedin":
-			return nil, errors.New("blocked")
-		case "indeed":
-			return []rawJob{{Title: "Dev", Company: "Acme"}, {Title: "", Company: "NoTitle"}}, nil
-		}
-		return nil, nil
-	}
-	q := DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin", "indeed", "myspace"}}
-	resp := runDiscover(context.Background(), q, fetch, func(string) fetchOptions { return fetchOptions{} })
-	if len(resp.Results) != 1 || resp.Results[0].Company != "Acme" {
-		t.Fatalf("results = %+v", resp.Results)
-	}
-	if resp.Errors["linkedin"] != "blocked" || len(resp.Errors) != 1 {
-		t.Fatalf("errors = %+v", resp.Errors)
-	}
-}
-
 func TestResolvePythonOrder(t *testing.T) {
 	exeDir, cwd := t.TempDir(), t.TempDir()
 	makePy := func(dir string) string {

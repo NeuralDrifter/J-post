@@ -83,7 +83,7 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: AI task runner and providers -> internal/ai (+ aitest helpers, testdata/fakeclaude)
 - [x] prep: CompPackage type, kinds, vesting and validation move to comp_package.go; columns() becomes compColumnsOf()
 - [x] extract-pure-core: CompPackage + Evaluate -> internal/comp (basePackage fixture copied to comp_test.go)
-- [x] prep: markTracked -> postings.go; fetchOptions + fetch limits -> discover.go; Muse cache and rate-limit log -> muse_cache.go (3 commits)
+- [x] prep: markTracked -> postings.go; fetchOptions + fetch limits -> discover.go; Muse cache and rate-limit log -> muse_cache.go; runDiscover + sourceFunc -> searches.go (4 commits)
 - [ ] extract-leaf-module: job-site fetchers -> internal/discover (+ scraper.py)
 - [ ] prep: `keptPlans` dependency of db.go (if still needed once in app)
 - [ ] extract: Repo, bindings and interview flow -> internal/app
