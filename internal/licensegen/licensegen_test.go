@@ -34,12 +34,12 @@ func TestDetectLicense(t *testing.T) {
 		mitText: "MIT",
 		"                                 Apache License\n                           Version 2.0, January 2004": "Apache-2.0",
 		"Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n1. ...\n2. ...\n3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse": "BSD-3-Clause",
-		"Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n1. ...\n2. ... THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS":                                                           "BSD-2-Clause",
-		"ISC License\n\nPermission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted": "ISC",
-		"Mozilla Public License Version 2.0": "MPL-2.0",
+		"Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n1. ...\n2. ... THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS":                                                    "BSD-2-Clause",
+		"ISC License\n\nPermission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted":                                                                                                                                "ISC",
+		"Mozilla Public License Version 2.0":                                      "MPL-2.0",
 		"This is free and unencumbered software released into the public domain.": "Unlicense",
-		"SIL OPEN FONT LICENSE Version 1.1":                                         "OFL-1.1",
-		"All rights reserved. Do whatever.":                                         "Other",
+		"SIL OPEN FONT LICENSE Version 1.1":                                       "OFL-1.1",
+		"All rights reserved. Do whatever.":                                       "Other",
 	}
 	for text, want := range cases {
 		if got := DetectLicense(text); got != want {
@@ -73,22 +73,22 @@ func TestFindLicenseAppendsNotice(t *testing.T) {
 // another dependency needs js-tokens@9 nested under it. vite is a dev dependency.
 func npmFixture(t *testing.T) string {
 	return writeTree(t, map[string]string{
-		"frontend/package.json": `{"dependencies": {"react": "^18", "@scope/ui": "^1", "nolicense": "^1"}, "devDependencies": {"vite": "^6", "tailwindcss": "^4"}}`,
-		"frontend/node_modules/react/package.json":                          `{"name": "react", "version": "18.3.1", "license": "MIT", "homepage": "https://react.dev/", "dependencies": {"loose-envify": "^1"}}`,
-		"frontend/node_modules/react/LICENSE":                               mitText,
-		"frontend/node_modules/loose-envify/package.json":                   `{"name": "loose-envify", "version": "1.4.0", "license": "MIT", "repository": "git://github.com/zertosh/loose-envify.git", "dependencies": {"js-tokens": "^4"}}`,
-		"frontend/node_modules/loose-envify/LICENSE":                        mitText,
-		"frontend/node_modules/js-tokens/package.json":                      `{"name": "js-tokens", "version": "4.0.0", "license": "MIT"}`,
-		"frontend/node_modules/js-tokens/LICENSE":                           mitText,
-		"frontend/node_modules/@scope/ui/package.json":                      `{"name": "@scope/ui", "version": "1.2.0", "license": "ISC", "repository": {"type": "git", "url": "git+https://github.com/scope/ui.git"}, "dependencies": {"js-tokens": "^9"}}`,
-		"frontend/node_modules/@scope/ui/LICENSE":                           "ISC License",
+		"frontend/package.json":                                               `{"dependencies": {"react": "^18", "@scope/ui": "^1", "nolicense": "^1"}, "devDependencies": {"vite": "^6", "tailwindcss": "^4"}}`,
+		"frontend/node_modules/react/package.json":                            `{"name": "react", "version": "18.3.1", "license": "MIT", "homepage": "https://react.dev/", "dependencies": {"loose-envify": "^1"}}`,
+		"frontend/node_modules/react/LICENSE":                                 mitText,
+		"frontend/node_modules/loose-envify/package.json":                     `{"name": "loose-envify", "version": "1.4.0", "license": "MIT", "repository": "git://github.com/zertosh/loose-envify.git", "dependencies": {"js-tokens": "^4"}}`,
+		"frontend/node_modules/loose-envify/LICENSE":                          mitText,
+		"frontend/node_modules/js-tokens/package.json":                        `{"name": "js-tokens", "version": "4.0.0", "license": "MIT"}`,
+		"frontend/node_modules/js-tokens/LICENSE":                             mitText,
+		"frontend/node_modules/@scope/ui/package.json":                        `{"name": "@scope/ui", "version": "1.2.0", "license": "ISC", "repository": {"type": "git", "url": "git+https://github.com/scope/ui.git"}, "dependencies": {"js-tokens": "^9"}}`,
+		"frontend/node_modules/@scope/ui/LICENSE":                             "ISC License",
 		"frontend/node_modules/@scope/ui/node_modules/js-tokens/package.json": `{"name": "js-tokens", "version": "9.0.1", "license": "MIT"}`,
 		"frontend/node_modules/@scope/ui/node_modules/js-tokens/LICENSE":      mitText,
-		"frontend/node_modules/nolicense/package.json":                      `{"name": "nolicense", "version": "1.0.0", "license": "MIT"}`,
-		"frontend/node_modules/vite/package.json":                           `{"name": "vite", "version": "6.4.3", "license": "MIT"}`,
-		"frontend/node_modules/vite/LICENSE.md":                             mitText,
-		"frontend/node_modules/tailwindcss/package.json":                    `{"name": "tailwindcss", "version": "4.3.3", "license": "MIT"}`,
-		"frontend/node_modules/tailwindcss/LICENSE":                         mitText,
+		"frontend/node_modules/nolicense/package.json":                        `{"name": "nolicense", "version": "1.0.0", "license": "MIT"}`,
+		"frontend/node_modules/vite/package.json":                             `{"name": "vite", "version": "6.4.3", "license": "MIT"}`,
+		"frontend/node_modules/vite/LICENSE.md":                               mitText,
+		"frontend/node_modules/tailwindcss/package.json":                      `{"name": "tailwindcss", "version": "4.3.3", "license": "MIT"}`,
+		"frontend/node_modules/tailwindcss/LICENSE":                           mitText,
 	})
 }
 
