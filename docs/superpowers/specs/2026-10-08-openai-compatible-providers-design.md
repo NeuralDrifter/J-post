@@ -9,7 +9,11 @@
 - Missing model text is "Choose a model for <Label> in Settings → AI" (reads better than "a OpenAI model").
 - SDK: `github.com/openai/openai-go/v3` v3.73.0 (Apache-2.0).
 
-**Live runs:** not done yet. There's no DeepSeek key or Ollama on the build machine. Run `JOBTRACK_LIVE_DEEPSEEK_KEY=… go test -run TestLive -v` (and `JOBTRACK_LIVE_OLLAMA_MODEL=…` with Ollama running), then record the models, times, cache hit/miss lines and any repair retries here. OpenAI stays fake-server-only until a key is available.
+**Added while building: LM Studio (local)** (`lmstudio`, default `http://localhost:1234/v1`, `json_schema` mode, optional API token for when "Require Authentication" is on; a 401 without a token says where to add one). Settings fields `lmStudioURL`, `lmStudioKey`, `lmStudioModel`.
+
+**Live run, LM Studio (2026-10-08, `google/gemma-3-1b`, authentication off):** model list loaded (5 models). Tip 4.6 s / 2.1 s on a repeat, grading 34 s, question plan 48 s (passes `InterviewPlan.validate`). All answers were schema-valid on the first try, with no repair retries. Answer quality from a 1B model wasn't judged.
+
+**Live runs still to do:** there's no DeepSeek key or Ollama on the build machine. Run `JOBTRACK_LIVE_DEEPSEEK_KEY=… go test -run TestLive -v` (and `JOBTRACK_LIVE_OLLAMA_MODEL=…` with Ollama running), then record the models, times, cache hit/miss lines and any repair retries here. OpenAI stays fake-server-only until a key is available.
 
 ## Goal
 
@@ -42,6 +46,7 @@ All four share one file, `provider_openai.go`, and one `openAIProvider` type con
 | `openai` | OpenAI | `https://api.openai.com/v1` | `json_schema` (strict) | Fake server; real run only if a key becomes available |
 | `deepseek` | DeepSeek | `https://api.deepseek.com/v1` | `json_object` (DeepSeek documents only this type, not `json_schema`) | **Real runs with the user's key** |
 | `ollama` | Ollama (local) | `http://localhost:11434/v1` | `json_schema` (confirm while building) | Real runs if Ollama is installed; free and local |
+| `lmstudio` | LM Studio (local) | `http://localhost:1234/v1` | `json_schema` | **Real runs done** (see the status line) |
 | `openai-compatible` | OpenAI-compatible (custom) | user-entered | user's choice, default `plain` | Same code path as the presets |
 
 **Answer modes** (`response_format`):
