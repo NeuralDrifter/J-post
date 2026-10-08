@@ -116,6 +116,8 @@ export function RegradeInterview(arg1:string,arg2:string):Promise<app.MockInterv
 
 export function RenameAttachment(arg1:string,arg2:string):Promise<void>;
 
+export function RescoreOutdated():Promise<app.MatchRun>;
+
 export function RestorePosting(arg1:string):Promise<void>;
 
 export function RunSearch(arg1:app.SearchQuery):Promise<app.SearchRun>;
@@ -134,7 +136,11 @@ export function SavePosting(arg1:string):Promise<app.Job>;
 
 export function SaveSettings(arg1:settings.Settings):Promise<void>;
 
+export function ScoreInbox():Promise<app.MatchRun>;
+
 export function ScoreInterview(arg1:string):Promise<app.MockInterview>;
+
+export function ScorePosting(arg1:string):Promise<app.MatchRun>;
 
 export function SearchAreas(arg1:string):Promise<Array<marketdata.Option>>;
 

@@ -6,6 +6,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -161,5 +162,16 @@ func TestRunDiscoverPartialFailure(t *testing.T) {
 	}
 	if resp.Errors["linkedin"] != "blocked" || len(resp.Errors) != 1 {
 		t.Fatalf("errors = %+v", resp.Errors)
+	}
+}
+func TestWithProgressCountsFinishedBoards(t *testing.T) {
+	var seen []string
+	fetch := withProgress(func(context.Context, string, discover.DiscoverQuery, discover.FetchOptions) ([]discover.RawJob, error) {
+		return nil, errors.New("board down")
+	}, 2, func(done, total int) { seen = append(seen, fmt.Sprintf("%d/%d", done, total)) })
+	fetch(context.Background(), "indeed", discover.DiscoverQuery{}, discover.FetchOptions{})
+	fetch(context.Background(), "linkedin", discover.DiscoverQuery{}, discover.FetchOptions{})
+	if strings.Join(seen, " ") != "1/2 2/2" {
+		t.Fatalf("seen = %v (a failed board still counts as finished)", seen)
 	}
 }

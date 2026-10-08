@@ -222,6 +222,10 @@ export function RenameAttachment(arg1, arg2) {
   return window['go']['app']['App']['RenameAttachment'](arg1, arg2);
 }
 
+export function RescoreOutdated() {
+  return window['go']['app']['App']['RescoreOutdated']();
+}
+
 export function RestorePosting(arg1) {
   return window['go']['app']['App']['RestorePosting'](arg1);
 }
@@ -258,8 +262,16 @@ export function SaveSettings(arg1) {
   return window['go']['app']['App']['SaveSettings'](arg1);
 }
 
+export function ScoreInbox() {
+  return window['go']['app']['App']['ScoreInbox']();
+}
+
 export function ScoreInterview(arg1) {
   return window['go']['app']['App']['ScoreInterview'](arg1);
+}
+
+export function ScorePosting(arg1) {
+  return window['go']['app']['App']['ScorePosting'](arg1);
 }
 
 export function SearchAreas(arg1) {

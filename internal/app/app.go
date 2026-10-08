@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -44,6 +45,7 @@ type App struct {
 	aiCancel    context.CancelFunc
 	initErr     error
 	windowShown bool
+	matchMu     sync.Mutex // one scoring run at a time
 }
 
 // NewApp opens (and if needed creates or migrates) the data folder. A failure
@@ -237,7 +239,8 @@ func (a *App) RunSearch(q SearchQuery) (SearchRun, error) {
 		return SearchRun{}, err
 	}
 	fetcher := sourceFetcher{settings: settings, repo: a.repo}
-	return RunSearch(context.Background(), a.repo, q, settings, fetcher.fetch)
+	fetch := withProgress(fetcher.fetch, len(normalizeSources(q.Sources)), a.reportProgress("search:progress"))
+	return RunSearch(context.Background(), a.repo, q, settings, fetch)
 }
 
 // RefreshSearch fetches new postings for a search even if it ran recently.
@@ -247,7 +250,8 @@ func (a *App) RefreshSearch(q SearchQuery) (SearchRun, error) {
 		return SearchRun{}, err
 	}
 	fetcher := sourceFetcher{settings: settings, repo: a.repo}
-	return RefreshSearch(context.Background(), a.repo, q, fetcher.fetch)
+	fetch := withProgress(fetcher.fetch, len(normalizeSources(q.Sources)), a.reportProgress("search:progress"))
+	return RefreshSearch(context.Background(), a.repo, q, fetch)
 }
 
 // ListPostings returns a tab's postings, with each match score flagged if it
@@ -263,6 +267,53 @@ func (a *App) ListPostings(f PostingFilter) ([]Posting, error) {
 	}
 	markOutdated(postings, fingerprint)
 	return postings, nil
+}
+
+// emit sends an event to the frontend; it does nothing before startup (and in tests).
+func (a *App) emit(name string, data any) {
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, name, data)
+	}
+}
+
+func (a *App) reportProgress(event string) func(done, total int) {
+	return func(done, total int) { a.emit(event, map[string]int{"done": done, "total": total}) }
+}
+
+// ScoreInbox scores every inbox and Interested posting that has no match score yet.
+func (a *App) ScoreInbox() (MatchRun, error) {
+	return a.scoreMatches(func(p Posting, _ string) bool { return p.Match == nil })
+}
+
+// RescoreOutdated scores again the postings graded against an older resume or preferences.
+func (a *App) RescoreOutdated() (MatchRun, error) {
+	return a.scoreMatches(func(p Posting, fingerprint string) bool { return p.Match != nil && p.Match.fingerprint != fingerprint })
+}
+
+// ScorePosting scores one posting, or scores it again.
+func (a *App) ScorePosting(id string) (MatchRun, error) {
+	return a.scoreMatches(func(p Posting, _ string) bool { return p.ID == id })
+}
+
+func (a *App) scoreMatches(want func(p Posting, fingerprint string) bool) (MatchRun, error) {
+	if !a.matchMu.TryLock() {
+		return MatchRun{Error: "Scoring is already running"}, nil
+	}
+	defer a.matchMu.Unlock()
+	s, err := a.settings.Load()
+	if err != nil {
+		return MatchRun{}, err
+	}
+	profile, err := a.repo.GetProfile()
+	if err != nil {
+		return MatchRun{}, err
+	}
+	fingerprint := matchFingerprint(profile.ResumeText, s)
+	postings, err := a.repo.matchCandidates(func(p Posting) bool { return want(p, fingerprint) })
+	if err != nil {
+		return MatchRun{}, err
+	}
+	return runMatch(a.aiContext(), a.repo, s, profile.ResumeText, postings, a.reportProgress("match:progress"))
 }
 
 // currentMatchFingerprint identifies the resume and preferences new scores are graded against.

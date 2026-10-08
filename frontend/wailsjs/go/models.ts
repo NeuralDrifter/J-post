@@ -722,6 +722,24 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class MatchRun {
+	    scored: number;
+	    failed: number;
+	    total: number;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MatchRun(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.scored = source["scored"];
+	        this.failed = source["failed"];
+	        this.total = source["total"];
+	        this.error = source["error"];
+	    }
+	}
 	export class MatchScore {
 	    overall: number;
 	    factors: MatchFactors;

@@ -13,6 +13,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"jobtrack/internal/discover"
@@ -268,3 +269,14 @@ func runDiscover(ctx context.Context, q discover.DiscoverQuery, fetch sourceFunc
 
 // sourceFunc fetches raw postings from one source; injected so tests can fake it.
 type sourceFunc func(ctx context.Context, source string, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error)
+
+// withProgress wraps fetch so report hears each time a board finishes,
+// whether it found postings or failed.
+func withProgress(fetch sourceFunc, total int, report func(done, total int)) sourceFunc {
+	var done atomic.Int32
+	return func(ctx context.Context, source string, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
+		jobs, err := fetch(ctx, source, q, opts)
+		report(int(done.Add(1)), total)
+		return jobs, err
+	}
+}
