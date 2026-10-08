@@ -21,6 +21,7 @@ const (
 	RoleGrading Role = iota
 	RoleTips
 	RolePlanning
+	RoleMatching // job match scores for Discover postings, many per request
 )
 
 // Task is one AI job with a structured answer.

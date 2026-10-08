@@ -99,3 +99,12 @@ func TestPlanningRoleLimits(t *testing.T) {
 		t.Fatalf("claude code %v, anthropic %v / %d", claudeCodeTimeout[RolePlanning], anthropicTimeout[RolePlanning], anthropicMaxTokens[RolePlanning])
 	}
 }
+
+func TestMatchingRoleLimits(t *testing.T) {
+	if anthropicMaxTokens[RoleMatching] != 16000 || anthropicTimeout[RoleMatching] != 5*time.Minute ||
+		openAIMaxTokens[RoleMatching] != 16000 || openAITimeout[RoleMatching] != 5*time.Minute ||
+		claudeCodeTimeout[RoleMatching] != 5*time.Minute {
+		t.Fatalf("anthropic %d/%v, openai %d/%v, claude code %v", anthropicMaxTokens[RoleMatching], anthropicTimeout[RoleMatching],
+			openAIMaxTokens[RoleMatching], openAITimeout[RoleMatching], claudeCodeTimeout[RoleMatching])
+	}
+}
