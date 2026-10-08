@@ -27,7 +27,7 @@ Grading, coaching tips and question plans can run on OpenAI-style APIs as well a
 
 ## 1. Where the ideas come from
 
-Reviewed `3rd_party/reactive-resume` (MIT). It supports 16 providers through Vercel's AI SDK. Its own code adds three things worth copying:
+Reviewed `reference/3rd_party/reactive-resume` (MIT). It supports 16 providers through Vercel's AI SDK. Its own code adds three things worth copying:
 
 - **Plain-text JSON with tolerant parsing** (`packages/api/src/features/ai/generate-json.ts`): ask for JSON in the prompt, strip a code fence, take the outermost `{…}`, then validate. They avoid structured-output features because providers implement them unevenly.
 - **The default base URL table** (`packages/ai/src/types.ts`).

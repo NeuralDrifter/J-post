@@ -7,7 +7,7 @@
 
 Job_Track is primarily a tool for the owner's own active job search, and secondarily a portfolio piece. Phase 1 makes it a solid daily-use tracker with a polished UI. It is built so that later phases (offer/comp comparison, AI features) can be added without restructuring.
 
-**Visual and feature reference:** the Google Stitch mockup in `example_only_non_functioning_demo content/stitch_careerpilot_ai_tracker/`, specifically `obsidian_lumina/DESIGN.md` and the PRD. The mockup is reference only. None of its HTML is copied, and no fake or placeholder metrics ship in the app.
+**Visual and feature reference:** the Google Stitch mockup in `reference/example_only_non_functioning_demo content/stitch_careerpilot_ai_tracker/`, specifically `obsidian_lumina/DESIGN.md` and the PRD. The mockup is reference only. None of its HTML is copied, and no fake or placeholder metrics ship in the app.
 
 ### Success criteria
 - Every number shown in the UI comes from real data.

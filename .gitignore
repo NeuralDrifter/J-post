@@ -3,9 +3,8 @@ node_modules
 frontend/dist
 venv/
 __pycache__/
-example_only_non_functioning_demo content/
+reference/
 .superpowers/
 datasets/
 *.xlsx
-3rd_party/
 .claude/settings.local.json

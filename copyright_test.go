@@ -14,9 +14,9 @@ const copyrightLine = "Copyright (c) 2026 Michael P. Burgus (https://github.com/
 
 // Folders that hold generated, third-party or local-only files.
 var skipDirs = map[string]bool{
-	".git": true, ".superpowers": true, "3rd_party": true, "node_modules": true, "venv": true,
+	".git": true, ".superpowers": true, "node_modules": true, "venv": true,
 	"build": true, "dist": true, "wailsjs": true, "generated": true, "datasets": true,
-	"example_only_non_functioning_demo content": true, "__pycache__": true,
+	"reference": true, "__pycache__": true,
 }
 
 // Every source file in the project starts with the copyright and license notice.
