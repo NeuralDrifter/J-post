@@ -29,6 +29,16 @@ import { useLoad } from '../../lib/useLoad'
 import { AttemptsStrip, CompareAttempts, PlanView } from './PlanParts'
 import { cardLabel, PLAN_TAB, ScorecardTabs, ScorecardView, TranscriptWithTips } from './ReviewParts'
 
+/**
+ * The review route: keyed by interview id so moving between attempts (same route,
+ * new id) starts from fresh state instead of keeping the last attempt's recording,
+ * selected tab or in-flight grading result.
+ */
+export function InterviewReviewRoute() {
+  const { id = '' } = useParams()
+  return <InterviewReviewPage key={id} />
+}
+
 export default function InterviewReviewPage() {
   const { id = '' } = useParams()
   const [params, setParams] = useSearchParams()
