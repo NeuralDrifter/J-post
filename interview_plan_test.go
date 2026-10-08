@@ -473,3 +473,79 @@ func TestPlanTaskNamesTheInterviewer(t *testing.T) {
 		t.Error("the instruction should not fix the role; a phone screen is run by a recruiter")
 	}
 }
+
+func TestTryAgainAfterTokenFailureReusesThePlan(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	tokenFails := true
+	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+		if tokenFails {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Write([]byte(`{"name":"auth_tokens/t1"}`))
+	})
+	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
+		t.Fatal("expected the token error")
+	}
+	tokenFails = false
+	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
+	if err != nil || *calls != 1 {
+		t.Fatalf("err = %v, planning calls = %d (Try again should reuse the plan)", err, *calls)
+	}
+	if mi, _ := r.GetMockInterview(live.SessionID); mi.Plan == nil {
+		t.Fatal("the reused plan should be stored with the interview")
+	}
+	// The kept plan is used once: the next new interview gets a fresh plan.
+	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err != nil || *calls != 2 {
+		t.Fatalf("err = %v, planning calls = %d", err, *calls)
+	}
+}
+
+func TestKeptPlanOnlyMatchesTheSameSetup(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	tokenFails := true
+	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+		if tokenFails {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Write([]byte(`{"name":"auth_tokens/t1"}`))
+	})
+	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	prepareInterview(context.Background(), r, s, j.ID, testSetup)
+	tokenFails = false
+	other := testSetup
+	other.Focus = "system design"
+	if _, err := prepareInterview(context.Background(), r, s, j.ID, other); err != nil || *calls != 2 {
+		t.Fatalf("a different focus needs a new plan: err = %v, calls = %d", err, *calls)
+	}
+}
+
+func TestKeptPlanExpires(t *testing.T) {
+	r := newTestRepo(t)
+	j := interviewJob(t, r)
+	tokenFails := true
+	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+		if tokenFails {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Write([]byte(`{"name":"auth_tokens/t1"}`))
+	})
+	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
+	s := planSettings()
+	s.PlanProvider = providerAnthropic
+	prepareInterview(context.Background(), r, s, j.ID, testSetup)
+	tokenFails = false
+	setNow(r, 2026, time.October, 1, 13) // an hour later
+	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err != nil || *calls != 2 {
+		t.Fatalf("an old kept plan should not be reused: err = %v, calls = %d", err, *calls)
+	}
+}

@@ -103,6 +103,7 @@ type Repo struct {
 	db       *sql.DB
 	filesDir string
 	now      func() time.Time
+	kept     keptPlans // question plans kept for Try again (see prepareInterview)
 }
 
 func NewRepo(db *sql.DB, filesDir string) *Repo {

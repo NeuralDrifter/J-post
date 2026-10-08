@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -463,6 +464,11 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	if err != nil {
 		return LiveSession{}, err
 	}
+	keptKey := ""
+	if provider := cmp.Or(setup.PlanProvider, s.PlanProvider); reused == nil && provider != planNone {
+		keptKey = keptPlanKey(jobID, provider, setup)
+		reused = r.kept.take(keptKey, r.now())
+	}
 	plan, err := interviewPlanFor(ctx, s, job, profile.ResumeText, setup, reused)
 	if err != nil {
 		return LiveSession{}, err
@@ -474,6 +480,9 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup, brief))
 	token, err := createLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
+		if keptKey != "" && plan != nil {
+			r.kept.keep(keptKey, plan, r.now()) // so Try again doesn't write a new plan
+		}
 		return LiveSession{}, err
 	}
 	mi, err := r.createPlannedInterview(jobID, setup, plan)
