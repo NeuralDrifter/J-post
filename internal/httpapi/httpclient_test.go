@@ -1,18 +1,19 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package httpapi
 
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestAPIRequestUnreachableHidesURL(t *testing.T) {
-	_, err := apiRequest{source: "Example", url: "http://127.0.0.1:1/search?key=s3cret"}.send(context.Background())
+	_, err := Request{Source: "Example", URL: "http://127.0.0.1:1/search?key=s3cret"}.Send(context.Background())
 	if err == nil || strings.Contains(err.Error(), "s3cret") || !strings.Contains(err.Error(), "could not reach Example") {
 		t.Fatalf("err = %v", err)
 	}
@@ -22,7 +23,7 @@ func TestAPIRequestTimeout(t *testing.T) {
 	url := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 	})
-	_, err := apiRequest{source: "Example", url: url + "?key=s3cret", timeout: 20 * time.Millisecond}.send(context.Background())
+	_, err := Request{Source: "Example", URL: url + "?key=s3cret", Timeout: 20 * time.Millisecond}.Send(context.Background())
 	if err == nil || strings.Contains(err.Error(), "s3cret") || !strings.Contains(err.Error(), "Example timed out") {
 		t.Fatalf("err = %v", err)
 	}
@@ -37,8 +38,8 @@ func TestAPIRequestReturnsAnyStatus(t *testing.T) {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("short and stout"))
 	})
-	resp, err := apiRequest{source: "Example", url: url, headers: map[string]string{"X-Test": "yes"}}.send(context.Background())
-	if err != nil || resp.status != http.StatusTeapot || string(resp.body) != "short and stout" || resp.header.Get("X-RateLimit-Remaining") != "7" {
+	resp, err := Request{Source: "Example", URL: url, Headers: map[string]string{"X-Test": "yes"}}.Send(context.Background())
+	if err != nil || resp.Status != http.StatusTeapot || string(resp.Body) != "short and stout" || resp.Header.Get("X-RateLimit-Remaining") != "7" {
 		t.Fatalf("resp = %+v, err = %v", resp, err)
 	}
 }
@@ -59,8 +60,14 @@ func TestHTTPErrorMessage(t *testing.T) {
 		{400, `{"error":"bad where parameter"}`, `Adzuna error 400: {"error":"bad where parameter"}`},
 	}
 	for _, c := range cases {
-		if got := httpErrorMessage("Adzuna", c.status, []byte(c.body)); got != c.want {
+		if got := ErrorMessage("Adzuna", c.status, []byte(c.body)); got != c.want {
 			t.Errorf("%d: got %q, want %q", c.status, got, c.want)
 		}
 	}
+}
+
+func fakeServer(t *testing.T, handler http.HandlerFunc) string {
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	return srv.URL
 }

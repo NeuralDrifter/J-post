@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"jobtrack/internal/httpapi"
 	"jobtrack/internal/textproc"
 )
 
@@ -76,7 +77,7 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 	}
 	var resp usajobsResponse
 	headers := map[string]string{"Host": "data.usajobs.gov", "User-Agent": email, "Authorization-Key": key}
-	if _, err := getJSON(ctx, apiRequest{source: "USAJobs", url: usajobsBaseURL + "?" + params.Encode(), headers: headers}, &resp); err != nil {
+	if _, err := httpapi.GetJSON(ctx, httpapi.Request{Source: "USAJobs", URL: usajobsBaseURL + "?" + params.Encode(), Headers: headers}, &resp); err != nil {
 		return nil, err
 	}
 	out := []rawJob{}
@@ -120,7 +121,7 @@ func himalayasSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([
 	for page := 1; page <= himalayasMaxPages && len(out) < want; page++ {
 		var resp himalayasResponse
 		params := url.Values{"q": {q.Term}, "page": {strconv.Itoa(page)}}
-		if _, err := getJSON(ctx, apiRequest{source: "Himalayas", url: himalayasBaseURL + "?" + params.Encode()}, &resp); err != nil {
+		if _, err := httpapi.GetJSON(ctx, httpapi.Request{Source: "Himalayas", URL: himalayasBaseURL + "?" + params.Encode()}, &resp); err != nil {
 			if len(out) > 0 {
 				break // keep what we already have
 			}
@@ -174,7 +175,7 @@ type jobicyResponse struct {
 func jobicySearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
 	params := url.Values{"count": {strconv.Itoa(min(max(opts.Results, 1), jobicyMaxCount))}, "tag": {q.Term}}
 	var resp jobicyResponse
-	if _, err := getJSON(ctx, apiRequest{source: "Jobicy", url: jobicyBaseURL + "?" + params.Encode()}, &resp); err != nil {
+	if _, err := httpapi.GetJSON(ctx, httpapi.Request{Source: "Jobicy", URL: jobicyBaseURL + "?" + params.Encode()}, &resp); err != nil {
 		return nil, err
 	}
 	out := []rawJob{}

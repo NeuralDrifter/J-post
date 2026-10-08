@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"jobtrack/internal/httpapi"
 	"jobtrack/internal/textproc"
 )
 
@@ -69,24 +70,24 @@ func geminiPost(ctx context.Context, key, path string, body any, out any) error 
 }
 
 func geminiPostOnce(ctx context.Context, key, path string, payload []byte, out any) (int, error) {
-	resp, err := apiRequest{
-		source:  "Gemini",
-		method:  http.MethodPost,
-		url:     geminiBaseURL + path,
-		headers: map[string]string{"Content-Type": "application/json", "x-goog-api-key": key},
-		body:    payload,
-		timeout: geminiTimeout,
-	}.send(ctx)
+	resp, err := httpapi.Request{
+		Source:  "Gemini",
+		Method:  http.MethodPost,
+		URL:     geminiBaseURL + path,
+		Headers: map[string]string{"Content-Type": "application/json", "x-goog-api-key": key},
+		Body:    payload,
+		Timeout: geminiTimeout,
+	}.Send(ctx)
 	if err != nil {
 		return 0, err
 	}
-	if resp.status != http.StatusOK {
-		return resp.status, fmt.Errorf("Gemini error %d: %s", resp.status, textproc.Truncate(strings.ReplaceAll(geminiErrorText(resp.body), key, "[key]"), 300))
+	if resp.Status != http.StatusOK {
+		return resp.Status, fmt.Errorf("Gemini error %d: %s", resp.Status, textproc.Truncate(strings.ReplaceAll(geminiErrorText(resp.Body), key, "[key]"), 300))
 	}
-	if err := json.Unmarshal(resp.body, out); err != nil {
-		return resp.status, fmt.Errorf("unexpected Gemini response: %v", err)
+	if err := json.Unmarshal(resp.Body, out); err != nil {
+		return resp.Status, fmt.Errorf("unexpected Gemini response: %v", err)
 	}
-	return resp.status, nil
+	return resp.Status, nil
 }
 
 // geminiErrorText prefers the API's error.message over the raw body.

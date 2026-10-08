@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"jobtrack/internal/httpapi"
 	"jobtrack/internal/osproc"
 	"jobtrack/internal/textproc"
 )
@@ -225,8 +226,8 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 		params.Set("max_days_old", strconv.Itoa(opts.maxDaysOld()))
 	}
 	var parsed adzunaResponse
-	req := apiRequest{source: "Adzuna", url: adzunaBaseURL + "?" + params.Encode(), timeout: adzunaTimeout}
-	if _, err := getJSON(ctx, req, &parsed); err != nil {
+	req := httpapi.Request{Source: "Adzuna", URL: adzunaBaseURL + "?" + params.Encode(), Timeout: adzunaTimeout}
+	if _, err := httpapi.GetJSON(ctx, req, &parsed); err != nil {
 		return nil, err
 	}
 	out := make([]rawJob, 0, len(parsed.Results))

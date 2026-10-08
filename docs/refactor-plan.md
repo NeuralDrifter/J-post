@@ -70,7 +70,7 @@ Each line is one commit, green before the next.
 - [x] prep: `dateLayout` and `lastLine` move into text.go; `clamp` moves to window.go
 - [x] extract-leaf-module: string and HTML helpers -> internal/textproc
 - [x] prep: `httpErrorMessage` and its test move next to the HTTP client
-- [ ] extract-leaf-module: HTTP client -> internal/httpapi
+- [x] extract-leaf-module: HTTP client -> internal/httpapi (fakeServer test helper copied: 4 lines)
 - [ ] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
 - [ ] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
 - [ ] prep: provider IDs and answer modes move to settings.go (break settings <-> ai)

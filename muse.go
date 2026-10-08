@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"jobtrack/internal/httpapi"
 	"jobtrack/internal/textproc"
 )
 
@@ -77,7 +78,7 @@ func museSliceKey(category, location string) string { return category + "|" + lo
 func fetchMusePage(ctx context.Context, category, location string, page int) (museResponse, int, error) {
 	var out museResponse
 	params := url.Values{"page": {strconv.Itoa(page)}, "category": {category}, "location": {location}}
-	header, err := getJSON(ctx, apiRequest{source: "The Muse", url: museBaseURL + "?" + params.Encode()}, &out)
+	header, err := httpapi.GetJSON(ctx, httpapi.Request{Source: "The Muse", URL: museBaseURL + "?" + params.Encode()}, &out)
 	if err != nil {
 		return out, 0, err
 	}
