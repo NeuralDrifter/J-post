@@ -49,6 +49,7 @@ type openAIConn struct {
 type openAIPreset struct {
 	id, label string
 	needsKey  bool
+	localApp  string // for an app running on this PC (e.g. "Ollama"): its name, for "isn't running" errors
 	conn      func(Settings) openAIConn
 }
 
@@ -63,8 +64,12 @@ var openAIPresets = []openAIPreset{
 	{id: providerDeepSeek, label: "DeepSeek", needsKey: true, conn: func(s Settings) openAIConn {
 		return openAIConn{baseURL: "https://api.deepseek.com/v1", key: s.DeepSeekKey, model: s.DeepSeekModel, mode: modeJSONObject}
 	}},
-	{id: providerOllama, label: "Ollama (local)", conn: func(s Settings) openAIConn {
+	{id: providerOllama, label: "Ollama (local)", localApp: "Ollama", conn: func(s Settings) openAIConn {
 		return openAIConn{baseURL: s.OllamaURL, model: s.OllamaModel, mode: modeJSONSchema}
+	}},
+	// LM Studio documents only json_schema; its server can be set to require a token.
+	{id: providerLMStudio, label: "LM Studio (local)", localApp: "LM Studio", conn: func(s Settings) openAIConn {
+		return openAIConn{baseURL: s.LMStudioURL, key: s.LMStudioKey, model: s.LMStudioModel, mode: modeJSONSchema}
 	}},
 	{id: providerOpenAICompatible, label: "OpenAI-compatible (custom)", conn: func(s Settings) openAIConn {
 		return openAIConn{baseURL: s.CustomAIBaseURL, key: s.CustomAIKey, model: s.CustomAIModel, mode: answerMode(s.CustomAIMode)}
@@ -153,7 +158,7 @@ func (o openAIProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult
 	for attempt := 1; ; attempt++ {
 		resp, err := chat.New(ctx, params)
 		if err != nil {
-			return aiResult{}, openAIError(err, o.p.label, c)
+			return aiResult{}, openAIError(err, o.p, c)
 		}
 		model = resp.Model
 		logOpenAIUsage(o.p.label, resp)
@@ -228,7 +233,7 @@ func (o openAIProvider) listModels(ctx context.Context, s Settings) ([]string, e
 	models := openai.NewModelService(openAIOptions(c)...)
 	page, err := models.List(ctx)
 	if err != nil {
-		return nil, openAIError(err, o.p.label, c)
+		return nil, openAIError(err, o.p, c)
 	}
 	ids := make([]string, 0, len(page.Data))
 	for _, m := range page.Data {

@@ -13,6 +13,8 @@ import (
 //
 //	JOBTRACK_LIVE_DEEPSEEK_KEY=sk-… go test -run TestLive -v
 //	JOBTRACK_LIVE_OLLAMA_MODEL=llama3.2 go test -run TestLive -v   (Ollama running locally)
+//	JOBTRACK_LIVE_LMSTUDIO_MODEL=google/gemma-3-1b go test -run TestLive -v   (LM Studio's server running;
+//	    add JOBTRACK_LIVE_LMSTUDIO_KEY when Require Authentication is on)
 //
 // Optional: JOBTRACK_LIVE_DEEPSEEK_MODEL picks the model (default: the first
 // model DeepSeek lists). Each run prints model, time and the cache hit/miss
@@ -89,4 +91,18 @@ func TestLiveOllama(t *testing.T) {
 		t.Skip("set JOBTRACK_LIVE_OLLAMA_MODEL to run (Ollama must be running)")
 	}
 	runLive(t, providerOllama, Settings{OllamaURL: defaultOllamaURL, OllamaModel: model})
+}
+
+func TestLiveLMStudio(t *testing.T) {
+	model := os.Getenv("JOBTRACK_LIVE_LMSTUDIO_MODEL")
+	if model == "" {
+		t.Skip("set JOBTRACK_LIVE_LMSTUDIO_MODEL to run (LM Studio's server must be running)")
+	}
+	s := Settings{LMStudioURL: defaultLMStudioURL, LMStudioKey: os.Getenv("JOBTRACK_LIVE_LMSTUDIO_KEY"), LMStudioModel: model}
+	models, err := listAIModels(context.Background(), providerLMStudio, s)
+	if err != nil {
+		t.Fatalf("list models: %v", err)
+	}
+	t.Logf("LM Studio models: %s", strings.Join(models, ", "))
+	runLive(t, providerLMStudio, s)
 }

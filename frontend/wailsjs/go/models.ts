@@ -1525,6 +1525,9 @@ export namespace main {
 	    deepseekModel: string;
 	    ollamaURL: string;
 	    ollamaModel: string;
+	    lmStudioURL: string;
+	    lmStudioKey: string;
+	    lmStudioModel: string;
 	    customAIBaseURL: string;
 	    customAIKey: string;
 	    customAIModel: string;
@@ -1564,6 +1567,9 @@ export namespace main {
 	        this.deepseekModel = source["deepseekModel"];
 	        this.ollamaURL = source["ollamaURL"];
 	        this.ollamaModel = source["ollamaModel"];
+	        this.lmStudioURL = source["lmStudioURL"];
+	        this.lmStudioKey = source["lmStudioKey"];
+	        this.lmStudioModel = source["lmStudioModel"];
 	        this.customAIBaseURL = source["customAIBaseURL"];
 	        this.customAIKey = source["customAIKey"];
 	        this.customAIModel = source["customAIModel"];

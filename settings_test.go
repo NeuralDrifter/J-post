@@ -20,6 +20,7 @@ func TestSettingsRoundTrip(t *testing.T) {
 	store := NewSettingsStore(dir)
 	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: providerGeminiLive, TipsProvider: providerGeminiLive, PlanProvider: providerAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet",
 		OpenAIKey: "ok", OpenAIModel: "om", DeepSeekKey: "dk", DeepSeekModel: "dm", OllamaURL: "http://box:11434/v1", OllamaModel: "lm",
+		LMStudioURL: "http://box:1234/v1", LMStudioKey: "lk", LMStudioModel: "sm",
 		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object"}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
@@ -103,7 +104,7 @@ func TestSettingsOpenAIDefaults(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"followUpDays": 7}`), 0o600)
 	s, err := NewSettingsStore(dir).Load()
-	if err != nil || s.OllamaURL != "http://localhost:11434/v1" || s.CustomAIMode != "plain" {
+	if err != nil || s.OllamaURL != "http://localhost:11434/v1" || s.LMStudioURL != "http://localhost:1234/v1" || s.CustomAIMode != "plain" {
 		t.Fatalf("OllamaURL = %q, CustomAIMode = %q, %v", s.OllamaURL, s.CustomAIMode, err)
 	}
 }

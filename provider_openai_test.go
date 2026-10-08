@@ -21,6 +21,8 @@ func TestOpenAIProviderUnavailableReasons(t *testing.T) {
 		{providerDeepSeek, Settings{DeepSeekKey: "k", DeepSeekModel: "m"}, ""},
 		{providerOllama, Settings{OllamaURL: defaultOllamaURL}, "Choose a model for Ollama (local) in Settings → AI"},
 		{providerOllama, Settings{OllamaURL: defaultOllamaURL, OllamaModel: "llama"}, ""},
+		{providerLMStudio, Settings{LMStudioURL: defaultLMStudioURL}, "Choose a model for LM Studio (local) in Settings → AI"},
+		{providerLMStudio, Settings{LMStudioURL: defaultLMStudioURL, LMStudioModel: "qwen"}, ""},
 		{providerOpenAICompatible, Settings{CustomAIModel: "m"}, "Enter the server address in Settings → AI"},
 		{providerOpenAICompatible, Settings{CustomAIBaseURL: "http://x/v1"}, "Choose a model for OpenAI-compatible (custom) in Settings → AI"},
 		{providerOpenAICompatible, Settings{CustomAIBaseURL: "http://x/v1", CustomAIModel: "m"}, ""},
@@ -37,7 +39,7 @@ func TestOpenAIProviderUnavailableReasons(t *testing.T) {
 }
 
 func TestAIProvidersOrder(t *testing.T) {
-	want := []string{providerGeminiLive, providerAnthropic, providerClaudeCode, "openai", "deepseek", "ollama", "openai-compatible"}
+	want := []string{providerGeminiLive, providerAnthropic, providerClaudeCode, "openai", "deepseek", "ollama", "lmstudio", "openai-compatible"}
 	var got []string
 	for _, p := range aiProviders() {
 		got = append(got, p.id())
@@ -56,12 +58,14 @@ func TestOpenAIPresetConnections(t *testing.T) {
 	s := Settings{
 		OpenAIKey: "ok", OpenAIModel: "om", DeepSeekKey: "dk", DeepSeekModel: "dm",
 		OllamaURL: "http://box:11434/v1", OllamaModel: "lm",
+		LMStudioURL: "http://box:1234/v1", LMStudioKey: "lk", LMStudioModel: "sm",
 		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object",
 	}
 	want := map[string]openAIConn{
 		providerOpenAI:           {baseURL: "https://api.openai.com/v1", key: "ok", model: "om", mode: modeJSONSchema},
 		providerDeepSeek:         {baseURL: "https://api.deepseek.com/v1", key: "dk", model: "dm", mode: modeJSONObject},
 		providerOllama:           {baseURL: "http://box:11434/v1", key: "", model: "lm", mode: modeJSONSchema},
+		providerLMStudio:         {baseURL: "http://box:1234/v1", key: "lk", model: "sm", mode: modeJSONSchema},
 		providerOpenAICompatible: {baseURL: "http://c/v1", key: "ck", model: "cm", mode: modeJSONObject},
 	}
 	for _, preset := range openAIPresets {

@@ -17,6 +17,7 @@ const (
 	providerOpenAI           = "openai"
 	providerDeepSeek         = "deepseek"
 	providerOllama           = "ollama"
+	providerLMStudio         = "lmstudio"
 	providerOpenAICompatible = "openai-compatible"
 )
 

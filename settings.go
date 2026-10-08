@@ -20,6 +20,7 @@ const (
 	defaultGradingEffort      = "high"
 	defaultTipsEffort         = "low"
 	defaultOllamaURL          = "http://localhost:11434/v1"
+	defaultLMStudioURL        = "http://localhost:1234/v1"
 )
 
 type Settings struct {
@@ -57,6 +58,9 @@ type Settings struct {
 	DeepSeekModel   string `json:"deepseekModel"`
 	OllamaURL       string `json:"ollamaURL"`
 	OllamaModel     string `json:"ollamaModel"`
+	LMStudioURL     string `json:"lmStudioURL"`
+	LMStudioKey     string `json:"lmStudioKey"` // only when LM Studio's server requires a token
+	LMStudioModel   string `json:"lmStudioModel"`
 	CustomAIBaseURL string `json:"customAIBaseURL"`
 	CustomAIKey     string `json:"customAIKey"`
 	CustomAIModel   string `json:"customAIModel"`
@@ -117,6 +121,8 @@ func applySettingsDefaults(s *Settings) {
 	s.DeepSeekModel = strings.TrimSpace(s.DeepSeekModel)
 	s.OllamaURL = cmp.Or(strings.TrimSpace(s.OllamaURL), defaultOllamaURL)
 	s.OllamaModel = strings.TrimSpace(s.OllamaModel)
+	s.LMStudioURL = cmp.Or(strings.TrimSpace(s.LMStudioURL), defaultLMStudioURL)
+	s.LMStudioModel = strings.TrimSpace(s.LMStudioModel)
 	s.CustomAIBaseURL = strings.TrimSpace(s.CustomAIBaseURL)
 	s.CustomAIModel = strings.TrimSpace(s.CustomAIModel)
 	s.CustomAIMode = cmp.Or(s.CustomAIMode, string(modePlain))

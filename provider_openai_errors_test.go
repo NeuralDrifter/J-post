@@ -86,6 +86,8 @@ func TestOpenAIConnectionRefused(t *testing.T) {
 	if time.Since(start) > 5*time.Second {
 		t.Fatal("a refused connection should fail fast")
 	}
+	_, err = runProvider(t, providerLMStudio, Settings{LMStudioURL: addr, LMStudioModel: "m"})
+	wantMessage(t, err.Error(), "LM Studio isn't running at "+addr)
 	_, err = runProvider(t, providerOpenAICompatible, Settings{CustomAIBaseURL: addr, CustomAIModel: "m", CustomAIMode: "plain"})
 	wantMessage(t, err.Error(), "Couldn't reach "+customLabel+" at "+addr)
 }
@@ -107,4 +109,14 @@ func TestOpenAITimeout(t *testing.T) {
 		t.Fatal("want a timeout")
 	}
 	wantMessage(t, err.Error(), customLabel+" took too long to answer")
+}
+
+// LM Studio can require a token; without one the user needs to know where to set it.
+func TestLMStudioTokenRequired(t *testing.T) {
+	_, srv := newFakeOpenAI(t, errorReply(401, "An LM Studio API token is required to make requests to this server"))
+	_, err := runProvider(t, providerLMStudio, Settings{LMStudioURL: srv.URL + "/v1", LMStudioModel: "m"})
+	wantMessage(t, err.Error(), "LM Studio (local) needs an API token")
+	// With a token that's wrong, it's the usual message.
+	_, err = runProvider(t, providerLMStudio, Settings{LMStudioURL: srv.URL + "/v1", LMStudioKey: "bad", LMStudioModel: "m"})
+	wantMessage(t, err.Error(), "LM Studio (local) rejected the API key")
 }

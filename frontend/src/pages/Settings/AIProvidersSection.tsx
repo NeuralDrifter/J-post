@@ -51,7 +51,7 @@ export function AIProvidersSection({ s, setS }: Props) {
         Question plan: Gemini Live is fastest; Claude Code and the Anthropic API usually write deeper questions but take up to a minute.
       </p>
       <p className="mt-1 text-[11px] text-ink-3">
-        OpenAI, DeepSeek, Ollama on your own PC, or any OpenAI-compatible service can also grade, coach and plan. Set them up below.
+        OpenAI, DeepSeek, Ollama or LM Studio on your own PC, or any OpenAI-compatible service can also grade, coach and plan. Set them up below.
       </p>
 
       <ProviderBlock title="Gemini Live" note="Runs the interview itself, so it's always needed for the voice.">
@@ -146,6 +146,20 @@ export function AIProvidersSection({ s, setS }: Props) {
         </Field>
         <TestProviderButton providerId="ollama" label="Ollama" settings={s} />
         <LinkButton url="https://ollama.com/download">Download Ollama</LinkButton>
+      </ProviderBlock>
+
+      <ProviderBlock title="LM Studio (local)" note="Runs models on your own computer: free, and nothing leaves your PC. Load a model and start the server in LM Studio's Developer tab.">
+        <Field label="Server address" wide>
+          <input className="field font-mono text-xs" value={s.lmStudioURL} onChange={(e) => setS({ ...s, lmStudioURL: e.target.value })} />
+        </Field>
+        <Field label="API token (only if Require Authentication is on)" wide>
+          <input className="field" type="password" autoComplete="off" value={s.lmStudioKey} onChange={(e) => setS({ ...s, lmStudioKey: e.target.value })} />
+        </Field>
+        <Field label="Model" wide>
+          <ModelPicker providerId="lmstudio" settings={s} value={s.lmStudioModel} onChange={(v) => setS({ ...s, lmStudioModel: v })} />
+        </Field>
+        <TestProviderButton providerId="lmstudio" label="LM Studio" settings={s} />
+        <LinkButton url="https://lmstudio.ai/download">Download LM Studio</LinkButton>
       </ProviderBlock>
 
       <ProviderBlock title="OpenAI-compatible (custom)" note="Any other service that speaks OpenAI's format. Not tested by Job Track; use Test to check it.">
