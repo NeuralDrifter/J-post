@@ -57,7 +57,7 @@ internal/
   ai/          AI task runner and its providers
     aitest/      fake Anthropic API and fake Claude Code CLI for other packages' tests
   comp/        the offer package type and its pure evaluation
-  discover/    job-site fetchers (JobSpy, Adzuna, Muse, USAJobs, Himalayas, Jobicy)
+  discover/    job-board fetchers and result merging (JobSpy, Adzuna, Muse, USAJobs, Himalayas, Jobicy)
   app/         Wails bindings, the SQLite Repo and the interview flow
   licensegen/  (unchanged)
 ```
@@ -83,7 +83,7 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: AI task runner and providers -> internal/ai (+ aitest helpers, testdata/fakeclaude)
 - [x] prep: CompPackage type, kinds, vesting and validation move to comp_package.go; columns() becomes compColumnsOf()
 - [x] extract-pure-core: CompPackage + Evaluate -> internal/comp (basePackage fixture copied to comp_test.go)
-- [ ] prep: split fetchers from merge/Repo code in discover.go and sources.go
+- [x] prep: markTracked -> postings.go; fetchOptions + fetch limits -> discover.go; Muse cache and rate-limit log -> muse_cache.go (3 commits)
 - [ ] extract-leaf-module: job-site fetchers -> internal/discover (+ scraper.py)
 - [ ] prep: `keptPlans` dependency of db.go (if still needed once in app)
 - [ ] extract: Repo, bindings and interview flow -> internal/app
@@ -114,6 +114,9 @@ Each line is one commit, green before the next.
   tasks as sample input. They now use neutral fixtures shaped like the nudge
   and scorecard tasks; tests of the real tasks stay with the interview code.
   This is the one place the campaign rewrote tests rather than moving them.
+- 2026-10-08: the board catalog (sources.go) stays in app: it wires the
+  user's settings and the Repo (Muse cache, rate-limit log) into the
+  fetchers. discover is the fetcher library underneath it.
 
 ## Deferred: hand off to the next campaign
 - [ ] Split `Repo` into a `store` package plus feature packages (jobs,
