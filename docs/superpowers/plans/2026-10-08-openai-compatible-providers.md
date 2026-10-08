@@ -28,7 +28,7 @@
 - Keys never appear in error messages or logs.
 - Gemini stays on Live; no Qwen or other Alibaba services; no named presets beyond the four.
 - Every task ends with `go vet ./...` and `go test ./...` passing. When frontend files changed, also `npx tsc --noEmit -p .` and `npx vitest run` in `frontend/`. After a Go binding change, run `wails generate module` and delete the stray `jobtrack.exe` it leaves.
-- Commit messages end with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
+- No AI attribution trailers in commits; AI help is credited by model name on the licenses page (`BUILT_WITH`) and in the README Credits.
 
 ## Review Focus
 

@@ -99,6 +99,12 @@ Job Track is released under the [MIT License](LICENSE). Copyright (c) 2026 Micha
 
 Every source file starts with that copyright line and `SPDX-License-Identifier: MIT`; `go test ./...` checks it, so add both to new files. Third-party libraries, fonts, data and the Wails template files in `build/` keep their own licenses.
 
+## Credits
+
+Built with assistance from:
+[<img src="https://github.com/anthropics.png" width="22" height="22" valign="middle" alt="Anthropic logo"> Claude Opus 5.5 (Anthropic)](https://www.anthropic.com/claude) ·
+[<img src="https://github.com/google.png" width="22" height="22" valign="middle" alt="Google logo"> Google Stitch](https://stitch.withgoogle.com/) (visual design ideas; no mockup code copied)
+
 ## Third-party licenses
 
 Settings → About → **Open-source licenses** lists every library compiled or bundled into the app with its full license text, plus the data sources, the services the app connects to, and the projects that shaped it. The library list is generated: after adding, removing or upgrading a Go module or a frontend dependency, run

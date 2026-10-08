@@ -8,7 +8,7 @@ import { PageTitle } from '../../components/PageTitle'
 import { Panel } from '../../components/Panel'
 import { BrowserOpenURL } from '../../lib/backend'
 import licenses from '../../generated/licenses.json'
-import { DATA, SERVICES, THANKS, type Credit } from './credits'
+import { BUILT_WITH, DATA, SERVICES, THANKS, type Credit } from './credits'
 import { filterLicenses, type LicenseEntry } from './filter'
 
 const GROUPS = { npm: 'App interface', go: 'App core' } as const
@@ -33,6 +33,8 @@ export default function LicensesPage() {
         </p>
         <pre className="max-h-80 overflow-auto rounded-xl bg-black/30 p-3 text-[11px] leading-relaxed whitespace-pre-wrap text-ink-2">{licenses.app.text}</pre>
       </Panel>
+
+      <CreditPanel title="Built with" credits={BUILT_WITH} />
 
       <Panel
         title="Libraries"

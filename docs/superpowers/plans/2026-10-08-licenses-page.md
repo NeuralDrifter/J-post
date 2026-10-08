@@ -19,7 +19,7 @@
 - A Go module without a license file fails generation.
 - The Tax Foundation entry states CC BY-NC 4.0, the attribution link, and the non-commercial note.
 - Each task ends with `go vet ./...`, `go test ./...`, and for frontend changes `npx tsc --noEmit -p .` + `npx vitest run`.
-- Commits end with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
+- No AI attribution trailers in commits; AI help is credited by model name on the licenses page (`BUILT_WITH`) and in the README Credits.
 
 ## Review Focus
 

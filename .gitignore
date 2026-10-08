@@ -8,3 +8,4 @@ example_only_non_functioning_demo content/
 datasets/
 *.xlsx
 3rd_party/
+.claude/settings.local.json

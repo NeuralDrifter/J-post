@@ -4,6 +4,20 @@
 /** Hand-written credits shown under the generated library list. */
 export type Credit = { name: string; detail: string; license?: string; url: string }
 
+/** Tools that helped build Job Track. AI coding help is credited here by model name, not in commits. */
+export const BUILT_WITH: Credit[] = [
+  {
+    name: 'Claude Opus 5.5 (Anthropic)',
+    detail: 'AI coding assistance.',
+    url: 'https://www.anthropic.com/claude',
+  },
+  {
+    name: 'Google Stitch',
+    detail: "The app's visual design ideas came from a Stitch mockup (Obsidian Lumina). No mockup code was copied.",
+    url: 'https://stitch.withgoogle.com/',
+  },
+]
+
 /** Datasets the Offers page draws on (marked ✦¹ ✦² ✦³ there). */
 export const DATA: Credit[] = [
   {

@@ -27,7 +27,7 @@ Per project memory, this plan lists the tasks, interfaces and tests and does not
 - `InterviewSetup.PlanProvider`: `""` means use the setting, `"none"` means no plan, anything else is a provider id. `InterviewSetup.RetryOf`: an interview id.
 - Retry refusal message: "This interview has no question plan to retry."
 - Settings note: "Gemini Live is fastest; Claude Code and the Anthropic API usually write deeper questions but take up to a minute."
-- Commit messages end with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Don't push (there is no remote).
+- No AI attribution trailers in commits; AI help is credited by model name on the licenses page (`BUILT_WITH`) and in the README Credits.
 - Test commands:
   - Go: `go test ./...` from the repo root.
   - Frontend: `npx vitest run` and `npx tsc --noEmit` from `frontend/`.
