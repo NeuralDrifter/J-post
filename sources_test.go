@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"jobtrack/internal/settings"
 )
 
 func TestListJobSourcesOrderAndReadiness(t *testing.T) {
-	list := ListJobSources(Settings{})
+	list := ListJobSources(settings.Settings{})
 	var ids []string
 	for _, s := range list {
 		ids = append(ids, s.ID)
@@ -29,7 +31,7 @@ func TestListJobSourcesOrderAndReadiness(t *testing.T) {
 		t.Fatalf("unavailable = %v", unavailable)
 	}
 
-	ready := ListJobSources(Settings{AdzunaAppID: "id", AdzunaAppKey: "k", USAJobsKey: "k", USAJobsEmail: "a@b.c", MuseCategories: []string{"Data"}})
+	ready := ListJobSources(settings.Settings{AdzunaAppID: "id", AdzunaAppKey: "k", USAJobsKey: "k", USAJobsEmail: "a@b.c", MuseCategories: []string{"Data"}})
 	for _, s := range ready {
 		if s.Unavailable != "" {
 			t.Errorf("%s still unavailable: %s", s.ID, s.Unavailable)

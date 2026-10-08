@@ -16,6 +16,7 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
 
+	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
 
@@ -32,17 +33,17 @@ var (
 	anthropicTimeout = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second, rolePlanning: 2 * time.Minute}
 )
 
-func (anthropicProvider) id() string    { return providerAnthropic }
+func (anthropicProvider) id() string    { return settings.ProviderAnthropic }
 func (anthropicProvider) label() string { return "Anthropic API" }
 
-func (anthropicProvider) unavailable(s Settings) string {
+func (anthropicProvider) unavailable(s settings.Settings) string {
 	if s.AnthropicKey == "" {
 		return "Add your Anthropic API key in Settings → AI"
 	}
 	return ""
 }
 
-func (anthropicProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult, error) {
+func (anthropicProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
 	opts := []option.RequestOption{option.WithAPIKey(s.AnthropicKey), option.WithMaxRetries(anthropicMaxRetries)}
 	if anthropicBaseURL != "" {
 		opts = append(opts, option.WithBaseURL(anthropicBaseURL))

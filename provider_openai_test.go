@@ -8,27 +8,29 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"jobtrack/internal/settings"
 )
 
 func TestOpenAIProviderUnavailableReasons(t *testing.T) {
 	cases := []struct {
 		id   string
-		s    Settings
+		s    settings.Settings
 		want string
 	}{
-		{providerOpenAI, Settings{OpenAIModel: "m"}, "Add your OpenAI API key in Settings → AI"},
-		{providerOpenAI, Settings{OpenAIKey: "k"}, "Choose a model for OpenAI in Settings → AI"},
-		{providerOpenAI, Settings{OpenAIKey: "k", OpenAIModel: "m"}, ""},
-		{providerDeepSeek, Settings{DeepSeekModel: "m"}, "Add your DeepSeek API key in Settings → AI"},
-		{providerDeepSeek, Settings{DeepSeekKey: "k"}, "Choose a model for DeepSeek in Settings → AI"},
-		{providerDeepSeek, Settings{DeepSeekKey: "k", DeepSeekModel: "m"}, ""},
-		{providerOllama, Settings{OllamaURL: defaultOllamaURL}, "Choose a model for Ollama (local) in Settings → AI"},
-		{providerOllama, Settings{OllamaURL: defaultOllamaURL, OllamaModel: "llama"}, ""},
-		{providerLMStudio, Settings{LMStudioURL: defaultLMStudioURL}, "Choose a model for LM Studio (local) in Settings → AI"},
-		{providerLMStudio, Settings{LMStudioURL: defaultLMStudioURL, LMStudioModel: "qwen"}, ""},
-		{providerOpenAICompatible, Settings{CustomAIModel: "m"}, "Enter the server address in Settings → AI"},
-		{providerOpenAICompatible, Settings{CustomAIBaseURL: "http://x/v1"}, "Choose a model for OpenAI-compatible (custom) in Settings → AI"},
-		{providerOpenAICompatible, Settings{CustomAIBaseURL: "http://x/v1", CustomAIModel: "m"}, ""},
+		{settings.ProviderOpenAI, settings.Settings{OpenAIModel: "m"}, "Add your OpenAI API key in Settings → AI"},
+		{settings.ProviderOpenAI, settings.Settings{OpenAIKey: "k"}, "Choose a model for OpenAI in Settings → AI"},
+		{settings.ProviderOpenAI, settings.Settings{OpenAIKey: "k", OpenAIModel: "m"}, ""},
+		{settings.ProviderDeepSeek, settings.Settings{DeepSeekModel: "m"}, "Add your DeepSeek API key in Settings → AI"},
+		{settings.ProviderDeepSeek, settings.Settings{DeepSeekKey: "k"}, "Choose a model for DeepSeek in Settings → AI"},
+		{settings.ProviderDeepSeek, settings.Settings{DeepSeekKey: "k", DeepSeekModel: "m"}, ""},
+		{settings.ProviderOllama, settings.Settings{OllamaURL: settings.DefaultOllamaURL}, "Choose a model for Ollama (local) in Settings → AI"},
+		{settings.ProviderOllama, settings.Settings{OllamaURL: settings.DefaultOllamaURL, OllamaModel: "llama"}, ""},
+		{settings.ProviderLMStudio, settings.Settings{LMStudioURL: settings.DefaultLMStudioURL}, "Choose a model for LM Studio (local) in Settings → AI"},
+		{settings.ProviderLMStudio, settings.Settings{LMStudioURL: settings.DefaultLMStudioURL, LMStudioModel: "qwen"}, ""},
+		{settings.ProviderOpenAICompatible, settings.Settings{CustomAIModel: "m"}, "Enter the server address in Settings → AI"},
+		{settings.ProviderOpenAICompatible, settings.Settings{CustomAIBaseURL: "http://x/v1"}, "Choose a model for OpenAI-compatible (custom) in Settings → AI"},
+		{settings.ProviderOpenAICompatible, settings.Settings{CustomAIBaseURL: "http://x/v1", CustomAIModel: "m"}, ""},
 	}
 	for _, c := range cases {
 		p, ok := providerByID(c.id)
@@ -42,7 +44,7 @@ func TestOpenAIProviderUnavailableReasons(t *testing.T) {
 }
 
 func TestAIProvidersOrder(t *testing.T) {
-	want := []string{providerGeminiLive, providerAnthropic, providerClaudeCode, "openai", "deepseek", "ollama", "lmstudio", "openai-compatible"}
+	want := []string{settings.ProviderGeminiLive, settings.ProviderAnthropic, settings.ProviderClaudeCode, "openai", "deepseek", "ollama", "lmstudio", "openai-compatible"}
 	var got []string
 	for _, p := range aiProviders() {
 		got = append(got, p.id())
@@ -58,18 +60,18 @@ func TestAIProvidersOrder(t *testing.T) {
 }
 
 func TestOpenAIPresetConnections(t *testing.T) {
-	s := Settings{
+	s := settings.Settings{
 		OpenAIKey: "ok", OpenAIModel: "om", DeepSeekKey: "dk", DeepSeekModel: "dm",
 		OllamaURL: "http://box:11434/v1", OllamaModel: "lm",
 		LMStudioURL: "http://box:1234/v1", LMStudioKey: "lk", LMStudioModel: "sm",
 		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object",
 	}
 	want := map[string]openAIConn{
-		providerOpenAI:           {baseURL: "https://api.openai.com/v1", key: "ok", model: "om", mode: modeJSONSchema},
-		providerDeepSeek:         {baseURL: "https://api.deepseek.com/v1", key: "dk", model: "dm", mode: modeJSONObject},
-		providerOllama:           {baseURL: "http://box:11434/v1", key: "", model: "lm", mode: modeJSONSchema},
-		providerLMStudio:         {baseURL: "http://box:1234/v1", key: "lk", model: "sm", mode: modeJSONSchema},
-		providerOpenAICompatible: {baseURL: "http://c/v1", key: "ck", model: "cm", mode: modeJSONObject},
+		settings.ProviderOpenAI:           {baseURL: "https://api.openai.com/v1", key: "ok", model: "om", mode: settings.ModeJSONSchema},
+		settings.ProviderDeepSeek:         {baseURL: "https://api.deepseek.com/v1", key: "dk", model: "dm", mode: settings.ModeJSONObject},
+		settings.ProviderOllama:           {baseURL: "http://box:11434/v1", key: "", model: "lm", mode: settings.ModeJSONSchema},
+		settings.ProviderLMStudio:         {baseURL: "http://box:1234/v1", key: "lk", model: "sm", mode: settings.ModeJSONSchema},
+		settings.ProviderOpenAICompatible: {baseURL: "http://c/v1", key: "ck", model: "cm", mode: settings.ModeJSONObject},
 	}
 	for _, preset := range openAIPresets {
 		if got := preset.conn(s); got != want[preset.id] {
@@ -80,7 +82,7 @@ func TestOpenAIPresetConnections(t *testing.T) {
 
 func TestOpenAIJSONSchemaRequest(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1", validNudge))
-	res, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modeJSONSchema))
+	res, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModeJSONSchema))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,9 +102,9 @@ func TestOpenAIJSONSchemaRequest(t *testing.T) {
 
 func TestOpenAIJSONObjectRequest(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1", validNudge))
-	s := customSettings(srv, modeJSONObject)
+	s := customSettings(srv, settings.ModeJSONObject)
 	for range 2 {
-		if _, err := runProvider(t, providerOpenAICompatible, s); err != nil {
+		if _, err := runProvider(t, settings.ProviderOpenAICompatible, s); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -122,7 +124,7 @@ func TestOpenAIJSONObjectRequest(t *testing.T) {
 
 func TestOpenAIPlainRequest(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1", validNudge))
-	if _, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modePlain)); err != nil {
+	if _, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain)); err != nil {
 		t.Fatal(err)
 	}
 	if rf, ok := f.bodies[0]["response_format"]; ok {
@@ -139,7 +141,7 @@ func TestOpenAIPlainRequest(t *testing.T) {
 func TestOpenAIDeepSeekPreset(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("deepseek-chat", validNudge))
 	openAIBaseURLOverride = srv.URL + "/v1"
-	res, err := runProvider(t, providerDeepSeek, Settings{DeepSeekKey: "dk", DeepSeekModel: "deepseek-chat"})
+	res, err := runProvider(t, settings.ProviderDeepSeek, settings.Settings{DeepSeekKey: "dk", DeepSeekModel: "deepseek-chat"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +161,7 @@ func TestOpenAIDeepSeekPreset(t *testing.T) {
 func TestOpenAIPresetUsesMaxCompletionTokens(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("gpt-x", validNudge))
 	openAIBaseURLOverride = srv.URL + "/v1"
-	if _, err := runProvider(t, providerOpenAI, Settings{OpenAIKey: "ok", OpenAIModel: "gpt-x"}); err != nil {
+	if _, err := runProvider(t, settings.ProviderOpenAI, settings.Settings{OpenAIKey: "ok", OpenAIModel: "gpt-x"}); err != nil {
 		t.Fatal(err)
 	}
 	if f.bodies[0]["max_completion_tokens"] != float64(1024) || f.bodies[0]["max_tokens"] != nil {
@@ -169,7 +171,7 @@ func TestOpenAIPresetUsesMaxCompletionTokens(t *testing.T) {
 
 func TestOpenAIProseAnswerParses(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1", "Sure! ```json\n"+validNudge+"\n```"))
-	if _, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modePlain)); err != nil {
+	if _, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain)); err != nil {
 		t.Fatal(err)
 	}
 	if f.requests() != 1 {
@@ -179,7 +181,7 @@ func TestOpenAIProseAnswerParses(t *testing.T) {
 
 func TestOpenAIEmptyAnswerIsRepaired(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1", ""), chatReply("m1", validNudge))
-	if _, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modeJSONObject)); err != nil {
+	if _, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModeJSONObject)); err != nil {
 		t.Fatal(err)
 	}
 	if f.requests() != 2 {
@@ -194,7 +196,7 @@ func TestOpenAIEmptyAnswerIsRepaired(t *testing.T) {
 
 func TestOpenAIInvalidTwiceFails(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1", `{"kind": "great"}`))
-	_, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modeJSONObject))
+	_, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModeJSONObject))
 	if err == nil || !strings.Contains(err.Error(), "wasn't in the expected format") {
 		t.Fatalf("err = %v", err)
 	}
@@ -205,7 +207,7 @@ func TestOpenAIInvalidTwiceFails(t *testing.T) {
 
 func TestOpenAIReportsModel(t *testing.T) {
 	_, srv := newFakeOpenAI(t, chatReply("m1-2026-10-01", validNudge))
-	res, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modePlain))
+	res, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err != nil || res.model != "m1-2026-10-01" {
 		t.Fatalf("model = %q, %v", res.model, err)
 	}
@@ -213,7 +215,7 @@ func TestOpenAIReportsModel(t *testing.T) {
 
 func TestOpenAINoKeyForOllama(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("llama", validNudge))
-	if _, err := runProvider(t, providerOllama, Settings{OllamaURL: srv.URL + "/v1", OllamaModel: "llama"}); err != nil {
+	if _, err := runProvider(t, settings.ProviderOllama, settings.Settings{OllamaURL: srv.URL + "/v1", OllamaModel: "llama"}); err != nil {
 		t.Fatal(err)
 	}
 	if auth := f.headers[0].Get("Authorization"); strings.Contains(auth, "sk-") {
@@ -227,7 +229,7 @@ func TestOpenAIIgnoresOpenAIEnvironment(t *testing.T) {
 	t.Setenv("OPENAI_ORG_ID", "org-leak")
 	t.Setenv("OPENAI_CUSTOM_HEADERS", "X-Leak: yes")
 	f, srv := newFakeOpenAI(t, chatReply("llama", validNudge))
-	if _, err := runProvider(t, providerOllama, Settings{OllamaURL: srv.URL + "/v1", OllamaModel: "llama"}); err != nil {
+	if _, err := runProvider(t, settings.ProviderOllama, settings.Settings{OllamaURL: srv.URL + "/v1", OllamaModel: "llama"}); err != nil {
 		t.Fatal(err)
 	}
 	h := f.headers[0]
@@ -238,7 +240,7 @@ func TestOpenAIIgnoresOpenAIEnvironment(t *testing.T) {
 
 func TestListModelsSorted(t *testing.T) {
 	f, srv := newFakeOpenAI(t, fakeReply{body: `{"object":"list","data":[{"id":"zeta","object":"model","created":1,"owned_by":"x"},{"id":"alpha","object":"model","created":1,"owned_by":"x"},{"id":"mid","object":"model","created":1,"owned_by":"x"}]}`})
-	models, err := listAIModels(context.Background(), providerOpenAICompatible, customSettings(srv, modePlain))
+	models, err := listAIModels(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +251,7 @@ func TestListModelsSorted(t *testing.T) {
 
 func TestListModelsBadKey(t *testing.T) {
 	_, srv := newFakeOpenAI(t, errorReply(401, "bad key"))
-	_, err := listAIModels(context.Background(), providerOpenAICompatible, customSettings(srv, modePlain))
+	_, err := listAIModels(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err == nil || !strings.Contains(err.Error(), "rejected the API key") {
 		t.Fatalf("err = %v", err)
 	}
@@ -258,22 +260,22 @@ func TestListModelsBadKey(t *testing.T) {
 // Loading models needs the address and key, but not a model yet.
 func TestListModelsWithoutModelChosen(t *testing.T) {
 	_, srv := newFakeOpenAI(t, fakeReply{body: `{"object":"list","data":[{"id":"a","object":"model","created":1,"owned_by":"x"}]}`})
-	s := customSettings(srv, modePlain)
+	s := customSettings(srv, settings.ModePlain)
 	s.CustomAIModel = ""
-	if _, err := listAIModels(context.Background(), providerOpenAICompatible, s); err != nil {
+	if _, err := listAIModels(context.Background(), settings.ProviderOpenAICompatible, s); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestListModelsRejectsOtherProviders(t *testing.T) {
-	if _, err := listAIModels(context.Background(), providerAnthropic, Settings{}); err == nil {
+	if _, err := listAIModels(context.Background(), settings.ProviderAnthropic, settings.Settings{}); err == nil {
 		t.Fatal("Anthropic isn't an OpenAI-style provider")
 	}
 }
 
 func TestTestAIProviderReportsModelAndTime(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1-real", `{"ok": true}`))
-	res, err := testAIProvider(context.Background(), providerOpenAICompatible, customSettings(srv, modePlain))
+	res, err := testAIProvider(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,9 +286,9 @@ func TestTestAIProviderReportsModelAndTime(t *testing.T) {
 
 func TestTestAIProviderUnavailable(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m", `{"ok": true}`))
-	s := customSettings(srv, modePlain)
+	s := customSettings(srv, settings.ModePlain)
 	s.CustomAIModel = ""
-	_, err := testAIProvider(context.Background(), providerOpenAICompatible, s)
+	_, err := testAIProvider(context.Background(), settings.ProviderOpenAICompatible, s)
 	if err == nil || !strings.Contains(err.Error(), "Choose a model") || f.requests() != 0 {
 		t.Fatalf("err = %v, requests = %d", err, f.requests())
 	}

@@ -7,23 +7,25 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+
+	"jobtrack/internal/settings"
 )
 
 // geminiProvider runs tasks on the Gemini Live model through a submit_result
 // tool call (liveStructured), the same model that runs the interview.
 type geminiProvider struct{}
 
-func (geminiProvider) id() string    { return providerGeminiLive }
+func (geminiProvider) id() string    { return settings.ProviderGeminiLive }
 func (geminiProvider) label() string { return "Gemini Live" }
 
-func (geminiProvider) unavailable(s Settings) string {
+func (geminiProvider) unavailable(s settings.Settings) string {
 	if s.GeminiKey == "" {
 		return "Add your Gemini API key in Settings → AI"
 	}
 	return ""
 }
 
-func (geminiProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult, error) {
+func (geminiProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
 	var raw json.RawMessage
 	err := liveStructured(ctx, s.GeminiKey, jsonPrompt{
 		model:  s.GeminiLiveModel,

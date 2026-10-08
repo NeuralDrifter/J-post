@@ -12,6 +12,8 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+
+	"jobtrack/internal/settings"
 )
 
 //go:embed all:frontend/dist
@@ -28,7 +30,7 @@ func main() {
 		return
 	}
 
-	app := NewApp(defaultDataDir())
+	app := NewApp(settings.DefaultDataDir())
 
 	// The window starts hidden at a conservative size; domReady resizes it to
 	// fit the actual screen before showing it.

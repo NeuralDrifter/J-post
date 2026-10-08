@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
 
@@ -437,8 +438,8 @@ func (r *Repo) DeleteMockInterview(id string) error {
 // (made by the plan provider, reused for a retry, or none), the brief and the
 // Live token. Nothing is stored until the token succeeds, so a failure at any
 // step leaves no interview or plan behind.
-func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, setup InterviewSetup) (LiveSession, error) {
-	applySettingsDefaults(&s)
+func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID string, setup InterviewSetup) (LiveSession, error) {
+	settings.ApplyDefaults(&s)
 	if s.GeminiKey == "" {
 		return LiveSession{}, errNoGeminiKey
 	}
@@ -501,8 +502,8 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 
 // nudgeAnswer asks the tips provider for one coaching cue about the answer that
 // started at answerAtMs, and saves it with the interview for later review.
-func nudgeAnswer(ctx context.Context, r *Repo, s Settings, sessionID, question, answer string, answerAtMs int64) (Nudge, error) {
-	applySettingsDefaults(&s)
+func nudgeAnswer(ctx context.Context, r *Repo, s settings.Settings, sessionID, question, answer string, answerAtMs int64) (Nudge, error) {
+	settings.ApplyDefaults(&s)
 	var n Nudge
 	model, err := runAITask(ctx, s, s.TipsProvider, nudgeTask(question, answer), &n)
 	if err != nil {
@@ -516,8 +517,8 @@ func clampScore(v int) int { return clamp(v, 1, 5) }
 
 // scoreInterview turns the transcript into a scorecard. Failures are recorded on
 // the session (status "failed") so the transcript is kept and scoring can be retried.
-func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockInterview, error) {
-	applySettingsDefaults(&s)
+func scoreInterview(ctx context.Context, r *Repo, s settings.Settings, id string) (MockInterview, error) {
+	settings.ApplyDefaults(&s)
 	mi, err := r.GetMockInterview(id)
 	if err != nil {
 		return mi, err
@@ -541,8 +542,8 @@ func scoreInterview(ctx context.Context, r *Repo, s Settings, id string) (MockIn
 // regradeInterview grades an interview again with a chosen provider and adds (or
 // replaces) that provider's scorecard. On failure the interview keeps its
 // status and existing scorecards; only the error is returned.
-func regradeInterview(ctx context.Context, r *Repo, s Settings, id, provider string) (MockInterview, error) {
-	applySettingsDefaults(&s)
+func regradeInterview(ctx context.Context, r *Repo, s settings.Settings, id, provider string) (MockInterview, error) {
+	settings.ApplyDefaults(&s)
 	mi, err := r.GetMockInterview(id)
 	if err != nil {
 		return mi, err
@@ -574,7 +575,7 @@ func (r *Repo) failScoring(mi MockInterview, cause error) (MockInterview, error)
 
 // requestScorecard asks a provider to review the session against the job and
 // resume; it also returns the model that graded it.
-func requestScorecard(ctx context.Context, r *Repo, s Settings, provider string, mi MockInterview) (Scorecard, string, error) {
+func requestScorecard(ctx context.Context, r *Repo, s settings.Settings, provider string, mi MockInterview) (Scorecard, string, error) {
 	var card Scorecard
 	job, err := r.GetJob(mi.JobID)
 	if err != nil {

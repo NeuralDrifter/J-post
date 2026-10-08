@@ -74,7 +74,7 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
 - [x] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
 - [x] prep: provider IDs and answer modes move to settings.go (break settings <-> ai); Save checks a fixed ID list, guarded by TestProviderIDsMatchRegistry
-- [ ] extract-data-types: settings and window state store -> internal/settings
+- [x] extract-data-types: settings and window state store -> internal/settings
 - [ ] extract-leaf-module: Gemini API, Live, voices -> internal/gemini
 - [ ] extract-leaf-module: AI task runner and providers -> internal/ai (+ testdata/fakeclaude)
 - [ ] prep: split the CompPackage type from its Repo persistence in comp.go
@@ -108,3 +108,6 @@ Each line is one commit, green before the next.
   uses it; give profile a function instead — clean-code
 - [ ] `taxes.RoundDollars` is exported only because compcalc uses it; it is
   general rounding, not tax logic — clean-code
+- [ ] Stuttering names left by verbatim moves: `settings.SettingsStore`,
+  `marketdata.MarketData`, `settings.NewSettingsStore` — rename after the
+  campaign (touches the frontend models too) — clean-code

@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"jobtrack/internal/marketdata"
+	"jobtrack/internal/settings"
 	"jobtrack/internal/taxes"
 )
 
@@ -92,10 +93,10 @@ func equityValue(p CompPackage, multiplier float64) float64 {
 // Evaluate computes the 4-year breakdown, take-home, scenarios, market position
 // and cost-of-living figures for a package. current (optional) is the baseline
 // the deltas are measured against.
-func Evaluate(p CompPackage, s Settings, md *marketdata.MarketData, current *CompPackage) (PackageResult, error) {
+func Evaluate(p CompPackage, s settings.Settings, md *marketdata.MarketData, current *CompPackage) (PackageResult, error) {
 	// Save-time rules (job link, parent offer) live in ValidateCompPackage; Evaluate
 	// also runs on unsaved drafts for the editor's live preview.
-	applySettingsDefaults(&s)
+	settings.ApplyDefaults(&s)
 	years, tax1, err := yearBreakdowns(p, s.FilingStatus)
 	if err != nil {
 		return PackageResult{}, err
@@ -193,7 +194,7 @@ func addMarketFigures(res *PackageResult, p CompPackage, homeArea string, md *ma
 // marketBaseline compares base pay with the typical (median) pay for the user's
 // occupation at home, for users with no current job to compare against. OEWS
 // wages exclude stock and most bonuses, so it compares base salary only.
-func marketBaseline(p CompPackage, s Settings, md *marketdata.MarketData) *MarketBaseline {
+func marketBaseline(p CompPackage, s settings.Settings, md *marketdata.MarketData) *MarketBaseline {
 	if s.DefaultOccupation == "" {
 		return nil
 	}
@@ -208,7 +209,7 @@ func marketBaseline(p CompPackage, s Settings, md *marketdata.MarketData) *Marke
 }
 
 // deltasVsCurrent is nil when the current package can't be evaluated.
-func deltasVsCurrent(res PackageResult, current CompPackage, s Settings, md *marketdata.MarketData) *Deltas {
+func deltasVsCurrent(res PackageResult, current CompPackage, s settings.Settings, md *marketdata.MarketData) *Deltas {
 	cur, err := Evaluate(current, s, md, nil)
 	if err != nil {
 		return nil

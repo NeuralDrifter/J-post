@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
 
@@ -181,7 +182,7 @@ func (r *Repo) DeleteSearch(id string) error {
 
 // RunSearch serves a search that ran within the cache window from the inbox;
 // otherwise it fetches like RefreshSearch.
-func RunSearch(ctx context.Context, r *Repo, q SearchQuery, s Settings, fetch sourceFunc) (SearchRun, error) {
+func RunSearch(ctx context.Context, r *Repo, q SearchQuery, s settings.Settings, fetch sourceFunc) (SearchRun, error) {
 	return runSearch(ctx, r, q, s.DiscoverCacheHours, fetch)
 }
 

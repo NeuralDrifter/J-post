@@ -15,6 +15,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 var (
@@ -51,7 +53,7 @@ func buildFakeClaude(t *testing.T) string {
 
 // useFakeClaude points the provider at the fake CLI in the given mode and at
 // a temp root the test can inspect.
-func useFakeClaude(t *testing.T, mode string) (Settings, string) {
+func useFakeClaude(t *testing.T, mode string) (settings.Settings, string) {
 	t.Helper()
 	path := buildFakeClaude(t)
 	t.Setenv("FAKE_MODE", mode)
@@ -59,7 +61,7 @@ func useFakeClaude(t *testing.T, mode string) (Settings, string) {
 	old := claudeCodeTempRoot
 	claudeCodeTempRoot = root
 	t.Cleanup(func() { claudeCodeTempRoot = old })
-	return Settings{ClaudeCodePath: path}, root
+	return settings.Settings{ClaudeCodePath: path}, root
 }
 
 func assertEmptyDir(t *testing.T, dir string) {
@@ -72,7 +74,7 @@ func assertEmptyDir(t *testing.T, dir string) {
 
 func TestClaudeCodeArgs(t *testing.T) {
 	task := nudgeTask("q", "a")
-	args := claudeCodeArgs(task, `C:\tmp\mcp.json`, Settings{})
+	args := claudeCodeArgs(task, `C:\tmp\mcp.json`, settings.Settings{})
 	joined := strings.Join(args, "\x00")
 	for _, want := range [][]string{
 		{"-p"},
@@ -96,7 +98,7 @@ func TestClaudeCodeArgs(t *testing.T) {
 	if slices.Contains(args, "--bare") || slices.Contains(args, "--model") {
 		t.Errorf("no --bare (it skips the OAuth login), and no --model unless set: %q", args)
 	}
-	withModel := claudeCodeArgs(task, "m.json", Settings{ClaudeCodeModel: "sonnet"})
+	withModel := claudeCodeArgs(task, "m.json", settings.Settings{ClaudeCodeModel: "sonnet"})
 	if !strings.Contains(strings.Join(withModel, "\x00"), "--model\x00sonnet") {
 		t.Errorf("model not passed: %q", withModel)
 	}
@@ -107,7 +109,7 @@ func TestClaudeCodeRunsAndReadsResult(t *testing.T) {
 	argsFile := filepath.Join(t.TempDir(), "args.json")
 	t.Setenv("FAKE_ARGS", argsFile)
 	var n Nudge
-	model, err := runAITask(context.Background(), s, providerClaudeCode, nudgeTask("q", "a"), &n)
+	model, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, nudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "From the fake" || model != "claude-opus-5-5" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -132,7 +134,7 @@ func TestClaudeCodeMCPConfigPointsAtThisExecutable(t *testing.T) {
 func TestClaudeCodeSurfacesErrorResult(t *testing.T) {
 	s, root := useFakeClaude(t, "error")
 	var n Nudge
-	_, err := runAITask(context.Background(), s, providerClaudeCode, nudgeTask("q", "a"), &n)
+	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, nudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Please run /login") {
 		t.Fatalf("err = %v", err)
 	}
@@ -142,7 +144,7 @@ func TestClaudeCodeSurfacesErrorResult(t *testing.T) {
 func TestClaudeCodeWithoutSubmitFails(t *testing.T) {
 	s, root := useFakeClaude(t, "nosubmit")
 	var n Nudge
-	_, err := runAITask(context.Background(), s, providerClaudeCode, nudgeTask("q", "a"), &n)
+	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, nudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "without") {
 		t.Fatalf("err = %v", err)
 	}
@@ -156,7 +158,7 @@ func TestClaudeCodeTimesOutAndCleansUp(t *testing.T) {
 	t.Cleanup(func() { claudeCodeTimeout[roleTips] = old })
 	start := time.Now()
 	var n Nudge
-	_, err := runAITask(context.Background(), s, providerClaudeCode, nudgeTask("q", "a"), &n)
+	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, nudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 5*time.Second {
 		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
@@ -165,20 +167,20 @@ func TestClaudeCodeTimesOutAndCleansUp(t *testing.T) {
 
 func TestFindClaudeCode(t *testing.T) {
 	path := buildFakeClaude(t)
-	if got, err := findClaudeCode(Settings{ClaudeCodePath: path}); err != nil || got != path {
+	if got, err := findClaudeCode(settings.Settings{ClaudeCodePath: path}); err != nil || got != path {
 		t.Fatalf("explicit path: %q, %v", got, err)
 	}
-	if _, err := findClaudeCode(Settings{ClaudeCodePath: filepath.Join(t.TempDir(), "nope.exe")}); err == nil {
+	if _, err := findClaudeCode(settings.Settings{ClaudeCodePath: filepath.Join(t.TempDir(), "nope.exe")}); err == nil {
 		t.Fatal("a missing explicit path should fail")
 	}
 	t.Setenv("PATH", filepath.Dir(path))
 	t.Setenv("USERPROFILE", t.TempDir())
 	t.Setenv("HOME", t.TempDir())
-	if got, err := findClaudeCode(Settings{}); err != nil || !strings.EqualFold(got, path) {
+	if got, err := findClaudeCode(settings.Settings{}); err != nil || !strings.EqualFold(got, path) {
 		t.Fatalf("PATH lookup: %q, %v", got, err)
 	}
 	t.Setenv("PATH", t.TempDir())
-	if (claudeCodeProvider{}).unavailable(Settings{}) == "" {
+	if (claudeCodeProvider{}).unavailable(settings.Settings{}) == "" {
 		t.Fatal("no claude anywhere should make the provider unavailable")
 	}
 }
@@ -197,7 +199,7 @@ func TestClaudeCodeTimeoutKillsTheWholeProcessTree(t *testing.T) {
 	t.Cleanup(func() { claudeCodeTimeout[roleTips] = old })
 	start := time.Now()
 	var n Nudge
-	_, err := runAITask(context.Background(), s, providerClaudeCode, nudgeTask("q", "a"), &n)
+	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, nudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 6*time.Second {
 		t.Fatalf("a grandchild holding the output pipe must not keep the run alive: err = %v after %s", err, time.Since(start))
 	}

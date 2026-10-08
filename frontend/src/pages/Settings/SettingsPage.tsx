@@ -9,23 +9,7 @@ import { PackageEditor } from '../../components/comp/PackageEditor'
 import { Field } from '../../components/JobForm'
 import { PageTitle } from '../../components/PageTitle'
 import { api, apiOk } from '../../lib/api'
-import {
-  BrowserOpenURL,
-  DataDir,
-  DescribeArea,
-  DescribeOccupation,
-  GetCurrentComp,
-  GetProfile,
-  UpdateResumeText,
-  UploadResume,
-  GetSettings,
-  OpenDataDir,
-  SaveSettings,
-  SearchAreas,
-  SearchOccupations,
-  TestPython,
-  type main,
-} from '../../lib/backend'
+import { BrowserOpenURL, DataDir, DescribeArea, DescribeOccupation, GetCurrentComp, GetProfile, UpdateResumeText, UploadResume, GetSettings, OpenDataDir, SaveSettings, SearchAreas, SearchOccupations, TestPython, type main, type settings } from '../../lib/backend'
 import { blankPackage, FILING_LABEL, formatMoneyFull } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
@@ -98,7 +82,7 @@ function ResumeSection() {
   )
 }
 
-function SettingsForm({ initial, dataDir }: { initial: main.Settings; dataDir: string }) {
+function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDir: string }) {
   const [s, setS] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)

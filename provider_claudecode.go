@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"jobtrack/internal/osproc"
+	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
 
@@ -39,10 +40,10 @@ var (
 
 const claudeCodePrompt = "Call get_input to read the material, then call submit_result exactly once with your answer."
 
-func (claudeCodeProvider) id() string    { return providerClaudeCode }
+func (claudeCodeProvider) id() string    { return settings.ProviderClaudeCode }
 func (claudeCodeProvider) label() string { return "Claude Code" }
 
-func (claudeCodeProvider) unavailable(s Settings) string {
+func (claudeCodeProvider) unavailable(s settings.Settings) string {
 	if _, err := findClaudeCode(s); err != nil {
 		return err.Error()
 	}
@@ -51,7 +52,7 @@ func (claudeCodeProvider) unavailable(s Settings) string {
 
 // findClaudeCode locates the CLI: the Settings path, else `claude` on PATH,
 // else the default install folder (~/.local/bin).
-func findClaudeCode(s Settings) (string, error) {
+func findClaudeCode(s settings.Settings) (string, error) {
 	if s.ClaudeCodePath != "" {
 		if info, err := os.Stat(s.ClaudeCodePath); err != nil || info.IsDir() {
 			return "", fmt.Errorf("Claude Code wasn't found at %s; fix the path in Settings → AI", s.ClaudeCodePath)
@@ -76,7 +77,7 @@ func findClaudeCode(s Settings) (string, error) {
 
 // claudeCodeArgs are the flags for one isolated headless run. Not --bare: bare
 // mode never reads the OAuth login, so the user's Claude plan wouldn't be used.
-func claudeCodeArgs(t aiTask, mcpConfigPath string, s Settings) []string {
+func claudeCodeArgs(t aiTask, mcpConfigPath string, s settings.Settings) []string {
 	args := []string{
 		"-p", claudeCodePrompt, // the prompt must come right after -p; later variadic flags would swallow it
 		"--system-prompt", t.instruction,
@@ -112,7 +113,7 @@ type claudeCodeOutput struct {
 	ModelUsage map[string]json.RawMessage `json:"modelUsage"`
 }
 
-func (claudeCodeProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult, error) {
+func (claudeCodeProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
 	claude, err := findClaudeCode(s)
 	if err != nil {
 		return aiResult{}, err
@@ -165,7 +166,7 @@ func (claudeCodeProvider) run(ctx context.Context, s Settings, t aiTask) (aiResu
 }
 
 // claudeCodeModel is the model the run reports, else the configured one, else "".
-func claudeCodeModel(out claudeCodeOutput, s Settings) string {
+func claudeCodeModel(out claudeCodeOutput, s settings.Settings) string {
 	for model := range out.ModelUsage {
 		return model
 	}
@@ -173,7 +174,7 @@ func claudeCodeModel(out claudeCodeOutput, s Settings) string {
 }
 
 // claudeCodeVersion runs `claude --version` for the Settings "Test" button.
-func claudeCodeVersion(ctx context.Context, s Settings) (string, error) {
+func claudeCodeVersion(ctx context.Context, s settings.Settings) (string, error) {
 	claude, err := findClaudeCode(s)
 	if err != nil {
 		return "", err

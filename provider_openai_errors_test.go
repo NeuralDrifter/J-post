@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 // errorFor runs the custom provider against one reply and returns its error.
@@ -17,7 +19,7 @@ import (
 func errorFor(t *testing.T, reply fakeReply) string {
 	t.Helper()
 	_, srv := newFakeOpenAI(t, reply)
-	_, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modePlain))
+	_, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err == nil {
 		t.Fatal("want an error")
 	}
@@ -82,16 +84,16 @@ func TestOpenAIConnectionRefused(t *testing.T) {
 	addr := "http://" + l.Addr().String() + "/v1"
 	l.Close()
 	start := time.Now()
-	_, err = runProvider(t, providerOllama, Settings{OllamaURL: addr, OllamaModel: "llama"})
+	_, err = runProvider(t, settings.ProviderOllama, settings.Settings{OllamaURL: addr, OllamaModel: "llama"})
 	if err == nil || err.Error() != "Ollama isn't running at "+addr {
 		t.Fatalf("err = %v", err)
 	}
 	if time.Since(start) > 5*time.Second {
 		t.Fatal("a refused connection should fail fast")
 	}
-	_, err = runProvider(t, providerLMStudio, Settings{LMStudioURL: addr, LMStudioModel: "m"})
+	_, err = runProvider(t, settings.ProviderLMStudio, settings.Settings{LMStudioURL: addr, LMStudioModel: "m"})
 	wantMessage(t, err.Error(), "LM Studio isn't running at "+addr)
-	_, err = runProvider(t, providerOpenAICompatible, Settings{CustomAIBaseURL: addr, CustomAIModel: "m", CustomAIMode: "plain"})
+	_, err = runProvider(t, settings.ProviderOpenAICompatible, settings.Settings{CustomAIBaseURL: addr, CustomAIModel: "m", CustomAIMode: "plain"})
 	wantMessage(t, err.Error(), "Couldn't reach "+customLabel+" at "+addr)
 }
 
@@ -107,7 +109,7 @@ func TestOpenAITimeout(t *testing.T) {
 	old := openAITimeout[roleTips]
 	openAITimeout[roleTips] = 100 * time.Millisecond
 	t.Cleanup(func() { openAITimeout[roleTips] = old })
-	_, err := runProvider(t, providerOpenAICompatible, customSettings(srv, modePlain))
+	_, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err == nil {
 		t.Fatal("want a timeout")
 	}
@@ -117,9 +119,9 @@ func TestOpenAITimeout(t *testing.T) {
 // LM Studio can require a token; without one the user needs to know where to set it.
 func TestLMStudioTokenRequired(t *testing.T) {
 	_, srv := newFakeOpenAI(t, errorReply(401, "An LM Studio API token is required to make requests to this server"))
-	_, err := runProvider(t, providerLMStudio, Settings{LMStudioURL: srv.URL + "/v1", LMStudioModel: "m"})
+	_, err := runProvider(t, settings.ProviderLMStudio, settings.Settings{LMStudioURL: srv.URL + "/v1", LMStudioModel: "m"})
 	wantMessage(t, err.Error(), "LM Studio (local) needs an API token")
 	// With a token that's wrong, it's the usual message.
-	_, err = runProvider(t, providerLMStudio, Settings{LMStudioURL: srv.URL + "/v1", LMStudioKey: "bad", LMStudioModel: "m"})
+	_, err = runProvider(t, settings.ProviderLMStudio, settings.Settings{LMStudioURL: srv.URL + "/v1", LMStudioKey: "bad", LMStudioModel: "m"})
 	wantMessage(t, err.Error(), "LM Studio (local) rejected the API key")
 }

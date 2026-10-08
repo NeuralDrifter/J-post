@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"jobtrack/internal/marketdata"
+	"jobtrack/internal/settings"
 	"jobtrack/internal/taxes"
 )
 
 func mustEval(t *testing.T, p CompPackage, current *CompPackage) PackageResult {
 	t.Helper()
-	res, err := Evaluate(p, Settings{FilingStatus: "single", HomeAreaCode: "US"}, testMarket(), current)
+	res, err := Evaluate(p, settings.Settings{FilingStatus: "single", HomeAreaCode: "US"}, testMarket(), current)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -164,7 +165,7 @@ func TestEvaluateWarningsAndNoState(t *testing.T) {
 func TestMarketBaselinePresent(t *testing.T) {
 	p := basePackage("j")
 	p.BaseSalary = 160000
-	s := Settings{FilingStatus: "single", HomeAreaCode: "19740", DefaultOccupation: "15-1252"}
+	s := settings.Settings{FilingStatus: "single", HomeAreaCode: "19740", DefaultOccupation: "15-1252"}
 	r, err := Evaluate(p, s, testMarket(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -185,11 +186,11 @@ func TestMarketBaselinePresent(t *testing.T) {
 func TestMarketBaselineAbsent(t *testing.T) {
 	p := basePackage("j")
 	cur := CompPackage{ID: "cur", Kind: "current", BaseSalary: 120000, EquityType: "none", Vesting: "standard"}
-	withOcc := Settings{FilingStatus: "single", HomeAreaCode: "19740", DefaultOccupation: "15-1252"}
+	withOcc := settings.Settings{FilingStatus: "single", HomeAreaCode: "19740", DefaultOccupation: "15-1252"}
 	if r, _ := Evaluate(p, withOcc, testMarket(), &cur); r.MarketBaseline != nil {
 		t.Error("a current job is the baseline when it exists")
 	}
-	if r, _ := Evaluate(p, Settings{FilingStatus: "single"}, testMarket(), nil); r.MarketBaseline != nil {
+	if r, _ := Evaluate(p, settings.Settings{FilingStatus: "single"}, testMarket(), nil); r.MarketBaseline != nil {
 		t.Error("no default occupation → no market baseline")
 	}
 	// The Denver p90 is top-coded in the test data, but the median is not; a fully top-coded median gives no baseline.

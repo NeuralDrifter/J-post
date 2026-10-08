@@ -6,6 +6,8 @@ package main
 import (
 	"context"
 	"testing"
+
+	"jobtrack/internal/settings"
 )
 
 // OpenAI's strict structured outputs need every property in required; the
@@ -28,8 +30,8 @@ func TestStrictCompatible(t *testing.T) {
 
 func TestOpenAIJSONSchemaNotStrictWithOptionalFields(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1", `{}`))
-	p, _ := providerByID(providerOpenAICompatible)
-	p.run(context.Background(), customSettings(srv, modeJSONSchema), scorecardTask(Job{Company: "Acme"}, MockInterview{}, ""))
+	p, _ := providerByID(settings.ProviderOpenAICompatible)
+	p.run(context.Background(), customSettings(srv, settings.ModeJSONSchema), scorecardTask(Job{Company: "Acme"}, MockInterview{}, ""))
 	rf, _ := f.bodies[0]["response_format"].(map[string]any)
 	js, _ := rf["json_schema"].(map[string]any)
 	if rf["type"] != "json_schema" || js["schema"] == nil || js["strict"] == true {

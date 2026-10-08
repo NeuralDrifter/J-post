@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 func TestHoursOld(t *testing.T) {
@@ -97,7 +99,7 @@ func (f *fakeFetch) fn(ctx context.Context, source string, q DiscoverQuery, opts
 
 func TestRunSearchFakeFetcher(t *testing.T) {
 	r := newTestRepo(t)
-	settings := Settings{DiscoverCacheHours: 12}
+	settings := settings.Settings{DiscoverCacheHours: 12}
 	q := SearchQuery{Term: "dev", Sources: []string{"indeed", "linkedin"}, PerSource: map[string]int{"indeed": 30}}
 
 	f := &fakeFetch{calls: map[string]fetchOptions{}}

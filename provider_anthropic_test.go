@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 // fakeAnthropic serves /v1/messages with handler and points the provider at it.
@@ -32,7 +34,7 @@ func anthropicReply(model, text, stopReason string) []byte {
 	return b
 }
 
-var anthropicSettings = Settings{AnthropicKey: "sk-ant-s3cret", AnthropicModel: "claude-opus-5-5", AnthropicGradingEffort: "high", AnthropicTipsEffort: "low"}
+var anthropicSettings = settings.Settings{AnthropicKey: "sk-ant-s3cret", AnthropicModel: "claude-opus-5-5", AnthropicGradingEffort: "high", AnthropicTipsEffort: "low"}
 
 func TestAnthropicRequestShape(t *testing.T) {
 	var body map[string]any
@@ -85,7 +87,7 @@ func TestAnthropicReturnsResultAndModel(t *testing.T) {
 		w.Write(anthropicReply("claude-opus-5-5", `{"nudge":"Lead with the result","kind":"tip"}`, "end_turn"))
 	})
 	var n Nudge
-	model, err := runAITask(context.Background(), anthropicSettings, providerAnthropic, nudgeTask("q", "a"), &n)
+	model, err := runAITask(context.Background(), anthropicSettings, settings.ProviderAnthropic, nudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "claude-opus-5-5" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -130,7 +132,7 @@ func TestAnthropicErrorsAreReadableAndHideKey(t *testing.T) {
 }
 
 func TestAnthropicUnavailableWithoutKey(t *testing.T) {
-	if reason := (anthropicProvider{}).unavailable(Settings{}); !strings.Contains(reason, "Anthropic API key") {
+	if reason := (anthropicProvider{}).unavailable(settings.Settings{}); !strings.Contains(reason, "Anthropic API key") {
 		t.Fatalf("reason = %q", reason)
 	}
 	if (anthropicProvider{}).unavailable(anthropicSettings) != "" {

@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { ExternalLink, LoaderCircle } from 'lucide-react'
 import { Field } from '../../components/JobForm'
 import { api } from '../../lib/api'
-import { BrowserOpenURL, ListAIProviders, TestClaudeCode, type main } from '../../lib/backend'
+import { BrowserOpenURL, ListAIProviders, TestClaudeCode, type settings } from '../../lib/backend'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { ModelPicker, TestProviderButton } from './ModelPicker'
@@ -13,7 +13,7 @@ import { Section } from './Section'
 
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 
-type Props = { s: main.Settings; setS: (s: main.Settings) => void }
+type Props = { s: settings.Settings; setS: (s: settings.Settings) => void }
 
 /** Who grades interviews, gives coaching tips and plans the questions, and how each provider is set up. */
 export function AIProvidersSection({ s, setS }: Props) {

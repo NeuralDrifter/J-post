@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package settings
 
 import (
 	"os"
@@ -13,7 +13,7 @@ import (
 
 func TestSettingsDefaults(t *testing.T) {
 	s, err := NewSettingsStore(t.TempDir()).Load()
-	if err != nil || s.FollowUpDays != defaultFollowUpDays || s.PythonPath != "" || s.FilingStatus != "single" || s.HomeAreaCode != "US" || s.DiscoverCacheHours != 12 || s.GeminiLiveModel != "gemini-3.8-live" {
+	if err != nil || s.FollowUpDays != DefaultFollowUpDays || s.PythonPath != "" || s.FilingStatus != "single" || s.HomeAreaCode != "US" || s.DiscoverCacheHours != 12 || s.GeminiLiveModel != "gemini-3.8-live" {
 		t.Fatalf("s = %+v, %v", s, err)
 	}
 }
@@ -21,7 +21,7 @@ func TestSettingsDefaults(t *testing.T) {
 func TestSettingsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := NewSettingsStore(dir)
-	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: providerGeminiLive, TipsProvider: providerGeminiLive, PlanProvider: providerAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet",
+	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: ProviderGeminiLive, TipsProvider: ProviderGeminiLive, PlanProvider: ProviderAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet",
 		OpenAIKey: "ok", OpenAIModel: "om", DeepSeekKey: "dk", DeepSeekModel: "dm", OllamaURL: "http://box:11434/v1", OllamaModel: "lm",
 		LMStudioURL: "http://box:1234/v1", LMStudioKey: "lk", LMStudioModel: "sm",
 		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object"}
@@ -35,7 +35,7 @@ func TestSettingsRoundTrip(t *testing.T) {
 	if err := store.Save(Settings{}); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := store.Load(); got.FollowUpDays != defaultFollowUpDays {
+	if got, _ := store.Load(); got.FollowUpDays != DefaultFollowUpDays {
 		t.Fatalf("zero follow-up days should default, got %d", got.FollowUpDays)
 	}
 	if matches, _ := filepath.Glob(filepath.Join(dir, "*.tmp")); len(matches) != 0 {
@@ -67,7 +67,7 @@ func TestSettingsAIDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.GradingProvider != providerGeminiLive || s.TipsProvider != providerGeminiLive || s.AnthropicModel != "claude-opus-5-5" ||
+	if s.GradingProvider != ProviderGeminiLive || s.TipsProvider != ProviderGeminiLive || s.AnthropicModel != "claude-opus-5-5" ||
 		s.AnthropicGradingEffort != "high" || s.AnthropicTipsEffort != "low" || s.ClaudeCodePath != "" || s.ClaudeCodeModel != "" {
 		t.Fatalf("s = %+v", s)
 	}
@@ -91,7 +91,7 @@ func TestPlanProviderDefaultsToGeminiLive(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"followUpDays": 7}`), 0o600)
 	s, err := NewSettingsStore(dir).Load()
-	if err != nil || s.PlanProvider != providerGeminiLive {
+	if err != nil || s.PlanProvider != ProviderGeminiLive {
 		t.Fatalf("PlanProvider = %q, %v", s.PlanProvider, err)
 	}
 }

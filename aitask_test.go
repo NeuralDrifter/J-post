@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"jobtrack/internal/settings"
 )
 
 // checkStandardSchema walks a JSON Schema and reports anything a provider
@@ -70,13 +72,13 @@ func TestGeminiSchemaConversion(t *testing.T) {
 
 func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 	var n Nudge
-	if _, err := runAITask(context.Background(), Settings{}, "nope", nudgeTask("q", "a"), &n); err == nil {
+	if _, err := runAITask(context.Background(), settings.Settings{}, "nope", nudgeTask("q", "a"), &n); err == nil {
 		t.Fatal("unknown provider should fail")
 	}
 	old := geminiLiveWSBase
 	geminiLiveWSBase = "ws://127.0.0.1:1" // a dial here would fail with a connection error
 	t.Cleanup(func() { geminiLiveWSBase = old })
-	_, err := runAITask(context.Background(), Settings{}, providerGeminiLive, nudgeTask("q", "a"), &n)
+	_, err := runAITask(context.Background(), settings.Settings{}, settings.ProviderGeminiLive, nudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Gemini API key") || strings.Contains(err.Error(), "reach") {
 		t.Fatalf("an unconfigured provider should fail with its setup reason before connecting: %v", err)
 	}
@@ -85,7 +87,7 @@ func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 func TestRunAITaskReturnsModel(t *testing.T) {
 	fakeLiveServer(t, replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
 	var n Nudge
-	model, err := runAITask(context.Background(), Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, providerGeminiLive, nudgeTask("q", "a"), &n)
+	model, err := runAITask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.ProviderGeminiLive, nudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "gemini-3.8-live" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -96,7 +98,7 @@ func TestListAIProvidersReadiness(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	t.Setenv("USERPROFILE", t.TempDir())
 	t.Setenv("HOME", t.TempDir())
-	list := ListAIProviders(Settings{})
+	list := ListAIProviders(settings.Settings{})
 	var ids []string
 	for _, p := range list {
 		ids = append(ids, p.ID)
@@ -107,7 +109,7 @@ func TestListAIProvidersReadiness(t *testing.T) {
 	if got := strings.Join(ids, ","); got != "gemini-live,anthropic,claude-code,openai,deepseek,ollama,lmstudio,openai-compatible" {
 		t.Fatalf("ids = %s", got)
 	}
-	if ListAIProviders(Settings{GeminiKey: "k"})[0].Unavailable != "" {
+	if ListAIProviders(settings.Settings{GeminiKey: "k"})[0].Unavailable != "" {
 		t.Fatal("Gemini with a key should be ready")
 	}
 }
@@ -117,7 +119,7 @@ func TestProviderIDsMatchRegistry(t *testing.T) {
 	for _, p := range aiProviders() {
 		ids = append(ids, p.id())
 	}
-	if !slices.Equal(ids, aiProviderIDs) {
-		t.Fatalf("aiProviders() = %v, but settings accept %v", ids, aiProviderIDs)
+	if !slices.Equal(ids, settings.AIProviderIDs) {
+		t.Fatalf("aiProviders() = %v, but settings accept %v", ids, settings.AIProviderIDs)
 	}
 }

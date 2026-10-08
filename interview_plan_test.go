@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"jobtrack/internal/settings"
 )
 
 // samplePlan is a valid plan with n questions and one resume claim.
@@ -112,8 +114,8 @@ func TestPlanThroughGeminiLive(t *testing.T) {
 		replyWithToolCall(t, samplePlanArgs(5), nil)(c, setup)
 	})
 	var p InterviewPlan
-	s := Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
-	if _, err := runAITask(context.Background(), s, providerGeminiLive, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	s := settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
+	if _, err := runAITask(context.Background(), s, settings.ProviderGeminiLive, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
 }
@@ -126,7 +128,7 @@ func TestPlanThroughAnthropic(t *testing.T) {
 		w.Write(anthropicReply("claude-opus-5-5", samplePlanJSON(5), "end_turn"))
 	})
 	var p InterviewPlan
-	if _, err := runAITask(context.Background(), anthropicSettings, providerAnthropic, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := runAITask(context.Background(), anthropicSettings, settings.ProviderAnthropic, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
 	if body["output_config"].(map[string]any)["effort"] != anthropicSettings.AnthropicGradingEffort || body["max_tokens"] != float64(16000) {
@@ -137,7 +139,7 @@ func TestPlanThroughAnthropic(t *testing.T) {
 func TestPlanThroughClaudeCode(t *testing.T) {
 	s, root := useFakeClaude(t, "plan")
 	var p InterviewPlan
-	if _, err := runAITask(context.Background(), s, providerClaudeCode, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
 	assertEmptyDir(t, root)
@@ -229,7 +231,7 @@ func anthropicPlanner(t *testing.T, status int, body string) *int {
 	return calls
 }
 
-func planSettings() Settings {
+func planSettings() settings.Settings {
 	s := anthropicSettings
 	s.GeminiKey, s.GeminiLiveModel = "k", "gemini-3.8-live"
 	return s
@@ -242,13 +244,13 @@ func TestPrepareInterviewMakesPlanWithSettingProvider(t *testing.T) {
 	noLivePlanning(t)
 	anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	if err != nil {
 		t.Fatal(err)
 	}
 	mi, err := r.GetMockInterview(live.SessionID)
-	if err != nil || mi.Plan == nil || mi.Plan.Provider != providerAnthropic || mi.Plan.Model != "claude-opus-5-5" || mi.Attempt != 1 {
+	if err != nil || mi.Plan == nil || mi.Plan.Provider != settings.ProviderAnthropic || mi.Plan.Model != "claude-opus-5-5" || mi.Attempt != 1 {
 		t.Fatalf("mi = %+v, err = %v", mi, err)
 	}
 	if len(*briefs) != 1 || !strings.Contains((*briefs)[0], "Question 1?") || live.Cues != liveCues(25, true) {
@@ -263,9 +265,9 @@ func TestPrepareInterviewPlanProviderOverride(t *testing.T) {
 	noLivePlanning(t)
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = providerGeminiLive
+	s.PlanProvider = settings.ProviderGeminiLive
 	setup := testSetup
-	setup.PlanProvider = providerAnthropic
+	setup.PlanProvider = settings.ProviderAnthropic
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, setup); err != nil || *calls != 1 {
 		t.Fatalf("err = %v, anthropic calls = %d", err, *calls)
 	}
@@ -277,7 +279,7 @@ func TestPrepareInterviewPlanFailureCreatesNothing(t *testing.T) {
 	briefs := tokenServer(t)
 	anthropicPlanner(t, http.StatusInternalServerError, "")
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
 		t.Fatal("expected the planning error")
 	}
@@ -292,7 +294,7 @@ func TestPrepareInterviewInvalidPlanFails(t *testing.T) {
 	tokenServer(t)
 	anthropicPlanner(t, http.StatusOK, samplePlanJSON(1))
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	_, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	if err == nil || !strings.Contains(err.Error(), "expected about 5") {
 		t.Fatalf("err = %v", err)
@@ -308,7 +310,7 @@ func TestPrepareInterviewTokenFailureCreatesNothing(t *testing.T) {
 	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) { w.WriteHeader(http.StatusBadRequest) })
 	anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
 		t.Fatal("expected the token error")
 	}
@@ -324,7 +326,7 @@ func TestPrepareInterviewWithoutPlan(t *testing.T) {
 	noLivePlanning(t)
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	setup := testSetup
 	setup.PlanProvider = planNone
 	live, err := prepareInterview(context.Background(), r, s, j.ID, setup)
@@ -342,7 +344,7 @@ func TestPrepareInterviewWithoutPlan(t *testing.T) {
 func plannedOriginal(t *testing.T, r *Repo, j Job) MockInterview {
 	t.Helper()
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	if err != nil {
 		t.Fatal(err)
@@ -359,9 +361,9 @@ func TestRetryReusesPlanAndOriginalShape(t *testing.T) {
 	original := plannedOriginal(t, r, j)
 	noLivePlanning(t)
 	setNow(r, 2026, time.October, 2, 12)
-	retry := InterviewSetup{RetryOf: original.ID, Kind: "technical", Minutes: 45, Persona: "friendly", Voice: "Puck", PlanProvider: providerGeminiLive}
+	retry := InterviewSetup{RetryOf: original.ID, Kind: "technical", Minutes: 45, Persona: "friendly", Voice: "Puck", PlanProvider: settings.ProviderGeminiLive}
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	live, err := prepareInterview(context.Background(), r, s, j.ID, retry)
 	if err != nil || *calls != 1 {
 		t.Fatalf("err = %v, planning calls = %d (want only the original's)", err, *calls)
@@ -407,7 +409,7 @@ func TestRetryOfMissingInterview(t *testing.T) {
 func plannedForGrading() MockInterview {
 	plan := samplePlan(2)
 	return MockInterview{Kind: "behavioral", Persona: "tough", Transcript: sampleTranscript,
-		Plan: &InterviewPlanRecord{ID: "p1", Provider: providerClaudeCode, Plan: plan}}
+		Plan: &InterviewPlanRecord{ID: "p1", Provider: settings.ProviderClaudeCode, Plan: plan}}
 }
 
 func TestScoringPromptIncludesPlan(t *testing.T) {
@@ -490,7 +492,7 @@ func TestTryAgainAfterTokenFailureReusesThePlan(t *testing.T) {
 	})
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
 		t.Fatal("expected the token error")
 	}
@@ -521,7 +523,7 @@ func TestKeptPlanOnlyMatchesTheSameSetup(t *testing.T) {
 	})
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	tokenFails = false
 	other := testSetup
@@ -544,7 +546,7 @@ func TestKeptPlanExpires(t *testing.T) {
 	})
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = providerAnthropic
+	s.PlanProvider = settings.ProviderAnthropic
 	prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	tokenFails = false
 	setNow(r, 2026, time.October, 1, 13) // an hour later

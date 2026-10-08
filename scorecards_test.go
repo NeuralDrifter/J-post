@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 func card(summary string, communication int) Scorecard {
@@ -57,7 +59,7 @@ func TestMigration8MovesScorecards(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Scorecards) != 1 || got.Scorecards[0].Provider != providerGeminiLive || got.Scorecards[0].Scorecard.Summary != "Solid." ||
+	if len(got.Scorecards) != 1 || got.Scorecards[0].Provider != settings.ProviderGeminiLive || got.Scorecards[0].Scorecard.Summary != "Solid." ||
 		got.Scorecard == nil || got.Scorecard.Overall.Communication != 4 {
 		t.Fatalf("got = %+v", got)
 	}
@@ -69,19 +71,19 @@ func TestMigration8MovesScorecards(t *testing.T) {
 func TestScorecardUpsertPerProvider(t *testing.T) {
 	r := newTestRepo(t)
 	mi := newMock(t, r)
-	if err := r.saveScorecard(mi.ID, providerGeminiLive, "gemini-3.8-live", card("gemini", 3)); err != nil {
+	if err := r.saveScorecard(mi.ID, settings.ProviderGeminiLive, "gemini-3.8-live", card("gemini", 3)); err != nil {
 		t.Fatal(err)
 	}
 	setNow(r, 2026, time.October, 2, 9)
-	if err := r.saveScorecard(mi.ID, providerAnthropic, "claude-opus-5-5", card("claude", 4)); err != nil {
+	if err := r.saveScorecard(mi.ID, settings.ProviderAnthropic, "claude-opus-5-5", card("claude", 4)); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := r.GetMockInterview(mi.ID)
-	if len(got.Scorecards) != 2 || got.Scorecards[0].Provider != providerAnthropic || got.Scorecard.Summary != "claude" {
+	if len(got.Scorecards) != 2 || got.Scorecards[0].Provider != settings.ProviderAnthropic || got.Scorecard.Summary != "claude" {
 		t.Fatalf("newest first, newest is the headline card: %+v", got.Scorecards)
 	}
 	setNow(r, 2026, time.October, 3, 9)
-	if err := r.saveScorecard(mi.ID, providerAnthropic, "claude-opus-5-5", card("claude again", 5)); err != nil {
+	if err := r.saveScorecard(mi.ID, settings.ProviderAnthropic, "claude-opus-5-5", card("claude again", 5)); err != nil {
 		t.Fatal(err)
 	}
 	got, _ = r.GetMockInterview(mi.ID)
@@ -93,22 +95,22 @@ func TestScorecardUpsertPerProvider(t *testing.T) {
 func TestDeleteScorecardLastOneUnscores(t *testing.T) {
 	r := newTestRepo(t)
 	mi := newMock(t, r)
-	r.saveScorecard(mi.ID, providerGeminiLive, "m", card("a", 3))
-	r.saveScorecard(mi.ID, providerAnthropic, "m", card("b", 3))
-	if err := r.DeleteScorecard(mi.ID, providerGeminiLive); err != nil {
+	r.saveScorecard(mi.ID, settings.ProviderGeminiLive, "m", card("a", 3))
+	r.saveScorecard(mi.ID, settings.ProviderAnthropic, "m", card("b", 3))
+	if err := r.DeleteScorecard(mi.ID, settings.ProviderGeminiLive); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := r.GetMockInterview(mi.ID); len(got.Scorecards) != 1 || got.Status == MockUnscored {
 		t.Fatalf("one card left: %+v", got)
 	}
-	if err := r.DeleteScorecard(mi.ID, providerAnthropic); err != nil {
+	if err := r.DeleteScorecard(mi.ID, settings.ProviderAnthropic); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := r.GetMockInterview(mi.ID)
 	if len(got.Scorecards) != 0 || got.Scorecard != nil || got.Status != MockUnscored {
 		t.Fatalf("no cards left should mean unscored: %+v", got)
 	}
-	if err := r.DeleteScorecard(mi.ID, providerAnthropic); err == nil {
+	if err := r.DeleteScorecard(mi.ID, settings.ProviderAnthropic); err == nil {
 		t.Fatal("deleting a card that doesn't exist should fail")
 	}
 }
@@ -116,8 +118,8 @@ func TestDeleteScorecardLastOneUnscores(t *testing.T) {
 func TestTipsSavedAndCascade(t *testing.T) {
 	r := newTestRepo(t)
 	mi := newMock(t, r)
-	r.saveTip(mi.ID, InterviewTip{AnswerAtMs: 9000, Kind: "good", Text: "Clear outcome", Provider: providerGeminiLive, Model: "m"})
-	r.saveTip(mi.ID, InterviewTip{AnswerAtMs: 4000, Kind: "tip", Text: "Lead with the result", Provider: providerGeminiLive, Model: "m"})
+	r.saveTip(mi.ID, InterviewTip{AnswerAtMs: 9000, Kind: "good", Text: "Clear outcome", Provider: settings.ProviderGeminiLive, Model: "m"})
+	r.saveTip(mi.ID, InterviewTip{AnswerAtMs: 4000, Kind: "tip", Text: "Lead with the result", Provider: settings.ProviderGeminiLive, Model: "m"})
 	got, _ := r.GetMockInterview(mi.ID)
 	if len(got.Tips) != 2 || got.Tips[0].AnswerAtMs != 4000 || got.Tips[1].Text != "Clear outcome" {
 		t.Fatalf("tips in answer order: %+v", got.Tips)
@@ -157,9 +159,9 @@ func TestDeleteRecordingWhenFileMissing(t *testing.T) {
 func TestListAllMockInterviews(t *testing.T) {
 	r := newTestRepo(t)
 	first := newMock(t, r)
-	r.saveScorecard(first.ID, providerGeminiLive, "m", card("a", 2))
-	r.saveScorecard(first.ID, providerClaudeCode, "m", card("b", 4))
-	r.saveTip(first.ID, InterviewTip{AnswerAtMs: 1, Kind: "tip", Text: "x", Provider: providerGeminiLive})
+	r.saveScorecard(first.ID, settings.ProviderGeminiLive, "m", card("a", 2))
+	r.saveScorecard(first.ID, settings.ProviderClaudeCode, "m", card("b", 4))
+	r.saveTip(first.ID, InterviewTip{AnswerAtMs: 1, Kind: "tip", Text: "x", Provider: settings.ProviderGeminiLive})
 	setNow(r, 2026, time.October, 5, 9)
 	other, err := r.CreateJob(Job{Company: "Globex", Position: "Analyst"})
 	if err != nil {

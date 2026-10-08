@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 // Every job board Discover can search, in display order. Adding a board means
@@ -28,14 +30,14 @@ type jobSource struct {
 	// minInterval allows at most one call per interval across all searches; 0 = no limit.
 	minInterval time.Duration
 	// unavailable explains what's missing before the board can be searched; "" when ready.
-	unavailable func(Settings) string
+	unavailable func(settings.Settings) string
 	fetch       func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error)
 }
 
 var jobSources = []jobSource{
 	{
 		id: "adzuna", label: "Adzuna", kind: sourceOfficial, maxResults: maxAdzunaResults,
-		unavailable: func(s Settings) string {
+		unavailable: func(s settings.Settings) string {
 			return missingUnless(s.AdzunaAppID != "" && s.AdzunaAppKey != "", "Add your Adzuna keys in Settings")
 		},
 		fetch: func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
@@ -44,7 +46,7 @@ var jobSources = []jobSource{
 	},
 	{
 		id: "usajobs", label: "USAJobs", kind: sourceOfficial, defaultOn: true,
-		unavailable: func(s Settings) string {
+		unavailable: func(s settings.Settings) string {
 			return missingUnless(s.USAJobsKey != "" && s.USAJobsEmail != "", "Add your USAJobs key and email in Settings")
 		},
 		fetch: func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
@@ -66,7 +68,7 @@ var jobSources = []jobSource{
 	},
 	{
 		id: "themuse", label: "The Muse", kind: sourceOfficial, defaultOn: true,
-		unavailable: func(s Settings) string {
+		unavailable: func(s settings.Settings) string {
 			return missingUnless(len(s.MuseCategories) > 0, "Pick The Muse categories in Settings")
 		},
 		fetch: func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
@@ -112,7 +114,7 @@ func isKnownSource(id string) bool {
 	return ok
 }
 
-func (s jobSource) unavailableReason(settings Settings) string {
+func (s jobSource) unavailableReason(settings settings.Settings) string {
 	if s.unavailable == nil {
 		return ""
 	}
@@ -130,7 +132,7 @@ type JobSource struct {
 	Unavailable string `json:"unavailable"` // why it can't be searched yet; "" when ready
 }
 
-func ListJobSources(settings Settings) []JobSource {
+func ListJobSources(settings settings.Settings) []JobSource {
 	out := make([]JobSource, 0, len(jobSources))
 	for _, s := range jobSources {
 		out = append(out, JobSource{
@@ -152,7 +154,7 @@ func (s jobSource) resultCap() int {
 // sourceFetcher runs one board's search with what the boards may need: the
 // user's keys, the repo (local Muse copy, rate-limit log).
 type sourceFetcher struct {
-	settings Settings
+	settings settings.Settings
 	repo     *Repo
 }
 

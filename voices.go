@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 // VoiceOption is one of Google's prebuilt voices (usable by Live and TTS models).
@@ -148,7 +150,7 @@ func pcmToWAV(pcm []byte, rate int) []byte {
 }
 
 // voicePreview returns a short sample of a voice from the Live model, generated once and cached in dir.
-func voicePreview(ctx context.Context, s Settings, dir, voice string) ([]byte, error) {
+func voicePreview(ctx context.Context, s settings.Settings, dir, voice string) ([]byte, error) {
 	if !interviewVoices[voice] {
 		return nil, fmt.Errorf("unknown voice %q", voice)
 	}

@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"jobtrack/internal/settings"
 )
 
 // The AI task layer: every AI job in the app (interview grading, coaching tips,
@@ -40,8 +42,8 @@ type aiProvider interface {
 	id() string
 	label() string
 	// unavailable explains what's missing before this provider can run; "" when ready.
-	unavailable(s Settings) string
-	run(ctx context.Context, s Settings, t aiTask) (aiResult, error)
+	unavailable(s settings.Settings) string
+	run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error)
 }
 
 // aiProviders lists every provider in display order.
@@ -60,7 +62,7 @@ type AIProvider struct {
 	Unavailable string `json:"unavailable"` // what's missing before it can run; "" when ready
 }
 
-func ListAIProviders(s Settings) []AIProvider {
+func ListAIProviders(s settings.Settings) []AIProvider {
 	out := []AIProvider{}
 	for _, p := range aiProviders() {
 		out = append(out, AIProvider{ID: p.id(), Label: p.label(), Unavailable: p.unavailable(s)})
@@ -79,7 +81,7 @@ func providerByID(id string) (aiProvider, bool) {
 
 // runAITask runs t on the named provider and decodes the result into out. An
 // unconfigured provider fails with its setup reason before any call is made.
-func runAITask(ctx context.Context, s Settings, providerID string, t aiTask, out any) (string, error) {
+func runAITask(ctx context.Context, s settings.Settings, providerID string, t aiTask, out any) (string, error) {
 	p, ok := providerByID(providerID)
 	if !ok {
 		return "", fmt.Errorf("unknown AI provider %q", providerID)

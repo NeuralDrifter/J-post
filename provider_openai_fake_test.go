@@ -12,6 +12,8 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"jobtrack/internal/settings"
 )
 
 // fakeOpenAI is an OpenAI-style server that records requests and answers with
@@ -79,11 +81,11 @@ func errorReply(status int, message string) fakeReply {
 const validNudge = `{"nudge": "Lead with the result", "kind": "tip"}`
 
 // customSettings points the custom provider at srv in the given answer mode.
-func customSettings(srv *httptest.Server, mode answerMode) Settings {
-	return Settings{CustomAIBaseURL: srv.URL + "/v1", CustomAIKey: "sk-test-secret", CustomAIModel: "m1", CustomAIMode: string(mode)}
+func customSettings(srv *httptest.Server, mode settings.AnswerMode) settings.Settings {
+	return settings.Settings{CustomAIBaseURL: srv.URL + "/v1", CustomAIKey: "sk-test-secret", CustomAIModel: "m1", CustomAIMode: string(mode)}
 }
 
-func runProvider(t *testing.T, id string, s Settings) (aiResult, error) {
+func runProvider(t *testing.T, id string, s settings.Settings) (aiResult, error) {
 	t.Helper()
 	p, ok := providerByID(id)
 	if !ok {

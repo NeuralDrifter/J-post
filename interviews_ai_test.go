@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"jobtrack/internal/settings"
 )
 
 var testSetup = InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough", Voice: "Puck", InterviewerName: "Dana Reyes", Focus: "conflict stories"}
@@ -66,7 +68,7 @@ func TestInterviewSetupValidation(t *testing.T) {
 func TestPrepareInterviewNoKey(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	if _, err := prepareInterview(context.Background(), r, Settings{GeminiLiveModel: "gemini-3.8-live"}, j.ID, testSetup); !errors.Is(err, errNoGeminiKey) {
+	if _, err := prepareInterview(context.Background(), r, settings.Settings{GeminiLiveModel: "gemini-3.8-live"}, j.ID, testSetup); !errors.Is(err, errNoGeminiKey) {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -82,7 +84,7 @@ func TestPrepareInterview(t *testing.T) {
 		sentSetup = body["bidiGenerateContentSetup"].(map[string]any)
 		w.Write([]byte(`{"name":"auth_tokens/t1"}`))
 	})
-	s := Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
+	s := settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
 	setup := testSetup
 	setup.PlanProvider = planNone // planning has its own tests (interview_plan_test.go)
 	live, err := prepareInterview(context.Background(), r, s, j.ID, setup)
@@ -137,7 +139,7 @@ func TestScoreInterview(t *testing.T) {
 		"practiceNext":["Quantify impact","Name your role","Pause before answering"]}`), &card)
 	var prompt string
 	fakeLiveServer(t, replyWithToolCall(t, card, &prompt))
-	done, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
+	done, err := scoreInterview(context.Background(), r, settings.Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
 	if err != nil || done.Status != "done" || done.Scorecard == nil {
 		t.Fatalf("done = %+v, %v", done, err)
 	}
@@ -160,12 +162,12 @@ func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
 		c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1011, "model overloaded"))
 	})
-	failed, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
+	failed, err := scoreInterview(context.Background(), r, settings.Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
 	if err == nil || failed.Status != "failed" || failed.Error == "" || len(failed.Transcript) != 2 {
 		t.Fatalf("failed = %+v, %v", failed, err)
 	}
 	empty, _ := r.CreateMockInterview(j.ID, testSetup, "")
-	if res, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, empty.ID); err == nil || res.Status != "failed" {
+	if res, err := scoreInterview(context.Background(), r, settings.Settings{GeminiKey: "k", GeminiLiveModel: "m"}, empty.ID); err == nil || res.Status != "failed" {
 		t.Fatalf("an empty transcript can't be scored: %+v %v", res, err)
 	}
 }
@@ -232,7 +234,7 @@ func TestMockInterviewStatusTransitions(t *testing.T) {
 		t.Fatalf("scoring = %+v (ended_at must not move)", scoring)
 	}
 
-	if err := r.markDone(mi.ID, providerGeminiLive, "gemini-3.8-live", Scorecard{Summary: "solid"}); err != nil {
+	if err := r.markDone(mi.ID, settings.ProviderGeminiLive, "gemini-3.8-live", Scorecard{Summary: "solid"}); err != nil {
 		t.Fatal(err)
 	}
 	if done := get(); done.Status != MockDone || done.Scorecard == nil || done.Scorecard.Summary != "solid" {
@@ -380,12 +382,12 @@ func TestScoreInterviewUsesGradingProviderAndSavesCard(t *testing.T) {
 		w.Write(anthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
 	})
 	s := anthropicSettings
-	s.GradingProvider = providerAnthropic
+	s.GradingProvider = settings.ProviderAnthropic
 	done, err := scoreInterview(context.Background(), r, s, mi.ID)
 	if err != nil || done.Status != MockDone || len(done.Scorecards) != 1 {
 		t.Fatalf("done = %+v, err = %v", done, err)
 	}
-	if c := done.Scorecards[0]; c.Provider != providerAnthropic || c.Model != "claude-opus-5-5" || c.Scorecard.Summary != "Solid." {
+	if c := done.Scorecards[0]; c.Provider != settings.ProviderAnthropic || c.Model != "claude-opus-5-5" || c.Scorecard.Summary != "Solid." {
 		t.Fatalf("card = %+v", c)
 	}
 }
@@ -403,8 +405,8 @@ func TestRegradeAddsSecondCard(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(anthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
 	})
-	got, err := regradeInterview(context.Background(), r, s, mi.ID, providerAnthropic)
-	if err != nil || len(got.Scorecards) != 2 || got.Scorecards[0].Provider != providerAnthropic || got.Status != MockDone {
+	got, err := regradeInterview(context.Background(), r, s, mi.ID, settings.ProviderAnthropic)
+	if err != nil || len(got.Scorecards) != 2 || got.Scorecards[0].Provider != settings.ProviderAnthropic || got.Status != MockDone {
 		t.Fatalf("got = %+v, err = %v", got, err)
 	}
 }
@@ -412,12 +414,12 @@ func TestRegradeAddsSecondCard(t *testing.T) {
 func TestRegradeFailureKeepsStatusAndCards(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
-	r.markDone(mi.ID, providerGeminiLive, "gemini-3.8-live", card("first", 3))
+	r.markDone(mi.ID, settings.ProviderGeminiLive, "gemini-3.8-live", card("first", 3))
 	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"type":"error","error":{"type":"api_error","message":"boom"}}`))
 	})
-	got, err := regradeInterview(context.Background(), r, anthropicSettings, mi.ID, providerAnthropic)
+	got, err := regradeInterview(context.Background(), r, anthropicSettings, mi.ID, settings.ProviderAnthropic)
 	if err == nil {
 		t.Fatal("the re-grade should report the failure")
 	}
@@ -429,10 +431,10 @@ func TestRegradeFailureKeepsStatusAndCards(t *testing.T) {
 func TestRegradeWithUnavailableProvider(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
-	r.markDone(mi.ID, providerGeminiLive, "gemini-3.8-live", card("first", 3))
+	r.markDone(mi.ID, settings.ProviderGeminiLive, "gemini-3.8-live", card("first", 3))
 	calls := 0
 	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) { calls++ })
-	got, err := regradeInterview(context.Background(), r, Settings{}, mi.ID, providerAnthropic)
+	got, err := regradeInterview(context.Background(), r, settings.Settings{}, mi.ID, settings.ProviderAnthropic)
 	if err == nil || !strings.Contains(err.Error(), "Anthropic API key") || calls != 0 {
 		t.Fatalf("err = %v, calls = %d", err, calls)
 	}
@@ -445,12 +447,12 @@ func TestNudgeSavesTip(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
 	fakeLiveServer(t, replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
-	n, err := nudgeAnswer(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, mi.ID, "Q?", "A long answer.", 4000)
+	n, err := nudgeAnswer(context.Background(), r, settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, mi.ID, "Q?", "A long answer.", 4000)
 	if err != nil || n.Nudge != "Lead with the result" {
 		t.Fatalf("n = %+v, err = %v", n, err)
 	}
 	got, _ := r.GetMockInterview(mi.ID)
-	if len(got.Tips) != 1 || got.Tips[0] != (InterviewTip{AnswerAtMs: 4000, Kind: "tip", Text: "Lead with the result", Provider: providerGeminiLive, Model: "gemini-3.8-live"}) {
+	if len(got.Tips) != 1 || got.Tips[0] != (InterviewTip{AnswerAtMs: 4000, Kind: "tip", Text: "Lead with the result", Provider: settings.ProviderGeminiLive, Model: "gemini-3.8-live"}) {
 		t.Fatalf("tips = %+v", got.Tips)
 	}
 }

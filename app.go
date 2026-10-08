@@ -17,6 +17,7 @@ import (
 
 	"jobtrack/internal/marketdata"
 	"jobtrack/internal/osproc"
+	"jobtrack/internal/settings"
 	"jobtrack/internal/taxes"
 )
 
@@ -31,8 +32,8 @@ type App struct {
 	ctx      context.Context
 	dataDir  string
 	repo     *Repo
-	settings *SettingsStore
-	window   *WindowStateStore
+	settings *settings.SettingsStore
+	window   *settings.WindowStateStore
 	market   *marketdata.MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
 	// aiCtx lives as long as the app; shutdown cancels it so AI work (headless
 	// Claude Code, API calls) never outlives the window.
@@ -45,7 +46,7 @@ type App struct {
 // NewApp opens (and if needed creates or migrates) the data folder. A failure
 // is kept in initErr and shown full-screen by the frontend instead of crashing.
 func NewApp(dataDir string) *App {
-	a := &App{dataDir: dataDir, settings: NewSettingsStore(dataDir), window: NewWindowStateStore(dataDir)}
+	a := &App{dataDir: dataDir, settings: settings.NewSettingsStore(dataDir), window: settings.NewWindowStateStore(dataDir)}
 	a.aiCtx, a.aiCancel = context.WithCancel(context.Background())
 	if md, err := marketdata.Load(); err != nil {
 		log.Printf("market data unavailable: %v", err)
@@ -83,7 +84,7 @@ func (a *App) shutdown(ctx context.Context) {
 func (a *App) followUpDays() int {
 	s, err := a.settings.Load()
 	if err != nil {
-		return defaultFollowUpDays
+		return settings.DefaultFollowUpDays
 	}
 	return s.FollowUpDays
 }
@@ -293,11 +294,11 @@ func (a *App) DeleteSearch(id string) error {
 
 // ---- Settings ----
 
-func (a *App) GetSettings() (Settings, error) {
+func (a *App) GetSettings() (settings.Settings, error) {
 	return a.settings.Load()
 }
 
-func (a *App) SaveSettings(s Settings) error {
+func (a *App) SaveSettings(s settings.Settings) error {
 	s.PythonPath = strings.TrimSpace(s.PythonPath)
 	return a.settings.Save(s)
 }
@@ -633,13 +634,13 @@ func (a *App) TestClaudeCode(path string) (string, error) {
 
 // ListAIModels lists the models an OpenAI-style provider offers, using the
 // settings as entered on the page (Settings "Load models" button).
-func (a *App) ListAIModels(providerID string, s Settings) ([]string, error) {
+func (a *App) ListAIModels(providerID string, s settings.Settings) ([]string, error) {
 	return listAIModels(a.aiContext(), providerID, s)
 }
 
 // TestAIProvider runs a tiny task on a provider with the settings as entered
 // on the page (Settings "Test" button).
-func (a *App) TestAIProvider(providerID string, s Settings) (AIProviderTest, error) {
+func (a *App) TestAIProvider(providerID string, s settings.Settings) (AIProviderTest, error) {
 	return testAIProvider(a.aiContext(), providerID, s)
 }
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package settings
 
 import (
 	"cmp"
@@ -19,34 +19,34 @@ import (
 )
 
 const (
-	defaultFollowUpDays       = 7
+	DefaultFollowUpDays       = 7
 	defaultDiscoverCacheHours = 12
 	defaultGeminiLiveModel    = "gemini-3.8-live"
 	defaultAnthropicModel     = "claude-opus-5-5"
 	defaultGradingEffort      = "high"
 	defaultTipsEffort         = "low"
-	defaultOllamaURL          = "http://localhost:11434/v1"
-	defaultLMStudioURL        = "http://localhost:1234/v1"
+	DefaultOllamaURL          = "http://localhost:11434/v1"
+	DefaultLMStudioURL        = "http://localhost:1234/v1"
 )
 
 // AI provider IDs, as stored in the *Provider settings.
 const (
-	providerGeminiLive = "gemini-live"
-	providerAnthropic  = "anthropic"
-	providerClaudeCode = "claude-code"
+	ProviderGeminiLive = "gemini-live"
+	ProviderAnthropic  = "anthropic"
+	ProviderClaudeCode = "claude-code"
 	// OpenAI-style APIs, all served by openAIProvider (provider_openai.go).
-	providerOpenAI           = "openai"
-	providerDeepSeek         = "deepseek"
-	providerOllama           = "ollama"
-	providerLMStudio         = "lmstudio"
-	providerOpenAICompatible = "openai-compatible"
+	ProviderOpenAI           = "openai"
+	ProviderDeepSeek         = "deepseek"
+	ProviderOllama           = "ollama"
+	ProviderLMStudio         = "lmstudio"
+	ProviderOpenAICompatible = "openai-compatible"
 )
 
-// aiProviderIDs lists every provider a setting may name, in display order.
+// AIProviderIDs lists every provider a setting may name, in display order.
 // aiProviders() offers exactly these (TestProviderIDsMatchRegistry).
-var aiProviderIDs = []string{
-	providerGeminiLive, providerAnthropic, providerClaudeCode,
-	providerOpenAI, providerDeepSeek, providerOllama, providerLMStudio, providerOpenAICompatible,
+var AIProviderIDs = []string{
+	ProviderGeminiLive, ProviderAnthropic, ProviderClaudeCode,
+	ProviderOpenAI, ProviderDeepSeek, ProviderOllama, ProviderLMStudio, ProviderOpenAICompatible,
 }
 
 type Settings struct {
@@ -98,16 +98,16 @@ type Settings struct {
 // anthropicEfforts are the effort levels the Anthropic API accepts.
 var anthropicEfforts = []string{"low", "medium", "high", "xhigh", "max"}
 
-// answerMode is how a request asks for a structured answer (response_format).
-type answerMode string
+// AnswerMode is how a request asks for a structured answer (response_format).
+type AnswerMode string
 
 const (
-	modeJSONSchema answerMode = "json_schema" // strict schema; the server enforces the shape
-	modeJSONObject answerMode = "json_object" // JSON mode; the schema goes in the instruction
-	modePlain      answerMode = "plain"       // no response_format; the schema goes in the instruction
+	ModeJSONSchema AnswerMode = "json_schema" // strict schema; the server enforces the shape
+	ModeJSONObject AnswerMode = "json_object" // JSON mode; the schema goes in the instruction
+	ModePlain      AnswerMode = "plain"       // no response_format; the schema goes in the instruction
 )
 
-var answerModes = []answerMode{modeJSONSchema, modeJSONObject, modePlain}
+var answerModes = []AnswerMode{ModeJSONSchema, ModeJSONObject, ModePlain}
 
 func answerModeNames() []string {
 	names := make([]string, len(answerModes))
@@ -122,9 +122,9 @@ type SettingsStore struct {
 	filePath string
 }
 
-// defaultDataDir is where the app keeps its database, settings and files.
+// DefaultDataDir is where the app keeps its database, settings and files.
 // JOBTRACK_DATA_DIR overrides it (handy for testing against a scratch folder).
-func defaultDataDir() string {
+func DefaultDataDir() string {
 	if dir := os.Getenv("JOBTRACK_DATA_DIR"); dir != "" {
 		return dir
 	}
@@ -135,9 +135,9 @@ func defaultDataDir() string {
 	return filepath.Join(home, ".jobtrack")
 }
 
-func applySettingsDefaults(s *Settings) {
+func ApplyDefaults(s *Settings) {
 	if s.FollowUpDays <= 0 {
-		s.FollowUpDays = defaultFollowUpDays
+		s.FollowUpDays = DefaultFollowUpDays
 	}
 	if s.FilingStatus == "" {
 		s.FilingStatus = taxes.FilingSingle
@@ -154,9 +154,9 @@ func applySettingsDefaults(s *Settings) {
 	if s.DiscoverCacheHours <= 0 {
 		s.DiscoverCacheHours = defaultDiscoverCacheHours
 	}
-	s.GradingProvider = cmp.Or(s.GradingProvider, providerGeminiLive)
-	s.TipsProvider = cmp.Or(s.TipsProvider, providerGeminiLive)
-	s.PlanProvider = cmp.Or(s.PlanProvider, providerGeminiLive)
+	s.GradingProvider = cmp.Or(s.GradingProvider, ProviderGeminiLive)
+	s.TipsProvider = cmp.Or(s.TipsProvider, ProviderGeminiLive)
+	s.PlanProvider = cmp.Or(s.PlanProvider, ProviderGeminiLive)
 	s.AnthropicModel = cmp.Or(strings.TrimSpace(s.AnthropicModel), defaultAnthropicModel)
 	s.AnthropicGradingEffort = cmp.Or(s.AnthropicGradingEffort, defaultGradingEffort)
 	s.AnthropicTipsEffort = cmp.Or(s.AnthropicTipsEffort, defaultTipsEffort)
@@ -164,13 +164,13 @@ func applySettingsDefaults(s *Settings) {
 	s.ClaudeCodeModel = strings.TrimSpace(s.ClaudeCodeModel)
 	s.OpenAIModel = strings.TrimSpace(s.OpenAIModel)
 	s.DeepSeekModel = strings.TrimSpace(s.DeepSeekModel)
-	s.OllamaURL = cmp.Or(strings.TrimSpace(s.OllamaURL), defaultOllamaURL)
+	s.OllamaURL = cmp.Or(strings.TrimSpace(s.OllamaURL), DefaultOllamaURL)
 	s.OllamaModel = strings.TrimSpace(s.OllamaModel)
-	s.LMStudioURL = cmp.Or(strings.TrimSpace(s.LMStudioURL), defaultLMStudioURL)
+	s.LMStudioURL = cmp.Or(strings.TrimSpace(s.LMStudioURL), DefaultLMStudioURL)
 	s.LMStudioModel = strings.TrimSpace(s.LMStudioModel)
 	s.CustomAIBaseURL = strings.TrimSpace(s.CustomAIBaseURL)
 	s.CustomAIModel = strings.TrimSpace(s.CustomAIModel)
-	s.CustomAIMode = cmp.Or(s.CustomAIMode, string(modePlain))
+	s.CustomAIMode = cmp.Or(s.CustomAIMode, string(ModePlain))
 }
 
 func NewSettingsStore(dir string) *SettingsStore {
@@ -191,13 +191,13 @@ func (s *SettingsStore) Load() (Settings, error) {
 			return settings, err
 		}
 	}
-	applySettingsDefaults(&settings)
+	ApplyDefaults(&settings)
 	return settings, nil
 }
 
 // Save writes atomically; 0600 because the file holds API keys.
 func (s *SettingsStore) Save(settings Settings) error {
-	applySettingsDefaults(&settings)
+	ApplyDefaults(&settings)
 	if !taxes.ValidFilingStatus(settings.FilingStatus) {
 		return errors.New("filing status must be single, married or head of household")
 	}
@@ -211,7 +211,7 @@ func (s *SettingsStore) Save(settings Settings) error {
 		return errors.New("follow-up threshold must be between 1 and 365 days")
 	}
 	for _, id := range []string{settings.GradingProvider, settings.TipsProvider, settings.PlanProvider} {
-		if !slices.Contains(aiProviderIDs, id) {
+		if !slices.Contains(AIProviderIDs, id) {
 			return fmt.Errorf("unknown AI provider %q", id)
 		}
 	}
@@ -220,7 +220,7 @@ func (s *SettingsStore) Save(settings Settings) error {
 			return fmt.Errorf("effort must be one of %s", strings.Join(anthropicEfforts, ", "))
 		}
 	}
-	if !slices.Contains(answerModes, answerMode(settings.CustomAIMode)) {
+	if !slices.Contains(answerModes, AnswerMode(settings.CustomAIMode)) {
 		return fmt.Errorf("answer mode must be one of %s", strings.Join(answerModeNames(), ", "))
 	}
 	data, err := json.MarshalIndent(settings, "", "  ")

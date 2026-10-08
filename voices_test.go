@@ -17,6 +17,8 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+
+	"jobtrack/internal/settings"
 )
 
 func TestVoicesCatalog(t *testing.T) {
@@ -93,7 +95,7 @@ func TestVoicePreviewIsCached(t *testing.T) {
 	calls, voice := 0, ""
 	fakeLive(t, [][]byte{{1, 0, 2, 0}}, &calls, &voice)
 	dir := t.TempDir()
-	s := Settings{GeminiKey: "k3y", GeminiLiveModel: "gemini-3.8-live"}
+	s := settings.Settings{GeminiKey: "k3y", GeminiLiveModel: "gemini-3.8-live"}
 	first, err := voicePreview(context.Background(), s, dir, "Sulafat")
 	if err != nil || !bytes.HasPrefix(first, []byte("RIFF")) {
 		t.Fatalf("first = %d bytes, %v", len(first), err)
@@ -108,7 +110,7 @@ func TestVoicePreviewIsCached(t *testing.T) {
 	if _, err := voicePreview(context.Background(), s, dir, "../../etc"); err == nil {
 		t.Fatal("unknown voice names must be rejected (also guards the file path)")
 	}
-	if _, err := voicePreview(context.Background(), Settings{}, t.TempDir(), "Kore"); err == nil {
+	if _, err := voicePreview(context.Background(), settings.Settings{}, t.TempDir(), "Kore"); err == nil {
 		t.Fatal("no key and no cached preview should error")
 	}
 }

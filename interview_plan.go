@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
 
@@ -154,7 +155,7 @@ var errNoPlanToRetry = errors.New("This interview has no question plan to retry.
 // interviewPlanFor returns the plan for a new interview: reused when retrying,
 // nil for planNone, otherwise written by the chosen provider (the setup's
 // override, else the setting) and checked. A new plan has no ID yet.
-func interviewPlanFor(ctx context.Context, s Settings, job Job, resume string, setup InterviewSetup, reused *InterviewPlanRecord) (*InterviewPlanRecord, error) {
+func interviewPlanFor(ctx context.Context, s settings.Settings, job Job, resume string, setup InterviewSetup, reused *InterviewPlanRecord) (*InterviewPlanRecord, error) {
 	if reused != nil {
 		return reused, nil
 	}

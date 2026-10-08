@@ -1402,86 +1402,6 @@ export namespace main {
 	        this.lastRunAt = source["lastRunAt"];
 	    }
 	}
-	export class Settings {
-	    adzunaAppId: string;
-	    adzunaAppKey: string;
-	    pythonPath: string;
-	    followUpDays: number;
-	    filingStatus: string;
-	    homeAreaCode: string;
-	    defaultOccupation: string;
-	    usajobsKey: string;
-	    usajobsEmail: string;
-	    museCategories: string[];
-	    geminiKey: string;
-	    geminiLiveModel: string;
-	    gradingProvider: string;
-	    tipsProvider: string;
-	    planProvider: string;
-	    anthropicKey: string;
-	    anthropicModel: string;
-	    anthropicGradingEffort: string;
-	    anthropicTipsEffort: string;
-	    claudeCodePath: string;
-	    claudeCodeModel: string;
-	    openaiKey: string;
-	    openaiModel: string;
-	    deepseekKey: string;
-	    deepseekModel: string;
-	    ollamaURL: string;
-	    ollamaModel: string;
-	    lmStudioURL: string;
-	    lmStudioKey: string;
-	    lmStudioModel: string;
-	    customAIBaseURL: string;
-	    customAIKey: string;
-	    customAIModel: string;
-	    customAIMode: string;
-	    discoverCacheHours: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new Settings(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.adzunaAppId = source["adzunaAppId"];
-	        this.adzunaAppKey = source["adzunaAppKey"];
-	        this.pythonPath = source["pythonPath"];
-	        this.followUpDays = source["followUpDays"];
-	        this.filingStatus = source["filingStatus"];
-	        this.homeAreaCode = source["homeAreaCode"];
-	        this.defaultOccupation = source["defaultOccupation"];
-	        this.usajobsKey = source["usajobsKey"];
-	        this.usajobsEmail = source["usajobsEmail"];
-	        this.museCategories = source["museCategories"];
-	        this.geminiKey = source["geminiKey"];
-	        this.geminiLiveModel = source["geminiLiveModel"];
-	        this.gradingProvider = source["gradingProvider"];
-	        this.tipsProvider = source["tipsProvider"];
-	        this.planProvider = source["planProvider"];
-	        this.anthropicKey = source["anthropicKey"];
-	        this.anthropicModel = source["anthropicModel"];
-	        this.anthropicGradingEffort = source["anthropicGradingEffort"];
-	        this.anthropicTipsEffort = source["anthropicTipsEffort"];
-	        this.claudeCodePath = source["claudeCodePath"];
-	        this.claudeCodeModel = source["claudeCodeModel"];
-	        this.openaiKey = source["openaiKey"];
-	        this.openaiModel = source["openaiModel"];
-	        this.deepseekKey = source["deepseekKey"];
-	        this.deepseekModel = source["deepseekModel"];
-	        this.ollamaURL = source["ollamaURL"];
-	        this.ollamaModel = source["ollamaModel"];
-	        this.lmStudioURL = source["lmStudioURL"];
-	        this.lmStudioKey = source["lmStudioKey"];
-	        this.lmStudioModel = source["lmStudioModel"];
-	        this.customAIBaseURL = source["customAIBaseURL"];
-	        this.customAIKey = source["customAIKey"];
-	        this.customAIModel = source["customAIModel"];
-	        this.customAIMode = source["customAIMode"];
-	        this.discoverCacheHours = source["discoverCacheHours"];
-	    }
-	}
 	export class StageEvent {
 	    id: string;
 	    jobId: string;
@@ -1590,6 +1510,91 @@ export namespace marketdata {
 	        this.release = source["release"];
 	        this.url = source["url"];
 	        this.note = source["note"];
+	    }
+	}
+
+}
+
+export namespace settings {
+	
+	export class Settings {
+	    adzunaAppId: string;
+	    adzunaAppKey: string;
+	    pythonPath: string;
+	    followUpDays: number;
+	    filingStatus: string;
+	    homeAreaCode: string;
+	    defaultOccupation: string;
+	    usajobsKey: string;
+	    usajobsEmail: string;
+	    museCategories: string[];
+	    geminiKey: string;
+	    geminiLiveModel: string;
+	    gradingProvider: string;
+	    tipsProvider: string;
+	    planProvider: string;
+	    anthropicKey: string;
+	    anthropicModel: string;
+	    anthropicGradingEffort: string;
+	    anthropicTipsEffort: string;
+	    claudeCodePath: string;
+	    claudeCodeModel: string;
+	    openaiKey: string;
+	    openaiModel: string;
+	    deepseekKey: string;
+	    deepseekModel: string;
+	    ollamaURL: string;
+	    ollamaModel: string;
+	    lmStudioURL: string;
+	    lmStudioKey: string;
+	    lmStudioModel: string;
+	    customAIBaseURL: string;
+	    customAIKey: string;
+	    customAIModel: string;
+	    customAIMode: string;
+	    discoverCacheHours: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Settings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.adzunaAppId = source["adzunaAppId"];
+	        this.adzunaAppKey = source["adzunaAppKey"];
+	        this.pythonPath = source["pythonPath"];
+	        this.followUpDays = source["followUpDays"];
+	        this.filingStatus = source["filingStatus"];
+	        this.homeAreaCode = source["homeAreaCode"];
+	        this.defaultOccupation = source["defaultOccupation"];
+	        this.usajobsKey = source["usajobsKey"];
+	        this.usajobsEmail = source["usajobsEmail"];
+	        this.museCategories = source["museCategories"];
+	        this.geminiKey = source["geminiKey"];
+	        this.geminiLiveModel = source["geminiLiveModel"];
+	        this.gradingProvider = source["gradingProvider"];
+	        this.tipsProvider = source["tipsProvider"];
+	        this.planProvider = source["planProvider"];
+	        this.anthropicKey = source["anthropicKey"];
+	        this.anthropicModel = source["anthropicModel"];
+	        this.anthropicGradingEffort = source["anthropicGradingEffort"];
+	        this.anthropicTipsEffort = source["anthropicTipsEffort"];
+	        this.claudeCodePath = source["claudeCodePath"];
+	        this.claudeCodeModel = source["claudeCodeModel"];
+	        this.openaiKey = source["openaiKey"];
+	        this.openaiModel = source["openaiModel"];
+	        this.deepseekKey = source["deepseekKey"];
+	        this.deepseekModel = source["deepseekModel"];
+	        this.ollamaURL = source["ollamaURL"];
+	        this.ollamaModel = source["ollamaModel"];
+	        this.lmStudioURL = source["lmStudioURL"];
+	        this.lmStudioKey = source["lmStudioKey"];
+	        this.lmStudioModel = source["lmStudioModel"];
+	        this.customAIBaseURL = source["customAIBaseURL"];
+	        this.customAIKey = source["customAIKey"];
+	        this.customAIModel = source["customAIModel"];
+	        this.customAIMode = source["customAIMode"];
+	        this.discoverCacheHours = source["discoverCacheHours"];
 	    }
 	}
 

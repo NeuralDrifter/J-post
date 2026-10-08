@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 func countRows(t *testing.T, r *Repo, table string) int {
@@ -23,7 +25,7 @@ func countRows(t *testing.T, r *Repo, table string) int {
 // with it, one day apart starting 2026-10-01.
 func plannedAttempts(t *testing.T, r *Repo, job Job, n int) (string, []MockInterview) {
 	t.Helper()
-	planID, err := r.savePlan(job.ID, testSetup, providerClaudeCode, "claude-opus-5-5", samplePlan(5))
+	planID, err := r.savePlan(job.ID, testSetup, settings.ProviderClaudeCode, "claude-opus-5-5", samplePlan(5))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +97,7 @@ func TestPlanStorageAndAttempts(t *testing.T) {
 	if mid.PlanID != planID || mid.Attempt != 2 || len(mid.Attempts) != 3 || mid.Attempts[0].ID != attempts[0].ID || mid.Attempts[2].ID != attempts[2].ID {
 		t.Fatalf("mid = %+v", mid)
 	}
-	if mid.Plan == nil || mid.Plan.ID != planID || mid.Plan.Provider != providerClaudeCode || mid.Plan.Model != "claude-opus-5-5" ||
+	if mid.Plan == nil || mid.Plan.ID != planID || mid.Plan.Provider != settings.ProviderClaudeCode || mid.Plan.Model != "claude-opus-5-5" ||
 		len(mid.Plan.Plan.Questions) != 5 || mid.Plan.Plan.Questions[0].Probes[0] != "Probe 1-a" || mid.Plan.CreatedAt == "" {
 		t.Fatalf("plan = %+v", mid.Plan)
 	}
@@ -127,9 +129,9 @@ func TestAttemptOverallUsesNewestScorecard(t *testing.T) {
 	older := Scorecard{Overall: ScoreSet{Communication: 1}}
 	newer := Scorecard{Overall: ScoreSet{Communication: 5}}
 	setNow(r, 2026, time.October, 10, 12)
-	r.saveScorecard(attempts[0].ID, providerGeminiLive, "", older)
+	r.saveScorecard(attempts[0].ID, settings.ProviderGeminiLive, "", older)
 	setNow(r, 2026, time.October, 11, 12)
-	r.saveScorecard(attempts[0].ID, providerAnthropic, "", newer)
+	r.saveScorecard(attempts[0].ID, settings.ProviderAnthropic, "", newer)
 	got, err := r.GetMockInterview(attempts[1].ID)
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +195,7 @@ func TestListPlanAttempts(t *testing.T) {
 	r := newTestRepo(t)
 	job := interviewJob(t, r)
 	_, attempts := plannedAttempts(t, r, job, 2)
-	r.saveScorecard(attempts[1].ID, providerGeminiLive, "", Scorecard{Summary: "Second."})
+	r.saveScorecard(attempts[1].ID, settings.ProviderGeminiLive, "", Scorecard{Summary: "Second."})
 	list, err := r.ListPlanAttempts(attempts[1].ID)
 	if err != nil || len(list) != 2 || list[0].ID != attempts[0].ID || len(list[1].Scorecards) != 1 || list[1].Scorecards[0].Scorecard.Summary != "Second." {
 		t.Fatalf("list = %+v, err = %v", list, err)

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"jobtrack/internal/settings"
 )
 
 // Live checks against real services. Skipped unless asked for:
@@ -38,7 +40,7 @@ func liveTasks() []aiTask {
 	}
 }
 
-func runLive(t *testing.T, providerID string, s Settings) {
+func runLive(t *testing.T, providerID string, s settings.Settings) {
 	t.Helper()
 	ctx := context.Background()
 	for _, task := range liveTasks() {
@@ -72,8 +74,8 @@ func TestLiveDeepSeek(t *testing.T) {
 	if key == "" {
 		t.Skip("set JOBTRACK_LIVE_DEEPSEEK_KEY to run")
 	}
-	s := Settings{DeepSeekKey: key, DeepSeekModel: os.Getenv("JOBTRACK_LIVE_DEEPSEEK_MODEL")}
-	models, err := listAIModels(context.Background(), providerDeepSeek, s)
+	s := settings.Settings{DeepSeekKey: key, DeepSeekModel: os.Getenv("JOBTRACK_LIVE_DEEPSEEK_MODEL")}
+	models, err := listAIModels(context.Background(), settings.ProviderDeepSeek, s)
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
@@ -83,9 +85,9 @@ func TestLiveDeepSeek(t *testing.T) {
 	} else if !slices.Contains(models, s.DeepSeekModel) {
 		t.Fatalf("%s is not in the list", s.DeepSeekModel)
 	}
-	runLive(t, providerDeepSeek, s)
+	runLive(t, settings.ProviderDeepSeek, s)
 	// The custom provider in plain mode, against the same real server.
-	runLive(t, providerOpenAICompatible, Settings{CustomAIBaseURL: "https://api.deepseek.com/v1", CustomAIKey: key, CustomAIModel: s.DeepSeekModel, CustomAIMode: "plain"})
+	runLive(t, settings.ProviderOpenAICompatible, settings.Settings{CustomAIBaseURL: "https://api.deepseek.com/v1", CustomAIKey: key, CustomAIModel: s.DeepSeekModel, CustomAIMode: "plain"})
 }
 
 func TestLiveOllama(t *testing.T) {
@@ -93,7 +95,7 @@ func TestLiveOllama(t *testing.T) {
 	if model == "" {
 		t.Skip("set JOBTRACK_LIVE_OLLAMA_MODEL to run (Ollama must be running)")
 	}
-	runLive(t, providerOllama, Settings{OllamaURL: defaultOllamaURL, OllamaModel: model})
+	runLive(t, settings.ProviderOllama, settings.Settings{OllamaURL: settings.DefaultOllamaURL, OllamaModel: model})
 }
 
 func TestLiveLMStudio(t *testing.T) {
@@ -101,11 +103,11 @@ func TestLiveLMStudio(t *testing.T) {
 	if model == "" {
 		t.Skip("set JOBTRACK_LIVE_LMSTUDIO_MODEL to run (LM Studio's server must be running)")
 	}
-	s := Settings{LMStudioURL: defaultLMStudioURL, LMStudioKey: os.Getenv("JOBTRACK_LIVE_LMSTUDIO_KEY"), LMStudioModel: model}
-	models, err := listAIModels(context.Background(), providerLMStudio, s)
+	s := settings.Settings{LMStudioURL: settings.DefaultLMStudioURL, LMStudioKey: os.Getenv("JOBTRACK_LIVE_LMSTUDIO_KEY"), LMStudioModel: model}
+	models, err := listAIModels(context.Background(), settings.ProviderLMStudio, s)
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
 	t.Logf("LM Studio models: %s", strings.Join(models, ", "))
-	runLive(t, providerLMStudio, s)
+	runLive(t, settings.ProviderLMStudio, s)
 }
