@@ -1,6 +1,12 @@
 # Licenses page — Design Spec
 
-**Date:** 2026-10-08 · **Status:** Draft
+**Date:** 2026-10-08 · **Status:** Implemented (branch feature/licenses-page)
+
+**Deviations found while building:**
+- Shipped build tools (`tailwindcss`, `vite`) are listed as themselves only, not their dependency trees. Those are build-time only and differ per platform (e.g. `@esbuild/win32-x64`), which would make the staleness check fail on another OS.
+- ISC detection also matches the older wording "permission to use, copy, modify, and distribute" (`coder/websocket`).
+- The page is lazy-loaded, so its ~440 KB of license text is its own chunk and stays out of app startup.
+- Result: 40 Go modules and 100 npm packages, all with license text. Checked in the running app: search, expand, and the Data panel.
 
 ## Goal
 
