@@ -39,6 +39,7 @@ func TestTaskSchemasAreStandardJSONSchema(t *testing.T) {
 	checkStandardSchema(t, "scorecard", scorecardTask(Job{}, MockInterview{}, "").Schema)
 	checkStandardSchema(t, "nudge", nudgeTask("q", "a").Schema)
 	checkStandardSchema(t, "interviewPlan", planSchema)
+	checkStandardSchema(t, "jobMatch", matchSchema)
 }
 
 // OpenAI's strict structured outputs need every property in required; the
@@ -50,6 +51,7 @@ func TestStrictCompatible(t *testing.T) {
 	}{
 		"nudge":         {nudgeSchema, true},
 		"interviewPlan": {planSchema, true},
+		"jobMatch":      {matchSchema, true},
 		"scorecard":     {scorecardSchema, false},
 	}
 	for name, c := range cases {
