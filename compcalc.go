@@ -7,6 +7,8 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+
+	"jobtrack/internal/marketdata"
 )
 
 // YearBreakdown is one year of a package. Total includes equity and benefits;
@@ -56,7 +58,7 @@ type PackageResult struct {
 	MarketBaseline   *MarketBaseline          `json:"marketBaseline,omitempty"`
 	PTOValue         int64                    `json:"ptoValue"`
 	Scenarios        []Scenario               `json:"scenarios"`
-	Market           *MarketResult            `json:"market,omitempty"`
+	Market           *marketdata.MarketResult `json:"market,omitempty"`
 	COLIndex         float64                  `json:"colIndex"`
 	HomeCOLIndex     float64                  `json:"homeColIndex"`
 	COLLevel         string                   `json:"colLevel"`
@@ -89,7 +91,7 @@ func equityValue(p CompPackage, multiplier float64) float64 {
 // Evaluate computes the 4-year breakdown, take-home, scenarios, market position
 // and cost-of-living figures for a package. current (optional) is the baseline
 // the deltas are measured against.
-func Evaluate(p CompPackage, s Settings, md *MarketData, current *CompPackage) (PackageResult, error) {
+func Evaluate(p CompPackage, s Settings, md *marketdata.MarketData, current *CompPackage) (PackageResult, error) {
 	// Save-time rules (job link, parent offer) live in ValidateCompPackage; Evaluate
 	// also runs on unsaved drafts for the editor's live preview.
 	applySettingsDefaults(&s)
@@ -174,8 +176,8 @@ func equityScenarios(p CompPackage) []Scenario {
 }
 
 // addMarketFigures fills in the market position and cost-of-living comparison.
-func addMarketFigures(res *PackageResult, p CompPackage, homeArea string, md *MarketData) {
-	area := cmp.Or(p.AreaCode, nationalArea)
+func addMarketFigures(res *PackageResult, p CompPackage, homeArea string, md *marketdata.MarketData) {
+	area := cmp.Or(p.AreaCode, marketdata.NationalArea)
 	if p.OccupationCode != "" {
 		if m := md.MarketPosition(p.OccupationCode, area, p.BaseSalary); m.Found {
 			res.Market = &m
@@ -190,7 +192,7 @@ func addMarketFigures(res *PackageResult, p CompPackage, homeArea string, md *Ma
 // marketBaseline compares base pay with the typical (median) pay for the user's
 // occupation at home, for users with no current job to compare against. OEWS
 // wages exclude stock and most bonuses, so it compares base salary only.
-func marketBaseline(p CompPackage, s Settings, md *MarketData) *MarketBaseline {
+func marketBaseline(p CompPackage, s Settings, md *marketdata.MarketData) *MarketBaseline {
 	if s.DefaultOccupation == "" {
 		return nil
 	}
@@ -205,7 +207,7 @@ func marketBaseline(p CompPackage, s Settings, md *MarketData) *MarketBaseline {
 }
 
 // deltasVsCurrent is nil when the current package can't be evaluated.
-func deltasVsCurrent(res PackageResult, current CompPackage, s Settings, md *MarketData) *Deltas {
+func deltasVsCurrent(res PackageResult, current CompPackage, s Settings, md *marketdata.MarketData) *Deltas {
 	cur, err := Evaluate(current, s, md, nil)
 	if err != nil {
 		return nil

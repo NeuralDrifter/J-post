@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main } from './backend'
+import type { main, marketdata } from './backend'
 
 export const PACKAGE_KINDS = ['offer', 'estimate', 'counter', 'current'] as const
 export type PackageKind = (typeof PACKAGE_KINDS)[number]
@@ -112,7 +112,7 @@ export function ordinal(n: number): string {
 }
 
 /** "63rd", "<10th" (under the lowest published point), "≥75th" (at/over the highest known point). */
-export function percentileLabel(m: main.MarketResult): string {
+export function percentileLabel(m: marketdata.MarketResult): string {
   const base = ordinal(m.percentile)
   if (m.qualifier === 'below') return `<${base}`
   if (m.qualifier === 'above') return `≥${base}`

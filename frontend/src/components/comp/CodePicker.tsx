@@ -3,20 +3,20 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
-import type { main } from '../../lib/backend'
+import type { marketdata } from '../../lib/backend'
 
 type Props = {
   value: string
-  onChange: (code: string, option?: main.Option) => void
-  search: (q: string) => Promise<main.Option[]>
-  describe: (code: string) => Promise<main.Option>
+  onChange: (code: string, option?: marketdata.Option) => void
+  search: (q: string) => Promise<marketdata.Option[]>
+  describe: (code: string) => Promise<marketdata.Option>
   placeholder: string
 }
 
 /** Searchable picker for BLS occupation codes and BLS/BEA area codes. */
 export function CodePicker({ value, onChange, search, describe, placeholder }: Props) {
   const [text, setText] = useState('')
-  const [options, setOptions] = useState<main.Option[]>([])
+  const [options, setOptions] = useState<marketdata.Option[]>([])
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const describeRef = useRef(describe)
@@ -42,7 +42,7 @@ export function CodePicker({ value, onChange, search, describe, placeholder }: P
     return () => clearTimeout(timer)
   }, [text, open, search])
 
-  const choose = (o: main.Option) => {
+  const choose = (o: marketdata.Option) => {
     onChange(o.code, o)
     setText(o.title)
     setOpen(false)

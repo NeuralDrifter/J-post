@@ -71,7 +71,7 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: string and HTML helpers -> internal/textproc
 - [x] prep: `httpErrorMessage` and its test move next to the HTTP client
 - [x] extract-leaf-module: HTTP client -> internal/httpapi (fakeServer test helper copied: 4 lines)
-- [ ] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
+- [x] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
 - [ ] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
 - [ ] prep: provider IDs and answer modes move to settings.go (break settings <-> ai)
 - [ ] extract-data-types: settings and window state store -> internal/settings
@@ -94,6 +94,12 @@ Each line is one commit, green before the next.
 - 2026-10-08: the string package is `textproc`, not `text`: several files have
   locals named `text` that would shadow it. `clamp` is numeric, so it stayed
   in the root (window.go) instead of joining the string helpers.
+- 2026-10-08: embedded data files sit beside their package's .go file
+  (internal/marketdata/marketdata.json.gz), not in a data/ subfolder.
+- 2026-10-08: frontend types now come from several Wails namespaces
+  (`main`, `marketdata`, ...); lib/backend.ts re-exports each one.
+- 2026-10-08: compcalc_test.go has its own copy of the `testMarket` fixture
+  (it builds a MarketData from exported fields), so tests in two packages can use it.
 
 ## Deferred: hand off to the next campaign
 - [ ] Split `Repo` into a `store` package plus feature packages (jobs,

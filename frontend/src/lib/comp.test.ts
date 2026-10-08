@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main } from './backend'
+import type { main, marketdata } from './backend'
 import { blankPackage, formatDelta, formatMoneyFull, ordinal, percentileLabel } from './comp'
 import { baselineDetail, colDetail, marketDetail, taxDetail } from './sources'
 
@@ -21,9 +21,9 @@ describe('percentiles', () => {
     expect(ordinal(1)).toBe('1st')
     expect(ordinal(22)).toBe('22nd')
     expect(ordinal(13)).toBe('13th')
-    expect(percentileLabel({ percentile: 62.5, qualifier: '' } as main.MarketResult)).toBe('63rd')
-    expect(percentileLabel({ percentile: 10, qualifier: 'below' } as main.MarketResult)).toBe('<10th')
-    expect(percentileLabel({ percentile: 75, qualifier: 'above' } as main.MarketResult)).toBe('≥75th')
+    expect(percentileLabel({ percentile: 62.5, qualifier: '' } as marketdata.MarketResult)).toBe('63rd')
+    expect(percentileLabel({ percentile: 10, qualifier: 'below' } as marketdata.MarketResult)).toBe('<10th')
+    expect(percentileLabel({ percentile: 75, qualifier: 'above' } as marketdata.MarketResult)).toBe('≥75th')
   })
 })
 
@@ -42,11 +42,11 @@ describe('source details', () => {
   const sources = { bls: { release: 'May 2025' }, bea: { release: '2024' } } as main.DataSources
 
   it('names the occupation, area and fallback level for market data', () => {
-    const m = { occTitle: 'Software Developers', occCode: '15-1252', areaTitle: 'Colorado', level: 'state' } as main.MarketResult
+    const m = { occTitle: 'Software Developers', occCode: '15-1252', areaTitle: 'Colorado', level: 'state' } as marketdata.MarketResult
     expect(marketDetail(m, sources)).toBe(
       'BLS OEWS May 2025 · Software Developers (15-1252) · Colorado — state-level figures (no metro data for this occupation)',
     )
-    expect(marketDetail({ ...m, areaTitle: 'Denver', level: 'area' } as main.MarketResult, sources)).toBe(
+    expect(marketDetail({ ...m, areaTitle: 'Denver', level: 'area' } as marketdata.MarketResult, sources)).toBe(
       'BLS OEWS May 2025 · Software Developers (15-1252) · Denver',
     )
   })

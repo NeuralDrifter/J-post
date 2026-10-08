@@ -13,6 +13,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"jobtrack/internal/marketdata"
 )
 
 const (
@@ -101,7 +103,7 @@ func applySettingsDefaults(s *Settings) {
 		s.FilingStatus = FilingSingle
 	}
 	if s.HomeAreaCode == "" {
-		s.HomeAreaCode = nationalArea
+		s.HomeAreaCode = marketdata.NationalArea
 	}
 	if s.MuseCategories == nil {
 		s.MuseCategories = []string{}

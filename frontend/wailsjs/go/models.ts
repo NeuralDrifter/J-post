@@ -178,34 +178,6 @@ export namespace main {
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}
-	export class MarketResult {
-	    found: boolean;
-	    percentile: number;
-	    qualifier: string;
-	    points: number[];
-	    level: string;
-	    areaCode: string;
-	    areaTitle: string;
-	    occCode: string;
-	    occTitle: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new MarketResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.found = source["found"];
-	        this.percentile = source["percentile"];
-	        this.qualifier = source["qualifier"];
-	        this.points = source["points"];
-	        this.level = source["level"];
-	        this.areaCode = source["areaCode"];
-	        this.areaTitle = source["areaTitle"];
-	        this.occCode = source["occCode"];
-	        this.occTitle = source["occTitle"];
-	    }
-	}
 	export class Scenario {
 	    multiplier: number;
 	    value: number;
@@ -325,7 +297,7 @@ export namespace main {
 	    marketBaseline?: MarketBaseline;
 	    ptoValue: number;
 	    scenarios: Scenario[];
-	    market?: MarketResult;
+	    market?: marketdata.MarketResult;
 	    colIndex: number;
 	    homeColIndex: number;
 	    colLevel: string;
@@ -350,7 +322,7 @@ export namespace main {
 	        this.marketBaseline = this.convertValues(source["marketBaseline"], MarketBaseline);
 	        this.ptoValue = source["ptoValue"];
 	        this.scenarios = this.convertValues(source["scenarios"], Scenario);
-	        this.market = this.convertValues(source["market"], MarketResult);
+	        this.market = this.convertValues(source["market"], marketdata.MarketResult);
 	        this.colIndex = source["colIndex"];
 	        this.homeColIndex = source["homeColIndex"];
 	        this.colLevel = source["colLevel"];
@@ -456,28 +428,10 @@ export namespace main {
 	        this.gapMs = source["gapMs"];
 	    }
 	}
-	export class SourceInfo {
-	    name: string;
-	    release: string;
-	    url: string;
-	    note: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SourceInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.release = source["release"];
-	        this.url = source["url"];
-	        this.note = source["note"];
-	    }
-	}
 	export class DataSources {
-	    bls: SourceInfo;
-	    bea: SourceInfo;
-	    tax: SourceInfo;
+	    bls: marketdata.SourceInfo;
+	    bea: marketdata.SourceInfo;
+	    tax: marketdata.SourceInfo;
 	    built: string;
 	
 	    static createFrom(source: any = {}) {
@@ -486,9 +440,9 @@ export namespace main {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.bls = this.convertValues(source["bls"], SourceInfo);
-	        this.bea = this.convertValues(source["bea"], SourceInfo);
-	        this.tax = this.convertValues(source["tax"], SourceInfo);
+	        this.bls = this.convertValues(source["bls"], marketdata.SourceInfo);
+	        this.bea = this.convertValues(source["bea"], marketdata.SourceInfo);
+	        this.tax = this.convertValues(source["tax"], marketdata.SourceInfo);
 	        this.built = source["built"];
 	    }
 	
@@ -957,7 +911,6 @@ export namespace main {
 		}
 	}
 	
-	
 	export class NextUp {
 	    interview: Interview;
 	    company: string;
@@ -1315,24 +1268,6 @@ export namespace main {
 	        this.kind = source["kind"];
 	    }
 	}
-	export class Option {
-	    code: string;
-	    title: string;
-	    state: string;
-	    type: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new Option(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.code = source["code"];
-	        this.title = source["title"];
-	        this.state = source["state"];
-	        this.type = source["type"];
-	    }
-	}
 	
 	
 	export class Posting {
@@ -1577,7 +1512,6 @@ export namespace main {
 	        this.discoverCacheHours = source["discoverCacheHours"];
 	    }
 	}
-	
 	export class StageEvent {
 	    id: string;
 	    jobId: string;
@@ -1618,6 +1552,75 @@ export namespace main {
 	        this.name = source["name"];
 	        this.style = source["style"];
 	        this.gender = source["gender"];
+	    }
+	}
+
+}
+
+export namespace marketdata {
+	
+	export class MarketResult {
+	    found: boolean;
+	    percentile: number;
+	    qualifier: string;
+	    points: number[];
+	    level: string;
+	    areaCode: string;
+	    areaTitle: string;
+	    occCode: string;
+	    occTitle: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MarketResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.found = source["found"];
+	        this.percentile = source["percentile"];
+	        this.qualifier = source["qualifier"];
+	        this.points = source["points"];
+	        this.level = source["level"];
+	        this.areaCode = source["areaCode"];
+	        this.areaTitle = source["areaTitle"];
+	        this.occCode = source["occCode"];
+	        this.occTitle = source["occTitle"];
+	    }
+	}
+	export class Option {
+	    code: string;
+	    title: string;
+	    state: string;
+	    type: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Option(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.title = source["title"];
+	        this.state = source["state"];
+	        this.type = source["type"];
+	    }
+	}
+	export class SourceInfo {
+	    name: string;
+	    release: string;
+	    url: string;
+	    note: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SourceInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.release = source["release"];
+	        this.url = source["url"];
+	        this.note = source["note"];
 	    }
 	}
 

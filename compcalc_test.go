@@ -3,7 +3,11 @@
 
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"jobtrack/internal/marketdata"
+)
 
 func mustEval(t *testing.T, p CompPackage, current *CompPackage) PackageResult {
 	t.Helper()
@@ -193,5 +197,33 @@ func TestMarketBaselineAbsent(t *testing.T) {
 	md.Wages["19740"]["15-1252"][2] = &top
 	if r, _ := Evaluate(p, withOcc, md, nil); r.MarketBaseline != nil {
 		t.Errorf("top-coded median should give no baseline: %+v", r.MarketBaseline)
+	}
+}
+
+// testMarket builds a tiny in-memory dataset so percentile math is checked exactly.
+func testMarket() *marketdata.MarketData {
+	p := func(v ...int64) []*int64 {
+		out := make([]*int64, len(v))
+		for i := range v {
+			if v[i] != 0 {
+				x := v[i]
+				out[i] = &x
+			}
+		}
+		return out
+	}
+	return &marketdata.MarketData{
+		Occupations: map[string]string{"15-1252": "Software Developers", "99-9999": "Rare Job"},
+		Areas: map[string]marketdata.MarketArea{
+			"US":    {Title: "U.S.", Type: "national", State: "US", RPP: 100},
+			"08":    {Title: "Colorado", Type: "state", State: "CO", RPP: 103},
+			"19740": {Title: "Denver-Aurora-Centennial, CO", Type: "metro", State: "CO", RPP: 108.5, RPPLevel: "metro"},
+			"99999": {Title: "Tiny, CO", Type: "metro", State: "CO", RPP: 95},
+		},
+		Wages: map[string]map[string][]*int64{
+			"US":    {"15-1252": p(80000, 100000, 140000, 180000, 220000), "99-9999": p(50000, 60000, 70000, 80000, 90000)},
+			"08":    {"15-1252": p(85000, 105000, 145000, 185000, 225000)},
+			"19740": {"15-1252": p(90000, 110000, 150000, 200000, -1)},
+		},
 	}
 }

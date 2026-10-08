@@ -13,6 +13,7 @@ if [ -n "$unformatted" ]; then
 fi
 go vet ./...
 go test ./...
-wails generate module >/dev/null
-(cd frontend && npm run build --silent >/dev/null && npx vitest run)
+quiet() { local out; out=$("$@" 2>&1) || { echo "$out"; echo "FAILED: $*"; return 1; }; }
+quiet wails generate module
+(cd frontend && quiet npm run build && npx vitest run)
 echo "verify: all green"

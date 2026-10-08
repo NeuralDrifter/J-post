@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 # SPDX-License-Identifier: MIT
 
-"""Build marketdata/marketdata.json.gz from the raw government datasets in datasets/.
+"""Build internal/marketdata/marketdata.json.gz from the raw government datasets in datasets/.
 
 Inputs (download yearly, see README):
   datasets/all_data_M_2025.xlsx                  BLS OEWS May 2025, "All data" file
@@ -22,7 +22,7 @@ import openpyxl
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASETS = os.path.join(ROOT, "datasets")
-OUT = os.path.join(ROOT, "marketdata", "marketdata.json.gz")
+OUT = os.path.join(ROOT, "internal", "marketdata", "marketdata.json.gz")
 
 OEWS_FILE = "all_data_M_2025.xlsx"
 OEWS_RELEASE = "May 2025"

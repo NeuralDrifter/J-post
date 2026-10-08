@@ -15,6 +15,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"jobtrack/internal/marketdata"
 	"jobtrack/internal/osproc"
 )
 
@@ -31,7 +32,7 @@ type App struct {
 	repo     *Repo
 	settings *SettingsStore
 	window   *WindowStateStore
-	market   *MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
+	market   *marketdata.MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
 	// aiCtx lives as long as the app; shutdown cancels it so AI work (headless
 	// Claude Code, API calls) never outlives the window.
 	aiCtx       context.Context
@@ -45,7 +46,7 @@ type App struct {
 func NewApp(dataDir string) *App {
 	a := &App{dataDir: dataDir, settings: NewSettingsStore(dataDir), window: NewWindowStateStore(dataDir)}
 	a.aiCtx, a.aiCancel = context.WithCancel(context.Background())
-	if md, err := loadMarketData(); err != nil {
+	if md, err := marketdata.Load(); err != nil {
 		log.Printf("market data unavailable: %v", err)
 	} else {
 		a.market = md
@@ -329,10 +330,10 @@ type ComparisonItem struct {
 
 // DataSources describes the external datasets behind marked (✦) figures.
 type DataSources struct {
-	BLS   SourceInfo `json:"bls"`
-	BEA   SourceInfo `json:"bea"`
-	Tax   SourceInfo `json:"tax"`
-	Built string     `json:"built"`
+	BLS   marketdata.SourceInfo `json:"bls"`
+	BEA   marketdata.SourceInfo `json:"bea"`
+	Tax   marketdata.SourceInfo `json:"tax"`
+	Built string                `json:"built"`
 }
 
 func (a *App) evaluate(p CompPackage, current *CompPackage) (PackageResult, error) {
@@ -425,41 +426,41 @@ func (a *App) PreviewComp(p CompPackage) (PackageResult, error) {
 	return a.evaluate(p, current)
 }
 
-func (a *App) SearchOccupations(q string) []Option {
+func (a *App) SearchOccupations(q string) []marketdata.Option {
 	if md := a.market; md != nil {
 		return md.SearchOccupations(q)
 	}
-	return []Option{}
+	return []marketdata.Option{}
 }
 
-func (a *App) SearchAreas(q string) []Option {
+func (a *App) SearchAreas(q string) []marketdata.Option {
 	if md := a.market; md != nil {
 		return md.SearchAreas(q)
 	}
-	return []Option{}
+	return []marketdata.Option{}
 }
 
 // DescribeArea and DescribeOccupation give pickers the title for a saved code.
-func (a *App) DescribeArea(code string) Option {
+func (a *App) DescribeArea(code string) marketdata.Option {
 	if md := a.market; md != nil {
 		if ar, ok := md.Areas[code]; ok {
 			title := ar.Title
 			if ar.Type == "national" {
 				title = "Remote / United States"
 			}
-			return Option{Code: code, Title: title, State: ar.State, Type: ar.Type}
+			return marketdata.Option{Code: code, Title: title, State: ar.State, Type: ar.Type}
 		}
 	}
-	return Option{Code: code, Title: code}
+	return marketdata.Option{Code: code, Title: code}
 }
 
-func (a *App) DescribeOccupation(code string) Option {
+func (a *App) DescribeOccupation(code string) marketdata.Option {
 	if md := a.market; md != nil {
 		if t, ok := md.Occupations[code]; ok {
-			return Option{Code: code, Title: t}
+			return marketdata.Option{Code: code, Title: t}
 		}
 	}
-	return Option{Code: code, Title: code}
+	return marketdata.Option{Code: code, Title: code}
 }
 
 func (a *App) MarketSources() DataSources {

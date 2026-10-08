@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { MarketSources, type main } from './backend'
+import { MarketSources, type main, type marketdata } from './backend'
 import { useStaticData } from './staticData'
 
 // Every figure derived from an outside dataset carries a numbered ✦ mark.
@@ -13,7 +13,7 @@ const LEVEL_NOTE: Record<string, string> = {
   national: 'national figures (no local data for this occupation)',
 }
 
-export function marketDetail(m: main.MarketResult, sources?: main.DataSources): string {
+export function marketDetail(m: marketdata.MarketResult, sources?: main.DataSources): string {
   const base = `BLS OEWS ${sources?.bls.release ?? ''} · ${m.occTitle} (${m.occCode}) · ${m.areaTitle}`
   return LEVEL_NOTE[m.level] ? `${base} — ${LEVEL_NOTE[m.level]}` : base
 }

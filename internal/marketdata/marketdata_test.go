@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package marketdata
 
 import (
 	"math"
@@ -10,9 +10,9 @@ import (
 
 func mustMarket(t *testing.T) *MarketData {
 	t.Helper()
-	md, err := loadMarketData()
+	md, err := Load()
 	if err != nil {
-		t.Fatalf("loadMarketData: %v", err)
+		t.Fatalf("Load: %v", err)
 	}
 	return md
 }
