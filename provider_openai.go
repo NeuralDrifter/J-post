@@ -1,8 +1,17 @@
 package main
 
 import (
+	"cmp"
 	"context"
-	"errors"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/shared"
 )
 
 // openAIProvider runs tasks on any API that speaks OpenAI's Chat Completions
@@ -76,6 +85,108 @@ func (o openAIProvider) unavailable(s Settings) string {
 	return ""
 }
 
+var (
+	openAIBaseURLOverride = "" // tests point every preset at a fake server
+	openAIMaxRetries      = 1  // one SDK retry for transient errors
+	openAIMaxTokens       = map[aiRole]int64{roleGrading: 16000, roleTips: 1024, rolePlanning: 16000}
+	openAITimeout         = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second, rolePlanning: 2 * time.Minute}
+)
+
+// openAIOptions builds the request options for one connection. It never uses
+// openai.NewClient, which would add OPENAI_API_KEY, OPENAI_ORG_ID and other
+// environment settings to requests bound for DeepSeek, Ollama or a custom server.
+func openAIOptions(c openAIConn) []option.RequestOption {
+	opts := []option.RequestOption{
+		option.WithBaseURL(cmp.Or(openAIBaseURLOverride, c.baseURL)),
+		option.WithHTTPClient(&http.Client{}),
+		option.WithMaxRetries(openAIMaxRetries),
+	}
+	if c.key != "" {
+		opts = append(opts, option.WithAPIKey(c.key))
+	}
+	return opts
+}
+
+// openAIInstruction is the system message. It stays byte-identical between
+// runs of a task so DeepSeek's prefix cache keeps hitting. Modes the server
+// doesn't enforce get the schema in the text (DeepSeek's JSON mode also
+// requires the word "json").
+func openAIInstruction(t aiTask, mode answerMode) string {
+	if mode == modeJSONSchema {
+		return t.instruction
+	}
+	schema, _ := json.Marshal(t.schema) // map keys marshal in sorted order
+	return t.instruction + "\n\nReply with only a json object matching this JSON Schema:\n" + string(schema)
+}
+
 func (o openAIProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult, error) {
-	return aiResult{}, errors.New("not implemented")
+	c := o.p.conn(s)
+	ctx, cancel := context.WithTimeout(ctx, openAITimeout[t.role])
+	defer cancel()
+	chat := openai.NewChatCompletionService(openAIOptions(c)...)
+
+	params := openai.ChatCompletionNewParams{
+		Model: c.model,
+		Messages: []openai.ChatCompletionMessageParamUnion{
+			openai.SystemMessage(openAIInstruction(t, c.mode)),
+			openai.UserMessage(t.input),
+		},
+	}
+	// OpenAI's newer models reject max_tokens; DeepSeek and Ollama document only max_tokens.
+	if o.p.id == providerOpenAI {
+		params.MaxCompletionTokens = openai.Int(openAIMaxTokens[t.role])
+	} else {
+		params.MaxTokens = openai.Int(openAIMaxTokens[t.role])
+	}
+	switch c.mode {
+	case modeJSONSchema:
+		params.ResponseFormat.OfJSONSchema = &shared.ResponseFormatJSONSchemaParam{
+			JSONSchema: shared.ResponseFormatJSONSchemaJSONSchemaParam{Name: t.name, Strict: openai.Bool(true), Schema: t.schema},
+		}
+	case modeJSONObject:
+		params.ResponseFormat.OfJSONObject = &shared.ResponseFormatJSONObjectParam{}
+	}
+
+	var model string
+	for attempt := 1; ; attempt++ {
+		resp, err := chat.New(ctx, params)
+		if err != nil {
+			return aiResult{}, err
+		}
+		model = resp.Model
+		logOpenAIUsage(o.p.label, resp)
+		content := ""
+		if len(resp.Choices) > 0 {
+			content = resp.Choices[0].Message.Content
+		}
+		raw, err := extractJSON(content)
+		if err == nil {
+			err = validateAnswer(raw, t.schema)
+		}
+		if err == nil {
+			return aiResult{raw: raw, model: model}, nil
+		}
+		if attempt == 2 {
+			return aiResult{}, fmt.Errorf("%s's answer wasn't in the expected format: %v", o.p.label, err)
+		}
+		params.Messages = append(params.Messages,
+			openai.AssistantMessage(content),
+			openai.UserMessage("That answer wasn't valid: "+err.Error()+". Reply again with only the corrected json object."))
+	}
+}
+
+// logOpenAIUsage logs token use; DeepSeek adds prompt-cache hit/miss counts.
+func logOpenAIUsage(label string, resp *openai.ChatCompletion) {
+	var extra struct {
+		Usage struct {
+			Hit  *int64 `json:"prompt_cache_hit_tokens"`
+			Miss *int64 `json:"prompt_cache_miss_tokens"`
+		} `json:"usage"`
+	}
+	json.Unmarshal([]byte(resp.RawJSON()), &extra)
+	line := fmt.Sprintf("%s: %s, %d prompt tokens", label, resp.Model, resp.Usage.PromptTokens)
+	if extra.Usage.Hit != nil && extra.Usage.Miss != nil {
+		line += fmt.Sprintf(" (cache hit %d, miss %d)", *extra.Usage.Hit, *extra.Usage.Miss)
+	}
+	log.Print(line)
 }
