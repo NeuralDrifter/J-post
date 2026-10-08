@@ -64,7 +64,33 @@ wails dev                      # live-reloading app (also served at http://local
 go test ./...                  # backend tests
 cd frontend; npm test          # frontend tests
 wails build                    # produces build\bin\Job_Track.exe
+bash tools/verify.sh           # everything above except the build, in one go
 ```
+
+## Project layout
+
+```
+main.go              entry point: serves an AI task to Claude Code, or opens the window
+internal/
+  app/               Wails bindings, the SQLite database and the interview flow
+  ai/                AI task runner and providers (Gemini Live, Anthropic, Claude Code, OpenAI-style)
+  gemini/            Gemini REST calls, Live sessions and voice samples
+  discover/          job-board fetchers (JobSpy, Adzuna, The Muse, USAJobs, Himalayas, Jobicy)
+  comp/              offer packages and their evaluation
+  settings/          user settings and window state
+  taxes/             2026 federal and state income tax (embedded tables)
+  marketdata/        BLS/BEA wage and cost-of-living data (embedded)
+  httpapi/           shared HTTP client
+  textproc/          string and HTML helpers
+  osproc/            starting, stopping and opening things in the OS
+  licensegen/        builds the open-source licenses list
+frontend/            React + TypeScript UI; lib/backend.ts is its only door to the Go side
+tools/               data build scripts, the licenses generator and verify.sh
+```
+
+A package only imports packages listed below it, and nothing imports `app`.
+Tests sit next to the code they test, as Go requires. `ai/aitest` and
+`gemini/geminitest` provide fake servers for tests in other packages.
 
 ## Data sources for Offers
 

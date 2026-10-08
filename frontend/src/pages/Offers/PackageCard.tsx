@@ -7,13 +7,13 @@ import { openMenu } from '../../lib/menu'
 import { Chip } from '../../components/Chip'
 import { IconButton } from '../../components/IconButton'
 import { SourceMark } from '../../components/SourceMark'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { formatDelta, formatMoneyFull, KIND_LABEL, KIND_TONE, percentileLabel } from '../../lib/comp'
 import { baselineDetail, colDetail, marketDetail, taxDetail } from '../../lib/sources'
 
 type Props = {
-  item: main.ComparisonItem
-  sources?: main.DataSources
+  item: app.ComparisonItem
+  sources?: app.DataSources
   selected: boolean
   onToggle: () => void
   onEdit: () => void

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { LoaderCircle, MapPin, RefreshCw, Search } from 'lucide-react'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 
 export const DEFAULT_PER_SOURCE = 20
 const MIN_PER_SOURCE = 5
@@ -10,14 +10,14 @@ const MIN_PER_SOURCE = 5
 const KIND_TITLE: Record<string, string> = { official: 'Official APIs', scraped: 'Scraped via JobSpy' }
 
 type Props = {
-  query: main.SearchQuery
-  onChange: (q: main.SearchQuery) => void
+  query: app.SearchQuery
+  onChange: (q: app.SearchQuery) => void
   onSearch: () => void
   /** Search again even if this search ran recently. */
   onRefresh: () => void
   searching: boolean
   /** Every board, with why it can't run yet (missing keys etc.). */
-  sources: main.JobSource[]
+  sources: app.JobSource[]
 }
 
 export function SearchForm({ query, onChange, onSearch, onRefresh, searching, sources }: Props) {
@@ -107,8 +107,8 @@ function SourceRow({
   setCount,
 }: {
   title: string
-  sources: main.JobSource[]
-  query: main.SearchQuery
+  sources: app.JobSource[]
+  query: app.SearchQuery
   toggle: (s: string) => void
   setCount: (s: string, n: number) => void
 }) {

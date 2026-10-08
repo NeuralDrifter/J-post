@@ -5,11 +5,11 @@ import { useState } from 'react'
 import { Sparkles, ThumbsUp, Trash2 } from 'lucide-react'
 import { Chip } from '../../components/Chip'
 import { Panel } from '../../components/Panel'
-import type { main } from '../../lib/backend'
+import type { app, ai } from '../../lib/backend'
 import { attachTips, clock, SCORE_DIMENSIONS } from '../../lib/interview'
 
 /** "Gemini Live · gemini-3.8-live" for a scorecard tab. */
-export function cardLabel(card: main.ScorecardResult, providers: main.AIProvider[] | undefined): string {
+export function cardLabel(card: app.ScorecardResult, providers: ai.AIProvider[] | undefined): string {
   const name = providers?.find((p) => p.id === card.provider)?.label ?? card.provider
   return card.model ? `${name} · ${card.model}` : name
 }
@@ -25,9 +25,9 @@ export function ScorecardTabs({
   onSelect,
   onDelete,
 }: {
-  cards: main.ScorecardResult[]
+  cards: app.ScorecardResult[]
   selected: string
-  providers: main.AIProvider[] | undefined
+  providers: ai.AIProvider[] | undefined
   hasPlan?: boolean
   onSelect: (tab: string) => void
   onDelete: (provider: string) => void
@@ -59,7 +59,7 @@ export function ScorecardTabs({
   )
 }
 
-export function ScorecardView({ card }: { card: main.Scorecard }) {
+export function ScorecardView({ card }: { card: app.Scorecard }) {
   return (
     <>
       <Panel title="Scores">
@@ -90,7 +90,7 @@ export function ScorecardView({ card }: { card: main.Scorecard }) {
   )
 }
 
-function QuestionCard({ q, n }: { q: main.QuestionReview; n: number }) {
+function QuestionCard({ q, n }: { q: app.QuestionReview; n: number }) {
   const [open, setOpen] = useState(false)
   return (
     <Panel title={`Question ${n}`}>
@@ -112,7 +112,7 @@ function QuestionCard({ q, n }: { q: main.QuestionReview; n: number }) {
   )
 }
 
-function TipLine({ tip }: { tip: main.InterviewTip }) {
+function TipLine({ tip }: { tip: app.InterviewTip }) {
   return (
     <p className="flex items-start gap-2 text-xs text-ink-2">
       {tip.kind === 'good' ? <ThumbsUp size={12} className="mt-0.5 shrink-0 text-success" /> : <Sparkles size={12} className="mt-0.5 shrink-0 text-info" />}
@@ -128,8 +128,8 @@ export function TranscriptWithTips({
   canPlay,
   onSeek,
 }: {
-  lines: main.TranscriptLine[]
-  tips: main.InterviewTip[]
+  lines: app.TranscriptLine[]
+  tips: app.InterviewTip[]
   canPlay: boolean
   onSeek: (ms: number) => void
 }) {

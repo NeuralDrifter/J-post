@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 # SPDX-License-Identifier: MIT
 
-"""Build taxdata/us_2026.json: federal 2026 figures plus all state income tax tables.
+"""Build internal/taxes/us_2026.json: federal 2026 figures plus all state income tax tables.
 
 State data: Tax Foundation, "State Individual Income Tax Rates and Brackets, 2026"
   https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/
@@ -18,7 +18,7 @@ import openpyxl
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "datasets", "tf_2026_state_income_tax.xlsx")
-OUT = os.path.join(ROOT, "taxdata", "us_2026.json")
+OUT = os.path.join(ROOT, "internal", "taxes", "us_2026.json")
 YEAR = 2026
 STATE_SOURCE = "Tax Foundation, State Individual Income Tax Rates and Brackets, 2026"
 

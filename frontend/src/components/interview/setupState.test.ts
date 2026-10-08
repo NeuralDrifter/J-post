@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { closeUnlessStarting, initialSetup, preparingLabel } from './setupState'
 
-const job = (status: string) => ({ id: 'j1', status }) as main.Job
+const job = (status: string) => ({ id: 'j1', status }) as app.Job
 
 describe('initialSetup', () => {
   it('keeps the usual defaults for a new interview', () => {
@@ -31,7 +31,7 @@ describe('initialSetup', () => {
 })
 
 describe('preparingLabel', () => {
-  const base = initialSetup({ id: 'j1', status: 'applied' } as main.Job)
+  const base = initialSetup({ id: 'j1', status: 'applied' } as app.Job)
   it('names the planner while questions are being written', () => {
     expect(preparingLabel('Claude Code', base)).toBe('Preparing your questions with Claude Code…')
   })

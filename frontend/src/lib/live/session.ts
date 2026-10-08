@@ -5,7 +5,7 @@
 // connection (setup, reconnection, timekeeping) and wires together the
 // microphone (mic.ts), the interviewer's voice (playback.ts) and the recording
 // (recorder.ts).
-import type { main } from '../backend'
+import type { app } from '../backend'
 import type { AudioChunk } from './audio'
 import { routeOutput } from './devices'
 import { MicCapture, openMicrophone } from './mic'
@@ -20,7 +20,7 @@ export type LiveConfig = {
   wsUrl: string
   setup: Record<string, unknown>
   /** What to tell the interviewer, and when (written by the backend next to the brief). */
-  cues: main.LiveCues
+  cues: app.LiveCues
   micDeviceId?: string
   outputDeviceId?: string
 }

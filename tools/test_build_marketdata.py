@@ -11,7 +11,7 @@ import json
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "marketdata", "marketdata.json.gz")
+OUT = os.path.join(ROOT, "internal", "marketdata", "marketdata.json.gz")
 
 
 def csv_value(path, geo, line="1"):

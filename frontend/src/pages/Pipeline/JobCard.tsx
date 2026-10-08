@@ -3,10 +3,10 @@
 
 import { BellRing, CalendarClock } from 'lucide-react'
 import { Chip } from '../../components/Chip'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { CLOSE_REASON_LABEL, daysLabel, formatDateTime, formatMoney, formatSalary, initials, INTERVIEW_KIND_LABEL, labelFor, WORK_MODE_LABEL } from '../../lib/format'
 
-export function JobCard({ summary, overlay = false }: { summary: main.JobSummary; overlay?: boolean }) {
+export function JobCard({ summary, overlay = false }: { summary: app.JobSummary; overlay?: boolean }) {
   const { job } = summary
   // A modeled offer beats the posted range.
   const salary = summary.offerYear1Total ? `${formatMoney(summary.offerYear1Total)} yr-1 total` : formatSalary(job.salaryMin, job.salaryMax)

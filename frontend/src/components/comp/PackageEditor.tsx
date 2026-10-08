@@ -5,15 +5,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { labelFor } from '../../lib/format'
 import { TriangleAlert } from 'lucide-react'
 import { api } from '../../lib/api'
-import {
-  DescribeArea,
-  DescribeOccupation,
-  PreviewComp,
-  SaveCompPackage,
-  SearchAreas,
-  SearchOccupations,
-  type main,
-} from '../../lib/backend'
+import { DescribeArea, DescribeOccupation, PreviewComp, SaveCompPackage, SearchAreas, SearchOccupations, type comp } from '../../lib/backend'
 import { EQUITY_LABEL, formatMoneyFull, KIND_LABEL, percentileLabel, STATES, VESTING_LABEL } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
 import { colDetail, marketDetail, taxDetail, useSources } from '../../lib/sources'
@@ -23,7 +15,7 @@ import { Modal } from '../Modal'
 import { SourceMark } from '../SourceMark'
 import { CodePicker } from './CodePicker'
 
-type NumKey = { [K in keyof main.CompPackage]: main.CompPackage[K] extends number ? K : never }[keyof main.CompPackage]
+type NumKey = { [K in keyof comp.CompPackage]: comp.CompPackage[K] extends number ? K : never }[keyof comp.CompPackage]
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -34,13 +26,13 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-export function PackageEditor({ initial, onClose }: { initial: main.CompPackage; onClose: () => void }) {
+export function PackageEditor({ initial, onClose }: { initial: comp.CompPackage; onClose: () => void }) {
   const [p, setP] = useState(initial)
-  const [preview, setPreview] = useState<main.PackageResult>()
+  const [preview, setPreview] = useState<comp.PackageResult>()
   const [saving, setSaving] = useState(false)
   const sources = useSources()
 
-  const set = <K extends keyof main.CompPackage>(key: K, value: main.CompPackage[K]) => setP((cur) => ({ ...cur, [key]: value }))
+  const set = <K extends keyof comp.CompPackage>(key: K, value: comp.CompPackage[K]) => setP((cur) => ({ ...cur, [key]: value }))
 
   const num = (key: NumKey, label: string, opts: { prefix?: string; suffix?: string; step?: number } = {}) => (
     <Field label={label}>

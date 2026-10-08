@@ -10,7 +10,7 @@ import { InterviewSetupModal } from '../../components/interview/InterviewSetupMo
 import type { RetryInfo } from '../../components/interview/setupState'
 import { PageTitle } from '../../components/PageTitle'
 import { api, apiOk } from '../../lib/api'
-import { DeleteMockInterview, GetJob, ListAIProviders, ListAllMockInterviews, type main } from '../../lib/backend'
+import { DeleteMockInterview, GetJob, ListAIProviders, ListAllMockInterviews, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
 import { averageScore, filterByJob } from '../../lib/interview'
@@ -32,7 +32,7 @@ export default function InterviewsPage() {
   const { data: interviews } = useLoad(() => api(ListAllMockInterviews()), [])
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
   const [jobFilter, setJobFilter] = useState('')
-  const [retrying, setRetrying] = useState<{ job: main.Job; retry: RetryInfo }>()
+  const [retrying, setRetrying] = useState<{ job: app.Job; retry: RetryInfo }>()
 
   const jobs = useMemo(() => {
     const seen = new Map<string, string>()
@@ -42,12 +42,12 @@ export default function InterviewsPage() {
   const shown = filterByJob(interviews ?? [], jobFilter)
   const providerLabel = (id: string) => providers?.find((p) => p.id === id)?.label ?? id
 
-  const remove = async (m: main.MockInterviewSummary) => {
+  const remove = async (m: app.MockInterviewSummary) => {
     const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, tips, scorecards and recording will be deleted.', confirmLabel: 'Delete', danger: true })
     if (ok && (await apiOk(DeleteMockInterview(m.id)))) notifyDataChanged()
   }
 
-  const retry = async (m: main.MockInterviewSummary) => {
+  const retry = async (m: app.MockInterviewSummary) => {
     const job = await api(GetJob(m.jobId))
     if (job) setRetrying({ job, retry: { id: m.id, kind: m.kind, minutes: m.minutes, startedAt: m.startedAt } })
   }

@@ -5,10 +5,10 @@ import { Copy } from 'lucide-react'
 import { copyText } from '../../components/ContextMenu'
 import { Panel } from '../../components/Panel'
 import { openMenu } from '../../lib/menu'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { CLOSE_REASON_LABEL, formatDateTime, labelFor, lookup, STATUS_DOT, STATUS_LABEL } from '../../lib/format'
 
-export function StageTimeline({ events }: { events: main.StageEvent[] }) {
+export function StageTimeline({ events }: { events: app.StageEvent[] }) {
   return (
     <Panel title="Stage history">
       {events.length === 0 ? (

@@ -5,12 +5,12 @@ import { Bookmark, ExternalLink, EyeOff, MapPin, SquareKanban, Undo2, X } from '
 import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'
 import { Markdown } from '../../components/Markdown'
-import { BrowserOpenURL, type main } from '../../lib/backend'
+import { BrowserOpenURL, type app } from '../../lib/backend'
 import { formatDate, formatSalary } from '../../lib/format'
 import { sourceLabel, useJobSources } from '../../lib/jobSources'
 import type { PostingActions } from './PostingList'
 
-type Props = { posting: main.Posting; busy: boolean; actions: PostingActions; onClose: () => void }
+type Props = { posting: app.Posting; busy: boolean; actions: PostingActions; onClose: () => void }
 
 /** Side pane on wide windows; a slide-over panel below 1100px. */
 export function PreviewPane({ posting: p, busy, actions, onClose }: Props) {

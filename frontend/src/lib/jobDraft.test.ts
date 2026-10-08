@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main } from './backend'
+import type { app } from './backend'
 import { draftFromJob, emptyDraft, jobFromDraft } from './jobDraft'
 
 const baseJob = {
@@ -25,7 +25,7 @@ const baseJob = {
   notes: 'my notes',
   createdAt: 'c',
   updatedAt: 'u',
-} as main.Job
+} as app.Job
 
 describe('jobFromDraft', () => {
   it('trims fields and parses salary text', () => {

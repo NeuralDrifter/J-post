@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main } from './backend'
+import type { app } from './backend'
 
-export const SCORE_DIMENSIONS: [keyof main.ScoreSet, string][] = [
+export const SCORE_DIMENSIONS: [keyof app.ScoreSet, string][] = [
   ['communication', 'Communication'],
   ['structure', 'Structure'],
   ['relevance', 'Relevance'],
@@ -11,7 +11,7 @@ export const SCORE_DIMENSIONS: [keyof main.ScoreSet, string][] = [
   ['confidence', 'Confidence'],
 ]
 
-export function averageScore(s?: main.ScoreSet): number | undefined {
+export function averageScore(s?: app.ScoreSet): number | undefined {
   if (!s) return undefined
   const values = SCORE_DIMENSIONS.map(([k]) => s[k])
   return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10
@@ -26,8 +26,8 @@ export function clock(ms: number): string {
 // A prepared session is handed from the setup dialog to the live page in memory;
 // the token never goes into the URL or storage. Reading doesn't consume it (React
 // may run state setup twice in development); the page releases it when done.
-const pending = new Map<string, main.LiveSession>()
-export const holdSession = (s: main.LiveSession) => pending.set(s.sessionId, s)
+const pending = new Map<string, app.LiveSession>()
+export const holdSession = (s: app.LiveSession) => pending.set(s.sessionId, s)
 export const peekSession = (id: string) => pending.get(id)
 export const releaseSession = (id: string) => pending.delete(id)
 
@@ -38,9 +38,9 @@ const TIP_MATCH_MS = 1500 // a tip's answer start and its transcript line's time
  * the candidate line starting closest to its answerAtMs (within TIP_MATCH_MS);
  * tips with no such line are returned as unmatched so they're never dropped.
  */
-export function attachTips(lines: main.TranscriptLine[], tips: main.InterviewTip[]) {
-  const byLine = new Map<number, main.InterviewTip[]>()
-  const unmatched: main.InterviewTip[] = []
+export function attachTips(lines: app.TranscriptLine[], tips: app.InterviewTip[]) {
+  const byLine = new Map<number, app.InterviewTip[]>()
+  const unmatched: app.InterviewTip[] = []
   for (const tip of tips) {
     let best = -1
     lines.forEach((l, i) => {

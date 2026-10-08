@@ -19,7 +19,7 @@ import {
   ListPlanAttempts,
   RegradeInterview,
   ScoreInterview,
-  type main,
+  type app,
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
@@ -53,7 +53,7 @@ export default function InterviewReviewPage() {
   const [regrading, setRegrading] = useState('')
   const [selected, setSelected] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
-  const [retryJob, setRetryJob] = useState<main.Job>()
+  const [retryJob, setRetryJob] = useState<app.Job>()
   // Every attempt at this interview's plan, for the comparison (only fetched when there are several).
   const { data: attemptList } = useLoad(
     () => ((mi?.attempts.length ?? 0) > 1 ? api(ListPlanAttempts(id)) : Promise.resolve(undefined)),

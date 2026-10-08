@@ -4,13 +4,13 @@
 import { useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { api } from '../../lib/api'
-import { ListAIModels, TestAIProvider, type main } from '../../lib/backend'
+import { ListAIModels, TestAIProvider, type settings } from '../../lib/backend'
 import { toast } from '../../lib/toast'
 import { formatTestResult, modelChoices } from './modelChoices'
 
 const OTHER = '__other__'
 
-type PickerProps = { providerId: string; settings: main.Settings; value: string; onChange: (model: string) => void }
+type PickerProps = { providerId: string; settings: settings.Settings; value: string; onChange: (model: string) => void }
 
 /** A model name box with a "Load models" button that swaps it for a dropdown of what the server offers. */
 export function ModelPicker({ providerId, settings, value, onChange }: PickerProps) {
@@ -52,7 +52,7 @@ export function ModelPicker({ providerId, settings, value, onChange }: PickerPro
 }
 
 /** Runs a tiny task on the provider with the settings as entered and reports who answered and how fast. */
-export function TestProviderButton({ providerId, label, settings }: { providerId: string; label: string; settings: main.Settings }) {
+export function TestProviderButton({ providerId, label, settings }: { providerId: string; label: string; settings: settings.Settings }) {
   const [testing, setTesting] = useState(false)
   const test = async () => {
     setTesting(true)

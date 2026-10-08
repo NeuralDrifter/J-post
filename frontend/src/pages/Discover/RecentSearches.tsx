@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import { History, Play, RefreshCw, Trash2 } from 'lucide-react'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { timeAgo } from '../../lib/format'
 import { openMenu } from '../../lib/menu'
 
 type Props = {
-  searches: main.SavedSearch[]
-  onRun: (s: main.SavedSearch) => void
-  onRefresh: (s: main.SavedSearch) => void
-  onRemove: (s: main.SavedSearch) => void
+  searches: app.SavedSearch[]
+  onRun: (s: app.SavedSearch) => void
+  onRefresh: (s: app.SavedSearch) => void
+  onRemove: (s: app.SavedSearch) => void
 }
 
 export function RecentSearches({ searches, onRun, onRefresh, onRemove }: Props) {

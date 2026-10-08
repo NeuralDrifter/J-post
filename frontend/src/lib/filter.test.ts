@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main } from './backend'
+import type { app } from './backend'
 import { filterSummaries, sortSummaries } from './filter'
 
-function summary(job: Partial<main.Job>, daysInStage = 0): main.JobSummary {
+function summary(job: Partial<app.Job>, daysInStage = 0): app.JobSummary {
   return {
     job: { company: '', position: '', location: '', workMode: '', source: 'manual', status: 'interested', dateApplied: '', ...job },
     daysInStage,
-  } as unknown as main.JobSummary
+  } as unknown as app.JobSummary
 }
 
 const list = [
@@ -17,7 +17,7 @@ const list = [
   summary({ id: 'b', company: 'Brex', position: 'Product Manager', workMode: 'hybrid', status: 'offer', salaryMin: 200000, dateApplied: '2026-09-10' }, 1),
   summary({ id: 'c', company: 'Cora', position: 'Designer', status: 'interested' }, 9),
 ]
-const ids = (l: main.JobSummary[]) => l.map((s) => s.job.id).join(',')
+const ids = (l: app.JobSummary[]) => l.map((s) => s.job.id).join(',')
 
 describe('filterSummaries', () => {
   it('matches the query against company, position and location, case-insensitively', () => {

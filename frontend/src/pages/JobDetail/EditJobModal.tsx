@@ -5,11 +5,11 @@ import { useState, type FormEvent } from 'react'
 import { JobForm } from '../../components/JobForm'
 import { Modal } from '../../components/Modal'
 import { api } from '../../lib/api'
-import { UpdateJob, type main } from '../../lib/backend'
+import { UpdateJob, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { draftFromJob, jobFromDraft } from '../../lib/jobDraft'
 
-export function EditJobModal({ job, onClose }: { job: main.Job; onClose: () => void }) {
+export function EditJobModal({ job, onClose }: { job: app.Job; onClose: () => void }) {
   const [draft, setDraft] = useState(() => draftFromJob(job))
   const [saving, setSaving] = useState(false)
 

@@ -1,0 +1,135 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
+package gemini
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"jobtrack/internal/httpapi"
+	"jobtrack/internal/textproc"
+)
+
+// Gemini REST client. The API key travels in the x-goog-api-key header only,
+// so it never appears in URLs or error messages.
+var (
+	geminiBaseURL = "https://generativelanguage.googleapis.com"
+	geminiTimeout = 120 * time.Second
+	// Waits before retrying "high demand" (503) and rate-limit (429) errors.
+	geminiRetryDelays = []time.Duration{2 * time.Second, 5 * time.Second}
+)
+
+// LiveURL is where the frontend opens the voice session with an ephemeral token.
+const LiveURL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained"
+
+// liveLockedFields are fixed by the token; sessionResumption stays with the
+// client so it can reconnect with a handle.
+var liveLockedFields = []string{
+	"model", "generationConfig", "systemInstruction", "inputAudioTranscription",
+	"outputAudioTranscription", "contextWindowCompression", "realtimeInputConfig",
+}
+
+var ErrNoKey = errors.New("add your Gemini API key in Settings → AI first")
+
+type Blob struct {
+	MimeType string `json:"mimeType"`
+	Data     string `json:"data"` // base64
+}
+
+type Part struct {
+	Text       string `json:"text,omitempty"`
+	InlineData *Blob  `json:"inlineData,omitempty"`
+}
+
+func geminiPost(ctx context.Context, key, path string, body any, out any) error {
+	if key == "" {
+		return ErrNoKey
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	for attempt := 0; ; attempt++ {
+		status, err := geminiPostOnce(ctx, key, path, payload, out)
+		busy := status == http.StatusServiceUnavailable || status == http.StatusTooManyRequests
+		if err == nil || !busy || attempt >= len(geminiRetryDelays) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(geminiRetryDelays[attempt]):
+		}
+	}
+}
+
+func geminiPostOnce(ctx context.Context, key, path string, payload []byte, out any) (int, error) {
+	resp, err := httpapi.Request{
+		Source:  "Gemini",
+		Method:  http.MethodPost,
+		URL:     geminiBaseURL + path,
+		Headers: map[string]string{"Content-Type": "application/json", "x-goog-api-key": key},
+		Body:    payload,
+		Timeout: geminiTimeout,
+	}.Send(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if resp.Status != http.StatusOK {
+		return resp.Status, fmt.Errorf("Gemini error %d: %s", resp.Status, textproc.Truncate(strings.ReplaceAll(geminiErrorText(resp.Body), key, "[key]"), 300))
+	}
+	if err := json.Unmarshal(resp.Body, out); err != nil {
+		return resp.Status, fmt.Errorf("unexpected Gemini response: %v", err)
+	}
+	return resp.Status, nil
+}
+
+// geminiErrorText prefers the API's error.message over the raw body.
+func geminiErrorText(body []byte) string {
+	var e struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(body, &e) == nil && e.Error.Message != "" {
+		return e.Error.Message
+	}
+	return strings.TrimSpace(string(body))
+}
+
+// CreateLiveToken mints a short-lived token that locks the session's setup
+// (model, voice, brief) so the page never holds the real API key.
+func CreateLiveToken(ctx context.Context, key string, setup map[string]any, minutes int, now time.Time) (string, error) {
+	expires := now.Add(time.Duration(minutes)*time.Minute + 30*time.Minute).UTC().Format(time.RFC3339)
+	// The locked setup may only contain fields named in fieldMask (Google returns
+	// 400 otherwise); the rest, e.g. sessionResumption, comes from the page.
+	locked := map[string]any{}
+	for _, field := range liveLockedFields {
+		if v, ok := setup[field]; ok {
+			locked[field] = v
+		}
+	}
+	body := map[string]any{
+		"uses":                     0, // unlimited: reconnects open new sessions
+		"expireTime":               expires,
+		"newSessionExpireTime":     expires,
+		"bidiGenerateContentSetup": locked,
+		"fieldMask":                strings.Join(liveLockedFields, ","),
+	}
+	var resp struct {
+		Name string `json:"name"`
+	}
+	if err := geminiPost(ctx, key, "/v1beta/auth_tokens", body, &resp); err != nil {
+		return "", err
+	}
+	if resp.Name == "" {
+		return "", errors.New("Gemini didn't return a session token")
+	}
+	return resp.Name, nil
+}

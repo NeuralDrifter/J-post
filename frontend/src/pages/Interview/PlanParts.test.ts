@@ -4,7 +4,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import type { main } from '../../lib/backend'
+import type { app, ai } from '../../lib/backend'
 import { AttemptsStrip, CompareAttempts, PlanView } from './PlanParts'
 
 const plan = {
@@ -13,15 +13,15 @@ const plan = {
     { question: 'A conflict?', tests: 'collaboration', minutes: 4, probes: ['How did it end?'], strongAnswer: ['Shows empathy'] },
   ],
   resumeClaims: [{ claim: 'Cut deploy time 60%', probe: 'From what?' }],
-} as unknown as main.InterviewPlan
+} as unknown as app.InterviewPlan
 
-const providers = [{ id: 'claude-code', label: 'Claude Code', unavailable: '' }] as main.AIProvider[]
+const providers = [{ id: 'claude-code', label: 'Claude Code', unavailable: '' }] as ai.AIProvider[]
 
 const overall = (n: number) => ({ communication: n, structure: n, relevance: n, depth: n, confidence: n })
 
 describe('PlanView', () => {
   it('shows every part of the plan and who wrote it', () => {
-    const record = { id: 'p1', provider: 'claude-code', model: 'claude-opus-5-5', createdAt: '', plan } as unknown as main.InterviewPlanRecord
+    const record = { id: 'p1', provider: 'claude-code', model: 'claude-opus-5-5', createdAt: '', plan } as unknown as app.InterviewPlanRecord
     const html = renderToStaticMarkup(createElement(PlanView, { record, providers }))
     for (const text of ['Tell me about a migration.', 'ownership', 'What did you own?', 'Names the baseline', 'A conflict?', 'Shows empathy', 'Cut deploy time 60%', 'From what?']) {
       expect(html).toContain(text)
@@ -35,7 +35,7 @@ describe('AttemptsStrip', () => {
     { id: 'a1', startedAt: '2026-10-01T12:00:00Z', overall: overall(3) },
     { id: 'a2', startedAt: '2026-10-02T12:00:00Z' },
     { id: 'a3', startedAt: '2026-10-03T12:00:00Z', overall: overall(4) },
-  ] as main.AttemptSummary[]
+  ] as app.AttemptSummary[]
 
   it('labels the current attempt and lists each with its score', () => {
     const html = renderToStaticMarkup(createElement(AttemptsStrip, { current: 'a2', attempts, onOpen: () => {} }))
@@ -52,14 +52,14 @@ describe('AttemptsStrip', () => {
 })
 
 describe('CompareAttempts', () => {
-  const card = (questions: main.QuestionReview[], n: number) => [{ provider: 'gemini-live', model: '', createdAt: '', scorecard: { overall: overall(n), questions } }]
+  const card = (questions: app.QuestionReview[], n: number) => [{ provider: 'gemini-live', model: '', createdAt: '', scorecard: { overall: overall(n), questions } }]
   const q = (summary: string, planIndex?: number) => ({ question: summary, answerSummary: summary, worked: '', improve: `fix ${summary}`, strongerAnswer: '', planIndex })
 
   it('shows scores per attempt and each attempt’s answer under its planned question', () => {
     const attempts = [
       { id: 'a1', startedAt: '2026-10-01T12:00:00Z', scorecards: card([q('first try', 0)], 2) },
       { id: 'a2', startedAt: '2026-10-02T12:00:00Z', scorecards: card([q('second try', 0)], 4) },
-    ] as unknown as main.MockInterview[]
+    ] as unknown as app.MockInterview[]
     const html = renderToStaticMarkup(createElement(CompareAttempts, { plan, attempts }))
     for (const text of ['Communication', 'Attempt 1', 'Attempt 2', 'Tell me about a migration.', 'first try', 'second try', 'fix second try']) {
       expect(html).toContain(text)
@@ -71,7 +71,7 @@ describe('CompareAttempts', () => {
     const attempts = [
       { id: 'a1', startedAt: '2026-10-01T12:00:00Z', scorecards: card([q('off plan')], 2) },
       { id: 'a2', startedAt: '2026-10-02T12:00:00Z', scorecards: [] },
-    ] as unknown as main.MockInterview[]
+    ] as unknown as app.MockInterview[]
     const html = renderToStaticMarkup(createElement(CompareAttempts, { plan, attempts }))
     expect(html).toContain('Other questions')
     expect(html).toContain('off plan')

@@ -5,21 +5,21 @@ import { Bookmark, Copy, ExternalLink, EyeOff, SquareKanban, Undo2 } from 'lucid
 import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'
 import { copyText } from '../../components/ContextMenu'
-import { BrowserOpenURL, type main } from '../../lib/backend'
+import { BrowserOpenURL, type app } from '../../lib/backend'
 import { formatDate, formatSalary, labelFor, STATUS_LABEL, timeAgo } from '../../lib/format'
 import { sourceLabel, useJobSources } from '../../lib/jobSources'
 import { openMenu, type MenuEntry } from '../../lib/menu'
 
 export type PostingActions = {
-  save: (p: main.Posting) => void
-  dismiss: (p: main.Posting) => void
-  restore: (p: main.Posting) => void
+  save: (p: app.Posting) => void
+  dismiss: (p: app.Posting) => void
+  restore: (p: app.Posting) => void
 }
 
 type Props = {
-  postings: main.Posting[]
+  postings: app.Posting[]
   selectedId: string | null
-  onSelect: (p: main.Posting) => void
+  onSelect: (p: app.Posting) => void
   actions: PostingActions
 }
 
@@ -27,7 +27,7 @@ export function PostingList({ postings, selectedId, onSelect, actions }: Props) 
   const navigate = useNavigate()
   const sources = useJobSources()
 
-  const menu = (p: main.Posting): MenuEntry[] => {
+  const menu = (p: app.Posting): MenuEntry[] => {
     const link: MenuEntry[] = [
       { label: 'Open posting', icon: ExternalLink, disabled: !p.url, onSelect: () => BrowserOpenURL(p.url) },
       { label: 'Copy link', icon: Copy, disabled: !p.url, onSelect: () => copyText(p.url, 'Link copied') },

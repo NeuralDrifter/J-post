@@ -10,12 +10,12 @@ import { Field } from '../../components/JobForm'
 import { Modal } from '../../components/Modal'
 import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
-import { BrowserOpenURL, DeleteContact, ListContacts, SaveContact, type main } from '../../lib/backend'
+import { BrowserOpenURL, DeleteContact, ListContacts, SaveContact, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 
-const blankContact = (jobId: string): main.Contact => ({
+const blankContact = (jobId: string): app.Contact => ({
   id: '',
   jobId,
   name: '',
@@ -28,9 +28,9 @@ const blankContact = (jobId: string): main.Contact => ({
 
 export function ContactsPanel({ jobId }: { jobId: string }) {
   const { data: contacts } = useLoad(() => api(ListContacts(jobId)), [jobId])
-  const [editing, setEditing] = useState<main.Contact | null>(null)
+  const [editing, setEditing] = useState<app.Contact | null>(null)
 
-  const remove = async (c: main.Contact) => {
+  const remove = async (c: app.Contact) => {
     const ok = await confirmDialog({ title: 'Remove contact?', message: `Remove ${c.name} from this job?`, confirmLabel: 'Remove', danger: true })
     if (ok && (await apiOk(DeleteContact(c.id)))) notifyDataChanged()
   }
@@ -114,9 +114,9 @@ export function ContactsPanel({ jobId }: { jobId: string }) {
   )
 }
 
-function ContactModal({ contact, onClose }: { contact: main.Contact; onClose: () => void }) {
+function ContactModal({ contact, onClose }: { contact: app.Contact; onClose: () => void }) {
   const [c, setC] = useState(contact)
-  const set = (key: keyof main.Contact) => (e: { target: { value: string } }) => setC({ ...c, [key]: e.target.value })
+  const set = (key: keyof app.Contact) => (e: { target: { value: string } }) => setC({ ...c, [key]: e.target.value })
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
