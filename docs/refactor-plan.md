@@ -88,9 +88,9 @@ Each line is one commit, green before the next.
 - [x] extract-pure-core: CompPackage + Evaluate -> internal/comp (basePackage fixture copied to comp_test.go)
 - [x] prep: markTracked -> postings.go; fetchOptions + fetch limits -> discover.go; Muse cache and rate-limit log -> muse_cache.go; runDiscover + sourceFunc -> searches.go (4 commits)
 - [x] extract-leaf-module: job-board fetchers -> internal/discover (+ scraper.py; TestScraperSelfTest looks for the venv at the repo root)
-- [ ] prep: `keptPlans` dependency of db.go (if still needed once in app)
+- [x] prep: db.go -> plans.go `keptPlans` — not needed; both end up in app
 - [ ] extract: Repo, bindings and interview flow -> internal/app
-- [ ] thin-entry-point: wails.Run moves into app.Run; main.go only wires
+- [x] prep (thin-entry-point): the wails.Run setup moves from main() into runWindow (run.go)
 - [ ] final: frontend `main.X` -> new namespaces, README paths, wails build + launch
 
 ## Decisions & Discoveries
