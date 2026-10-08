@@ -1,6 +1,15 @@
 # OpenAI-compatible providers (OpenAI, DeepSeek, Ollama, custom) — Design Spec
 
-**Date:** 2026-10-08 · **Status:** Draft · **Builds on:** [AI providers](2026-10-07-ai-providers-design.md) (the task/provider layer in `aitask.go`)
+**Date:** 2026-10-08 · **Status:** Implemented (branch feature/openai-providers); live runs pending · **Builds on:** [AI providers](2026-10-07-ai-providers-design.md) (the task/provider layer in `aitask.go`)
+
+**Deviations found while building:**
+- The SDK client is built from `openai.NewChatCompletionService` / `NewModelService`, not `openai.NewClient`. `NewClient` adds `OPENAI_API_KEY`, `OPENAI_ORG_ID`, `OPENAI_BASE_URL` and `OPENAI_CUSTOM_HEADERS` from the environment, which would send an OpenAI key to DeepSeek, Ollama or a custom server. A test pins this.
+- `max_completion_tokens` for the OpenAI preset, `max_tokens` for the others (the field DeepSeek and Ollama document).
+- DeepSeek reports an unknown model as a 400 "Model Not Exist", so the unknown-model message also matches on the body, not only 404.
+- Missing model text is "Choose a model for <Label> in Settings → AI" (reads better than "a OpenAI model").
+- SDK: `github.com/openai/openai-go/v3` v3.73.0 (Apache-2.0).
+
+**Live runs:** not done yet. There's no DeepSeek key or Ollama on the build machine. Run `JOBTRACK_LIVE_DEEPSEEK_KEY=… go test -run TestLive -v` (and `JOBTRACK_LIVE_OLLAMA_MODEL=…` with Ollama running), then record the models, times, cache hit/miss lines and any repair retries here. OpenAI stays fake-server-only until a key is available.
 
 ## Goal
 
