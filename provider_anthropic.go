@@ -15,6 +15,8 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
+
+	"jobtrack/internal/textproc"
 )
 
 // anthropicProvider runs tasks on the Anthropic Messages API with structured
@@ -104,7 +106,7 @@ func anthropicError(err error, key string) error {
 	case status >= 500:
 		return fmt.Errorf("Anthropic is temporarily unavailable (%d). Try again later.", status)
 	default:
-		return fmt.Errorf("Anthropic error %d: %s", status, truncate(hideKey(anthropicErrorMessage(apiErr), key), 300))
+		return fmt.Errorf("Anthropic error %d: %s", status, textproc.Truncate(hideKey(anthropicErrorMessage(apiErr), key), 300))
 	}
 }
 

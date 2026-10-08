@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"jobtrack/internal/osproc"
+	"jobtrack/internal/textproc"
 )
 
 // claudeCodeProvider runs tasks with headless Claude Code (`claude -p`) on the
@@ -155,11 +156,11 @@ func (claudeCodeProvider) run(ctx context.Context, s Settings, t aiTask) (aiResu
 	}
 	switch {
 	case out.IsError:
-		return aiResult{}, fmt.Errorf("Claude Code: %s", truncate(out.Result, 300))
+		return aiResult{}, fmt.Errorf("Claude Code: %s", textproc.Truncate(out.Result, 300))
 	case runErr != nil:
-		return aiResult{}, fmt.Errorf("Claude Code failed: %s", lastLine(stderr.String(), runErr.Error()))
+		return aiResult{}, fmt.Errorf("Claude Code failed: %s", textproc.LastLine(stderr.String(), runErr.Error()))
 	default:
-		return aiResult{}, fmt.Errorf("Claude Code finished without submitting a result: %s", truncate(out.Result, 200))
+		return aiResult{}, fmt.Errorf("Claude Code finished without submitting a result: %s", textproc.Truncate(out.Result, 200))
 	}
 }
 

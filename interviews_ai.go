@@ -13,6 +13,8 @@ import (
 	"os"
 	"slices"
 	"strings"
+
+	"jobtrack/internal/textproc"
 )
 
 // Mock interviews: a live Gemini voice session plays the interviewer; a text
@@ -210,14 +212,14 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 	if plan != nil {
 		b.WriteString("\n" + plan.briefSection())
 	}
-	fmt.Fprintf(&b, "\nJob description:\n%s\n", orDefault(job.Description, "(not provided)"))
+	fmt.Fprintf(&b, "\nJob description:\n%s\n", textproc.OrDefault(job.Description, "(not provided)"))
 	if strings.TrimSpace(job.Notes) != "" {
 		fmt.Fprintf(&b, "\nThe candidate's own notes about this job (context only):\n%s\n", job.Notes)
 	}
 	if len(contacts) > 0 {
 		b.WriteString("\nPeople the candidate has been in touch with at the company (background only; you are not one of them):\n")
 		for _, c := range contacts {
-			fmt.Fprintf(&b, "- %s, %s\n", c.Name, orDefault(c.Role, "role unknown"))
+			fmt.Fprintf(&b, "- %s, %s\n", c.Name, textproc.OrDefault(c.Role, "role unknown"))
 		}
 	}
 	if strings.TrimSpace(resume) == "" {

@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"jobtrack/internal/textproc"
 )
 
 const (
@@ -79,7 +81,7 @@ func searchKey(q SearchQuery) string {
 	if q.RemoteOnly {
 		remote = "1"
 	}
-	return normalizeForMatch(q.Term) + "|" + normalizeForMatch(q.Location) + "|" + remote + "|" + strings.Join(normalizeSources(q.Sources), ",")
+	return textproc.NormalizeForMatch(q.Term) + "|" + textproc.NormalizeForMatch(q.Location) + "|" + remote + "|" + strings.Join(normalizeSources(q.Sources), ",")
 }
 
 // perSourceCount is the clamped number of results to request from one board.

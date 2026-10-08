@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"jobtrack/internal/textproc"
 )
 
 // Gemini REST client. The API key travels in the x-goog-api-key header only,
@@ -79,7 +81,7 @@ func geminiPostOnce(ctx context.Context, key, path string, payload []byte, out a
 		return 0, err
 	}
 	if resp.status != http.StatusOK {
-		return resp.status, fmt.Errorf("Gemini error %d: %s", resp.status, truncate(strings.ReplaceAll(geminiErrorText(resp.body), key, "[key]"), 300))
+		return resp.status, fmt.Errorf("Gemini error %d: %s", resp.status, textproc.Truncate(strings.ReplaceAll(geminiErrorText(resp.body), key, "[key]"), 300))
 	}
 	if err := json.Unmarshal(resp.body, out); err != nil {
 		return resp.status, fmt.Errorf("unexpected Gemini response: %v", err)

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"jobtrack/internal/textproc"
 )
 
 const (
@@ -110,7 +112,7 @@ func validateJobFields(j *Job) error {
 		if d == "" {
 			continue
 		}
-		if _, err := time.Parse(dateLayout, d); err != nil {
+		if _, err := time.Parse(textproc.DateLayout, d); err != nil {
 			return fmt.Errorf("invalid date %q (want YYYY-MM-DD)", d)
 		}
 	}
@@ -133,7 +135,7 @@ func validateStatus(status, reason string) error {
 	return nil
 }
 
-func (r *Repo) today() string { return r.now().Format(dateLayout) }
+func (r *Repo) today() string { return r.now().Format(textproc.DateLayout) }
 
 func insertStageEvent(ex execer, jobID, from, to, reason, at, note string) error {
 	var fromVal any

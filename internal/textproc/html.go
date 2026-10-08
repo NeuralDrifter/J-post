@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package textproc
 
 import (
 	"regexp"
@@ -14,12 +14,12 @@ var (
 	blockTags     = map[string]bool{"p": true, "div": true, "section": true, "article": true, "ul": true, "ol": true, "table": true, "tr": true, "h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true, "blockquote": true, "pre": true}
 	skipTags      = map[string]bool{"script": true, "style": true, "head": true}
 	manyNewlines  = regexp.MustCompile(`\n{3,}`)
-	innerSpaceRun = regexp.MustCompile(`[ \t]+`)
+	InnerSpaceRun = regexp.MustCompile(`[ \t]+`)
 )
 
-// htmlToText turns API job descriptions (HTML) into plain, markdown-friendly
+// HTMLToText turns API job descriptions (HTML) into plain, markdown-friendly
 // text: paragraphs and headings become blank-line separated, list items "- ".
-func htmlToText(s string) string {
+func HTMLToText(s string) string {
 	if !strings.Contains(s, "<") && !strings.Contains(s, "&") {
 		return strings.TrimSpace(s)
 	}
@@ -29,7 +29,7 @@ func htmlToText(s string) string {
 	for {
 		switch z.Next() {
 		case html.ErrorToken:
-			return tidyText(b.String())
+			return TidyText(b.String())
 		case html.TextToken:
 			if skip == 0 {
 				b.WriteString(strings.ReplaceAll(string(z.Text()), " ", " "))
@@ -59,10 +59,10 @@ func htmlToText(s string) string {
 	}
 }
 
-func tidyText(s string) string {
+func TidyText(s string) string {
 	lines := strings.Split(s, "\n")
 	for i, l := range lines {
-		lines[i] = strings.TrimSpace(innerSpaceRun.ReplaceAllString(l, " "))
+		lines[i] = strings.TrimSpace(InnerSpaceRun.ReplaceAllString(l, " "))
 	}
 	return strings.TrimSpace(manyNewlines.ReplaceAllString(strings.Join(lines, "\n"), "\n\n"))
 }

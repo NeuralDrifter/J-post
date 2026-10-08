@@ -16,6 +16,8 @@ import (
 	"strings"
 
 	"github.com/ledongthuc/pdf"
+
+	"jobtrack/internal/textproc"
 )
 
 // Profile holds the user's resume. Every AI feature reads ResumeText, which the
@@ -146,7 +148,7 @@ func extractPDFText(path string) (string, error) {
 		lines = append(lines, pdfPageLines(page.Content().Text)...)
 		lines = append(lines, "") // blank line between pages
 	}
-	text := tidyText(strings.Join(lines, "\n"))
+	text := textproc.TidyText(strings.Join(lines, "\n"))
 	if len(text) < 20 {
 		return "", errors.New("this PDF has no readable text (it may be a scanned image). Copy the text from your resume and paste it into the Resume box instead")
 	}
@@ -188,7 +190,7 @@ func pdfPageLines(glyphs []pdf.Text) []string {
 			}
 			b.WriteString(g.S)
 		}
-		if line := strings.TrimSpace(innerSpaceRun.ReplaceAllString(b.String(), " ")); line != "" {
+		if line := strings.TrimSpace(textproc.InnerSpaceRun.ReplaceAllString(b.String(), " ")); line != "" {
 			lines = append(lines, line)
 		}
 	}

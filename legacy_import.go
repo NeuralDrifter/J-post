@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"jobtrack/internal/textproc"
 )
 
 // legacyApplication is the record shape of the old ~/.jobtrack/data.json store.
@@ -71,7 +73,7 @@ func (r *Repo) ImportLegacy(jsonPath string) (int, error) {
 	for _, a := range apps {
 		status, reason := mapLegacyStatus(a.Status)
 		dateApplied := strings.TrimSpace(a.DateApplied)
-		if _, err := time.Parse(dateLayout, dateApplied); err != nil {
+		if _, err := time.Parse(textproc.DateLayout, dateApplied); err != nil {
 			dateApplied = ""
 		}
 		at := a.UpdatedAt
@@ -82,14 +84,14 @@ func (r *Repo) ImportLegacy(jsonPath string) (int, error) {
 		id := newID()
 		_, err := tx.Exec(`INSERT INTO jobs (id, company, position, status, close_reason, date_applied, notes, source, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?)`,
-			id, orDefault(a.Company, "(unknown company)"), orDefault(a.Position, "(unknown position)"),
+			id, textproc.OrDefault(a.Company, "(unknown company)"), textproc.OrDefault(a.Position, "(unknown position)"),
 			status, reason, dateApplied, a.Notes, stamp, stamp)
 		if err != nil {
 			return 0, err
 		}
 		if status == StatusClosed && dateApplied != "" {
 			// Record the application too, so old rejections count in the response rate.
-			applied, _ := time.ParseInLocation(dateLayout, dateApplied, time.Local)
+			applied, _ := time.ParseInLocation(textproc.DateLayout, dateApplied, time.Local)
 			if err := insertStageEvent(tx, id, "", StatusApplied, "", ts(applied), "imported"); err != nil {
 				return 0, err
 			}

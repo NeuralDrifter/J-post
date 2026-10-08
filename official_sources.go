@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"jobtrack/internal/textproc"
 )
 
 // Free, official job APIs used alongside the JobSpy scraper. Each maps its
@@ -84,8 +86,8 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 		d := item.MatchedObjectDescriptor
 		j := rawJob{
 			Title: d.PositionTitle, Company: d.OrganizationName, Location: d.PositionLocationDisplay,
-			URL: d.PositionURI, DatePosted: datePart(d.PublicationStartDate), Site: "usajobs",
-			Description: htmlToText(d.UserArea.Details.JobSummary),
+			URL: d.PositionURI, DatePosted: textproc.DatePart(d.PublicationStartDate), Site: "usajobs",
+			Description: textproc.HTMLToText(d.UserArea.Details.JobSummary),
 		}
 		if len(d.PositionRemuneration) > 0 {
 			pay := d.PositionRemuneration[0]
@@ -129,13 +131,13 @@ func himalayasSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([
 		for _, h := range resp.Jobs {
 			j := rawJob{
 				Title: h.Title, Company: h.CompanyName, URL: h.GUID, IsRemote: true, Site: "himalayas",
-				Location: strings.Join(h.LocationRestrictions, ", "), Description: htmlToText(h.Description), Interval: "yearly",
+				Location: strings.Join(h.LocationRestrictions, ", "), Description: textproc.HTMLToText(h.Description), Interval: "yearly",
 			}
 			if j.Location == "" {
 				j.Location = "Remote"
 			}
 			if h.PubDate > 0 {
-				j.DatePosted = time.Unix(h.PubDate, 0).UTC().Format(dateLayout)
+				j.DatePosted = time.Unix(h.PubDate, 0).UTC().Format(textproc.DateLayout)
 			}
 			if h.Currency == nil || *h.Currency == "" || *h.Currency == "USD" {
 				j.MinAmount, j.MaxAmount = h.MinSalary, h.MaxSalary
@@ -181,7 +183,7 @@ func jobicySearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]ra
 	for _, jb := range resp.Jobs {
 		j := rawJob{
 			Title: jb.JobTitle, Company: jb.CompanyName, URL: jb.URL, Location: jb.JobGeo, IsRemote: true,
-			DatePosted: datePart(jb.PubDate), Description: htmlToText(jb.JobDescription), Site: "jobicy",
+			DatePosted: textproc.DatePart(jb.PubDate), Description: textproc.HTMLToText(jb.JobDescription), Site: "jobicy",
 		}
 		if jb.SalaryCurrency == "" || jb.SalaryCurrency == "USD" {
 			lo, hi := jb.SalaryMin, jb.SalaryMax
@@ -211,9 +213,9 @@ func httpErrorMessage(source string, status int, body []byte) string {
 		return fmt.Sprintf("%s is temporarily unavailable (%d). Try again later.", source, status)
 	}
 	text := strings.TrimSpace(string(body))
-	lower := strings.ToLower(firstN(text, 200))
+	lower := strings.ToLower(textproc.FirstN(text, 200))
 	if text == "" || strings.HasPrefix(lower, "<!doctype") || strings.HasPrefix(lower, "<html") || strings.Contains(lower, "<head") {
 		return fmt.Sprintf("%s returned an error (%d).", source, status)
 	}
-	return fmt.Sprintf("%s error %d: %s", source, status, truncate(text, 200))
+	return fmt.Sprintf("%s error %d: %s", source, status, textproc.Truncate(text, 200))
 }

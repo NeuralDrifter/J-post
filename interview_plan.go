@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"jobtrack/internal/textproc"
 )
 
 // A question plan is written by an AI provider before a mock interview. It
@@ -81,15 +83,15 @@ func planTask(job Job, resume string, s InterviewSetup) aiTask {
 	kind, _ := findInterviewKind(s.Kind)
 	var b strings.Builder
 	fmt.Fprintf(&b, "Interview: a %d minutes %s interview for the %s role at %s.\n", s.Minutes, kindBriefName(s.Kind), job.Position, job.Company)
-	fmt.Fprintf(&b, "You are %s.\n", orDefault(kind.interviewer, "the interviewer"))
+	fmt.Fprintf(&b, "You are %s.\n", textproc.OrDefault(kind.interviewer, "the interviewer"))
 
 	fmt.Fprintf(&b, "Interviewer style: %s (%s).\n", s.Persona, persona.briefStyle)
 	fmt.Fprintf(&b, "Write %d core questions.\n", planQuestionCount(s.Minutes))
 	if s.Focus != "" {
 		fmt.Fprintf(&b, "The candidate wants to practice: %s. Make sure the plan covers it.\n", s.Focus)
 	}
-	fmt.Fprintf(&b, "\nJob description:\n%s\n", orDefault(job.Description, "(not provided)"))
-	fmt.Fprintf(&b, "\nCandidate's resume:\n%s\n", orDefault(resume, "(no resume provided)"))
+	fmt.Fprintf(&b, "\nJob description:\n%s\n", textproc.OrDefault(job.Description, "(not provided)"))
+	fmt.Fprintf(&b, "\nCandidate's resume:\n%s\n", textproc.OrDefault(resume, "(no resume provided)"))
 	return aiTask{
 		name:        "interviewPlan",
 		instruction: planInstruction,

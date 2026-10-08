@@ -6,6 +6,8 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"jobtrack/internal/textproc"
 )
 
 // The AI tasks used by mock interviews. Each schema is standard JSON Schema;
@@ -105,8 +107,8 @@ func scoringPrompt(job Job, mi MockInterview, resume string) string {
 		plan = mi.Plan.Plan.gradingSection() + "\n"
 	}
 	return fmt.Sprintf("Role: %s at %s (%s interview, %s interviewer).\n\nJob description:\n%s\n\nCandidate's resume:\n%s\n\n%sTranscript:\n%s",
-		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, orDefault(job.Description, "(not provided)"),
-		orDefault(resume, "(not provided)"), plan, transcriptText(mi.Transcript))
+		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, textproc.OrDefault(job.Description, "(not provided)"),
+		textproc.OrDefault(resume, "(not provided)"), plan, transcriptText(mi.Transcript))
 }
 
 // transcriptText renders the transcript as "Interviewer: …" / "Candidate: …"

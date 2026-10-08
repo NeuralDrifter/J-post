@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"jobtrack/internal/osproc"
+	"jobtrack/internal/textproc"
 )
 
 //go:embed scripts/scraper.py
@@ -119,13 +120,13 @@ var errUnreadableOutput = errors.New("unreadable scraper output")
 // parseScraperOutput reads the JSON payload from the last non-empty stdout
 // line, ignoring any log noise printed before it.
 func parseScraperOutput(out []byte) ([]rawJob, error) {
-	line := lastLine(string(out), "")
+	line := textproc.LastLine(string(out), "")
 	var payload struct {
 		Jobs  []rawJob `json:"jobs"`
 		Error string   `json:"error"`
 	}
 	if line == "" || json.Unmarshal([]byte(line), &payload) != nil {
-		return nil, fmt.Errorf("%w: %q", errUnreadableOutput, truncate(line, 200))
+		return nil, fmt.Errorf("%w: %q", errUnreadableOutput, textproc.Truncate(line, 200))
 	}
 	if payload.Error != "" {
 		return nil, errors.New(payload.Error)
@@ -163,7 +164,7 @@ func runScraperScript(ctx context.Context, python string, timeout time.Duration,
 	}
 	jobs, err := parseScraperOutput(stdout.Bytes())
 	if err != nil && runErr != nil && errors.Is(err, errUnreadableOutput) {
-		return nil, fmt.Errorf("scraper failed: %s", lastLine(stderr.String(), runErr.Error()))
+		return nil, fmt.Errorf("scraper failed: %s", textproc.LastLine(stderr.String(), runErr.Error()))
 	}
 	return jobs, err
 }
@@ -233,7 +234,7 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 		out = append(out, rawJob{
 			Title: it.Title, Company: it.Company.DisplayName, Location: it.Location.DisplayName,
 			MinAmount: it.SalaryMin, MaxAmount: it.SalaryMax, Interval: "yearly",
-			Description: it.Description, DatePosted: datePart(it.Created), URL: it.RedirectURL, Site: "adzuna",
+			Description: it.Description, DatePosted: textproc.DatePart(it.Created), URL: it.RedirectURL, Site: "adzuna",
 		})
 	}
 	return out, nil
@@ -305,7 +306,7 @@ func normalizeSalary(minAmount, maxAmount *float64, interval string) annualSalar
 }
 
 func dedupeKey(company, title string) string {
-	return normalizeForMatch(company) + "|" + normalizeForMatch(title)
+	return textproc.NormalizeForMatch(company) + "|" + textproc.NormalizeForMatch(title)
 }
 
 func fromRaw(r rawJob, source string) DiscoverResult {

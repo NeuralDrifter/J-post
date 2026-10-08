@@ -9,16 +9,18 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"jobtrack/internal/textproc"
 )
 
 func TestHTMLToText(t *testing.T) {
 	in := `<p>We build <b>payments</b> &amp; billing.</p><h3>You&#39;ll</h3><ul><li>Write Go</li><li>Ship <i>fast</i></li></ul><br>Thanks&nbsp;!<script>alert(1)</script>`
-	got := htmlToText(in)
+	got := textproc.HTMLToText(in)
 	want := "We build payments & billing.\n\nYou'll\n\n- Write Go\n- Ship fast\n\nThanks !"
 	if got != want {
 		t.Fatalf("got %q\nwant %q", got, want)
 	}
-	if htmlToText("plain text, no tags") != "plain text, no tags" {
+	if textproc.HTMLToText("plain text, no tags") != "plain text, no tags" {
 		t.Fatal("plain text should pass through")
 	}
 }

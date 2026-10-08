@@ -3,7 +3,11 @@
 
 package main
 
-import "time"
+import (
+	"time"
+
+	"jobtrack/internal/textproc"
+)
 
 type JobSummary struct {
 	Job           Job        `json:"job"`
@@ -109,7 +113,7 @@ func (r *Repo) ListJobSummaries(followUpDays int) ([]JobSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	today := now.Format(dateLayout)
+	today := now.Format(textproc.DateLayout)
 	out := make([]JobSummary, 0, len(jobs))
 	for _, j := range jobs {
 		s := JobSummary{Job: j, StageSince: since[j.ID]}

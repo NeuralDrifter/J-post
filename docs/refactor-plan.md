@@ -47,7 +47,7 @@ settings store, window state, live sessions). `db.go` depends on plans.go
 main.go, generate.go, copyright_test.go   entry point, go:generate, header check
 internal/
   osproc/      start/stop external processes, open files in the OS
-  text/        string cleanup: truncate, normalize, HTML to plain text
+  textproc/    string cleanup: truncate, normalize, HTML to plain text
   httpapi/     shared HTTP client with timeouts and readable errors
   marketdata/  BLS/BEA wage and cost-of-living lookups (+ embedded data)
   taxes/       2026 federal and state income tax calculation (+ embedded data)
@@ -68,8 +68,8 @@ Each line is one commit, green before the next.
 - [x] plan: add this file and `tools/verify.sh`
 - [x] extract-leaf-module: process helpers -> internal/osproc
 - [x] prep: `dateLayout` and `lastLine` move into text.go; `clamp` moves to window.go
-- [ ] extract-leaf-module: string and HTML helpers -> internal/text
-- [ ] prep: `httpErrorMessage` moves next to the HTTP client; `lastLine` to text
+- [x] extract-leaf-module: string and HTML helpers -> internal/textproc
+- [ ] prep: `httpErrorMessage` moves next to the HTTP client
 - [ ] extract-leaf-module: HTTP client -> internal/httpapi
 - [ ] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
 - [ ] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
@@ -91,6 +91,12 @@ Each line is one commit, green before the next.
 - 2026-10-08: the Repo methods keep ~15 files together in `app`; splitting
   Repo is a separate campaign (see Deferred).
 
+- 2026-10-08: the string package is `textproc`, not `text`: several files have
+  locals named `text` that would shadow it. `clamp` is numeric, so it stayed
+  in the root (window.go) instead of joining the string helpers.
+
 ## Deferred: hand off to the next campaign
 - [ ] Split `Repo` into a `store` package plus feature packages (jobs,
   interviews, postings, comp) — Repo methods span ~15 files — refactor-legacy
+- [ ] `textproc.InnerSpaceRun` is an exported regexp only because profile.go
+  uses it; give profile a function instead — clean-code

@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"jobtrack/internal/textproc"
 )
 
 // The Muse API has no keyword search, so Job Track keeps a local copy of the
@@ -163,7 +165,7 @@ func museJobs(resp museResponse) []museJob {
 			levels = append(levels, l.Name)
 		}
 		jobs = append(jobs, museJob{j.ID, j.Name, j.Company.Name, strings.Join(locs, "; "), strings.Join(levels, ", "),
-			datePart(j.PublicationDate), j.Refs.LandingPage, htmlToText(j.Contents)})
+			textproc.DatePart(j.PublicationDate), j.Refs.LandingPage, textproc.HTMLToText(j.Contents)})
 	}
 	return jobs
 }
@@ -222,7 +224,7 @@ func (r *Repo) museSearch(ctx context.Context, q DiscoverQuery, opts fetchOption
 	}
 	if opts.HoursOld > 0 {
 		where = append(where, "publication_date >= ?")
-		args = append(args, r.now().Add(-time.Duration(opts.HoursOld)*time.Hour).Format(dateLayout))
+		args = append(args, r.now().Add(-time.Duration(opts.HoursOld)*time.Hour).Format(textproc.DateLayout))
 	}
 	limit := max(opts.Results, 1)
 	return queryAll(r.db, scanMuseJob, `SELECT title, company, locations, publication_date, url, MAX(description) FROM muse_jobs

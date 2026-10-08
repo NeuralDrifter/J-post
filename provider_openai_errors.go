@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	"github.com/openai/openai-go/v3"
+
+	"jobtrack/internal/textproc"
 )
 
 // openAIError turns a failed request into a short, readable message that
@@ -55,7 +57,7 @@ func openAIError(err error, p openAIPreset, c openAIConn) error {
 	case strings.Contains(lower, "response_format"):
 		return fmt.Errorf("%s doesn't accept this answer mode; set the mode to plain in Settings → AI", label)
 	default:
-		return fmt.Errorf("%s error %d: %s", label, status, truncate(scrubKey(message, c.key), 300))
+		return fmt.Errorf("%s error %d: %s", label, status, textproc.Truncate(scrubKey(message, c.key), 300))
 	}
 }
 
