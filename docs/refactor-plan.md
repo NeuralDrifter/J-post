@@ -1,10 +1,23 @@
 # Refactor Plan: backend packages
-Status: phase 4 (extract) | Started: 2026-10-08 | Branch: `refactor/backend-packages`
+Status: complete | Started and finished: 2026-10-08 | Branch: `refactor/backend-packages`
 
 Goal: move the ~95 Go files out of the repo root into focused packages under
 `internal/`, without changing what the app does. Structure only: no bug fixes,
 renames or restyling during a move (only the capitalization needed to cross a
 package boundary, plus imports).
+
+## Result
+The root went from ~95 Go files to 3 (`main.go`, `generate.go`,
+`copyright_test.go`). The code now lives in 11 new packages under `internal/`
+(next to the existing `licensegen`), plus two test-helper packages (`ai/aitest`, `gemini/geminitest`); see the
+Target Structure below, which matches the repo. `app` is still the largest
+package (~5,000 lines), held together by `Repo` (first Deferred item).
+Final checks, 2026-10-08: `bash tools/verify.sh` green; `go test -v ./...` runs
+the same tests as main with the same 3 skips, plus one new test; the import
+direction matches the dependency rule (checked with `go list`); `wails build`
+succeeds and the built app starts, opens its window and creates a fresh
+database in a scratch data folder. The page-by-page click-through is left to
+the user.
 
 ## Responsibility Map (survey, 2026-10-08)
 One `package main`: ~8,600 lines of code, ~6,100 lines of tests. Found with a
@@ -64,7 +77,8 @@ internal/
   app/         Wails bindings, the SQLite Repo and the interview flow
   licensegen/  (unchanged)
 ```
-Dependency rule: each package imports only packages listed above it, and
+Dependency rule: each package imports only packages listed above it (app
+imports all of them), and
 nothing imports `app`. No `utils`/`common`/`helpers` packages. Each `_test.go`
 moves in the same commit as the code it tests.
 
@@ -89,22 +103,22 @@ Each line is one commit, green before the next.
 - [x] prep: markTracked -> postings.go; fetchOptions + fetch limits -> discover.go; Muse cache and rate-limit log -> muse_cache.go; runDiscover + sourceFunc -> searches.go (4 commits)
 - [x] extract-leaf-module: job-board fetchers -> internal/discover (+ scraper.py; TestScraperSelfTest looks for the venv at the repo root)
 - [x] prep: db.go -> plans.go `keptPlans` — not needed; both end up in app
-- [x] extract: Repo, bindings and interview flow -> internal/app; main.go calls app.Run; frontend `main.X` -> `app.X` (51 files)
 - [x] prep (thin-entry-point): the wails.Run setup moves from main() into runWindow (run.go)
-- [ ] final: frontend `main.X` -> new namespaces, README paths, wails build + launch
+- [x] extract: Repo, bindings and interview flow -> internal/app; main.go calls app.Run; frontend `main.X` -> `app.X` (51 files)
+- [x] final: dependency-rule check, README project layout, wails build + launch
 
 ## Decisions & Discoveries
 - 2026-10-08: tests stay beside the code they test (Go requires it).
 - 2026-10-08: the Repo methods keep ~15 files together in `app`; splitting
   Repo is a separate campaign (see Deferred).
-
 - 2026-10-08: the string package is `textproc`, not `text`: several files have
   locals named `text` that would shadow it. `clamp` is numeric, so it stayed
   in the root (window.go) instead of joining the string helpers.
 - 2026-10-08: embedded data files sit beside their package's .go file
   (internal/marketdata/marketdata.json.gz), not in a data/ subfolder.
 - 2026-10-08: frontend types now come from several Wails namespaces
-  (`main`, `marketdata`, ...); lib/backend.ts re-exports each one.
+  (`app`, `ai`, `comp`, `marketdata`, `settings`, `taxes`); lib/backend.ts
+  re-exports each one.
 - 2026-10-08: compcalc_test.go has its own copy of the `testMarket` fixture
   (it builds a MarketData from exported fields), so tests in two packages can use it.
 - 2026-10-08: the voice catalog and interviewer names are interview logic and
@@ -134,3 +148,10 @@ Each line is one commit, green before the next.
 - [ ] `ai.AIProvider`, `ai.ListAIProviders`, `ai.AIProviderTest`, `ai.ListAIModels`,
   `ai.TestAIProvider` stutter — rename with the frontend models — clean-code
 - [ ] `discover.DiscoverQuery`/`DiscoverResult`/`DiscoverResponse` stutter — clean-code
+- [ ] `app.App` / `app.NewApp` stutter — clean-code
+- [ ] Small test helpers now exist in two places because packages can't share
+  _test.go files: `fakeServer` (app, ai, gemini, httpapi), `testMarket`
+  (marketdata, comp), `basePackage` (app, comp). Fold into the existing
+  *test packages if they grow — clean-code
+- [ ] Exported names with no doc comment after the move (e.g. `textproc.LastLine`,
+  `httpapi.Request`) — run a linter pass — clean-code
