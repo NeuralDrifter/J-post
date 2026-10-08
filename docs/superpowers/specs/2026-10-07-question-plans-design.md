@@ -1,6 +1,17 @@
 # Interview question plans — design
 
-Status: Approved (brainstorming), awaiting spec review
+Status: Implemented (feature/question-plans, merged to main). Automated tests pass; the
+live voice check (a real Claude Code / Gemini Live plan, then a retry) has not been run yet.
+
+Deviations from this spec, decided during implementation:
+- The plan and interview are stored only after the Live token succeeds; a token failure
+  leaves nothing behind (no "failed" record).
+- A retry is refused when the original interview belongs to another job.
+- Migration 9 also adds an index on mock_interviews(plan_id, started_at).
+- The planner writes as the interview type's real interviewer (recruiter, team lead,
+  senior engineer…), not always as a hiring manager.
+- The setup modal can't be closed while the interview is being prepared.
+- The review route is keyed by interview id so moving between attempts starts fresh.
 Branch: feature/question-plans (from main at 24a9543)
 
 ## Why
