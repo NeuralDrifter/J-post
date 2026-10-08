@@ -15,13 +15,13 @@ import {
 import { ChevronLeft, ChevronRight, ChevronsLeftRight, Plus } from 'lucide-react'
 import { requestNewApplication } from '../../components/ContextMenu'
 import { openMenu } from '../../lib/menu'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { STATUSES, STATUS_DOT, STATUS_LABEL, type Status } from '../../lib/format'
 import { readPref, writePref } from '../../lib/prefs'
 import { JobCard } from './JobCard'
 
 type Props = {
-  summaries: main.JobSummary[]
+  summaries: app.JobSummary[]
   onMove: (jobId: string, status: Status) => void
   onOpen: (jobId: string) => void
   onCardMenu: (e: React.MouseEvent, jobId: string) => void
@@ -92,7 +92,7 @@ function Column({
   onCardMenu,
 }: {
   status: Status
-  items: main.JobSummary[]
+  items: app.JobSummary[]
   collapsed: boolean
   onToggle?: () => void
   onOpen: (jobId: string) => void
@@ -145,7 +145,7 @@ function DraggableCard({
   onOpen,
   onMenu,
 }: {
-  summary: main.JobSummary
+  summary: app.JobSummary
   onOpen: (jobId: string) => void
   onMenu: (e: React.MouseEvent) => void
 }) {

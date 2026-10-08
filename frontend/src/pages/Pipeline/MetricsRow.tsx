@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { BellRing, Briefcase, CalendarClock, TrendingUp, type LucideIcon } from 'lucide-react'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { percent } from '../../lib/format'
 
 type Card = { label: string; value: string; hint: string; icon: LucideIcon; warn?: boolean }
 
-export function MetricsRow({ metrics }: { metrics?: main.Metrics }) {
+export function MetricsRow({ metrics }: { metrics?: app.Metrics }) {
   const m = metrics
   const cards: Card[] = [
     { label: 'Active', value: m ? String(m.active) : '—', hint: 'applied, interviewing or offer', icon: Briefcase },

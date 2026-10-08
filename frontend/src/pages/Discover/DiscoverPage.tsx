@@ -19,7 +19,7 @@ import {
   RestorePosting,
   RunSearch,
   SavePosting,
-  type main,
+  type app,
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { timeAgo } from '../../lib/format'
@@ -42,17 +42,17 @@ const TABS: { id: Tab; label: string }[] = [
 const QUERY_PREF = 'discoverQuery'
 
 /** The last query, or an empty one (its boards are filled in once the list loads). */
-function loadQuery(): main.SearchQuery {
+function loadQuery(): app.SearchQuery {
   const empty = { term: '', location: '', remoteOnly: false, sources: [], perSource: {} }
   try {
-    return { ...empty, ...(JSON.parse(readPref(QUERY_PREF, '{}')) as Partial<main.SearchQuery>) }
+    return { ...empty, ...(JSON.parse(readPref(QUERY_PREF, '{}')) as Partial<app.SearchQuery>) }
   } catch {
     return empty
   }
 }
 
 /** RunSearch (reuses recent results) or RefreshSearch (always fetches). */
-type SearchCall = (q: main.SearchQuery) => Promise<main.SearchRun>
+type SearchCall = (q: app.SearchQuery) => Promise<app.SearchRun>
 
 const hasSavedQuery = () => readPref(QUERY_PREF, '') !== ''
 
@@ -67,7 +67,7 @@ export default function DiscoverPage() {
   const [firstVisit] = useState(() => !hasSavedQuery())
   const [tab, setTab] = useState<Tab>('inbox')
   const [filter, setFilter] = useState({ query: '', source: '', onlyNew: false })
-  const [run, setRun] = useState(() => readSessionValue<main.SearchRun>(LAST_RUN_KEY))
+  const [run, setRun] = useState(() => readSessionValue<app.SearchRun>(LAST_RUN_KEY))
   const [showErrors, setShowErrors] = useState(true)
   const [searching, setSearching] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -91,7 +91,7 @@ export default function DiscoverPage() {
 
   const selected = useMemo(() => postings?.find((p) => p.id === selectedId), [postings, selectedId])
 
-  const search = async (call: SearchCall, q: main.SearchQuery = query) => {
+  const search = async (call: SearchCall, q: app.SearchQuery = query) => {
     setSearching(true)
     setShowErrors(true)
     const ready = q.sources.filter((id) => sources?.some((s) => s.id === id && !s.unavailable))
@@ -104,23 +104,23 @@ export default function DiscoverPage() {
     notifyDataChanged()
   }
 
-  const runSaved = (s: main.SavedSearch, call: SearchCall) => {
+  const runSaved = (s: app.SavedSearch, call: SearchCall) => {
     const q = { term: s.term, location: s.location, remoteOnly: s.remoteOnly, sources: s.sources, perSource: s.perSource }
     setQuery(q)
     void search(call, q)
   }
 
-  const removeSearch = async (s: main.SavedSearch) => {
+  const removeSearch = async (s: app.SavedSearch) => {
     if (await apiOk(DeleteSearch(s.id))) notifyDataChanged()
   }
 
-  const select = (p: main.Posting) => {
+  const select = (p: app.Posting) => {
     setSelectedId(p.id)
     if (p.state === 'new') void apiOk(MarkPostingSeen(p.id)).then((ok) => ok && notifyDataChanged())
   }
 
   // After an action the posting usually leaves this tab, so move to the next one.
-  const advance = (p: main.Posting) => {
+  const advance = (p: app.Posting) => {
     if (!postings || selectedId !== p.id) return
     const i = postings.findIndex((x) => x.id === p.id)
     const next = postings[i + 1] ?? postings[i - 1]

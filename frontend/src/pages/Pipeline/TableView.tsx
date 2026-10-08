@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { StatusChip } from '../../components/Chip'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { sortSummaries, type SortDir, type SortKey } from '../../lib/filter'
 import { daysLabel, formatDate, formatSalary } from '../../lib/format'
 
@@ -18,7 +18,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
 ]
 
 type Props = {
-  summaries: main.JobSummary[]
+  summaries: app.JobSummary[]
   onOpen: (jobId: string) => void
   onRowMenu: (e: React.MouseEvent, jobId: string) => void
 }

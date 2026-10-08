@@ -4,12 +4,12 @@
 import { ChevronLeft, ExternalLink, MapPin, Pencil, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'
-import { BrowserOpenURL, type main } from '../../lib/backend'
+import { BrowserOpenURL, type app } from '../../lib/backend'
 import { CLOSE_REASON_LABEL, formatDate, formatSalary, initials, labelFor, STATUS_LABEL, STATUSES, WORK_MODE_LABEL } from '../../lib/format'
 import { sourceLabel, useJobSources } from '../../lib/jobSources'
 
 type Props = {
-  job: main.Job
+  job: app.Job
   onStatus: (status: string) => void
   onEdit: () => void
   onDelete: () => void

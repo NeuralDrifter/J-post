@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router'
 import { ArrowRightLeft, BadgeDollarSign, Copy, ExternalLink, FolderOpen, Mic, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { InterviewSetupModal } from './interview/InterviewSetupModal'
 import { apiOk, api } from '../lib/api'
-import { BrowserOpenURL, DeleteJob, NewEstimate, type main, type comp } from '../lib/backend'
+import { BrowserOpenURL, DeleteJob, NewEstimate, type app, type comp } from '../lib/backend'
 import { notifyDataChanged } from '../lib/events'
 import { STATUSES, STATUS_LABEL, type Status } from '../lib/format'
 import type { MenuEntry } from '../lib/menu'
@@ -24,14 +24,14 @@ export function useJobMenu(move?: (jobId: string, status: Status) => void) {
   const navigate = useNavigate()
   const { request, picker } = useStatusChange()
   const [editor, setEditor] = useState<comp.CompPackage | null>(null)
-  const [interviewFor, setInterviewFor] = useState<main.Job | null>(null)
+  const [interviewFor, setInterviewFor] = useState<app.Job | null>(null)
 
-  const addComp = async (job: main.Job, kind: 'estimate' | 'offer') => {
+  const addComp = async (job: app.Job, kind: 'estimate' | 'offer') => {
     const draft = await api(NewEstimate(job.id))
     if (draft) setEditor({ ...draft, kind, label: kind === 'offer' ? 'Offer' : 'Estimate' })
   }
 
-  const remove = async (job: main.Job) => {
+  const remove = async (job: app.Job) => {
     const ok = await confirmDialog({
       title: 'Delete this job?',
       message: `${job.position} at ${job.company} will be permanently deleted, along with its history, contacts, interviews, files and comp packages.`,
@@ -43,7 +43,7 @@ export function useJobMenu(move?: (jobId: string, status: Status) => void) {
     toast.success('Job deleted')
   }
 
-  const menuFor = (job: main.Job): MenuEntry[] => [
+  const menuFor = (job: app.Job): MenuEntry[] => [
     { label: 'Open', icon: FolderOpen, onSelect: () => navigate(`/jobs/${job.id}`) },
     { label: 'Edit', icon: Pencil, onSelect: () => navigate(`/jobs/${job.id}?edit=1`) },
     {

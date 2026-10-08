@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"jobtrack/internal/ai"
+	"jobtrack/internal/app"
 	"jobtrack/internal/settings"
 )
 
@@ -27,7 +28,7 @@ func main() {
 		return
 	}
 
-	if err := runWindow(settings.DefaultDataDir(), assets); err != nil {
+	if err := app.Run(settings.DefaultDataDir(), assets); err != nil {
 		println("Error:", err.Error())
 	}
 }

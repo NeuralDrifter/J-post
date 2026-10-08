@@ -9,7 +9,7 @@ import { PackageEditor } from '../../components/comp/PackageEditor'
 import { PageTitle } from '../../components/PageTitle'
 import { SourcesFooter } from '../../components/SourcesFooter'
 import { api, apiOk } from '../../lib/api'
-import { DeleteCompPackage, DraftCounter, ListComparisons, type main, type comp } from '../../lib/backend'
+import { DeleteCompPackage, DraftCounter, ListComparisons, type app, type comp } from '../../lib/backend'
 import { blankPackage } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
 import { readPref, writePref } from '../../lib/prefs'
@@ -53,7 +53,7 @@ export default function OffersPage() {
     setEditing(c)
   }
 
-  const remove = async (it: main.ComparisonItem) => {
+  const remove = async (it: app.ComparisonItem) => {
     const ok = await confirmDialog({
       title: 'Delete this package?',
       message: `Delete "${it.package.label}" for ${it.company}?`,

@@ -14,7 +14,7 @@ import {
   PickAndAttachFile,
   RenameAttachment,
   ShowAttachmentInFolder,
-  type main,
+  type app,
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDate } from '../../lib/format'
@@ -31,7 +31,7 @@ export function FilesPanel({ jobId }: { jobId: string }) {
     toast.success(`Attached ${added.fileName}`)
   }
 
-  const remove = async (f: main.Attachment) => {
+  const remove = async (f: app.Attachment) => {
     const ok = await confirmDialog({
       title: 'Remove file?',
       message: `Remove ${f.label}? The copy stored by Job Track is deleted; your original file is not touched.`,
@@ -41,7 +41,7 @@ export function FilesPanel({ jobId }: { jobId: string }) {
     if (ok && (await apiOk(DeleteAttachment(f.id)))) notifyDataChanged()
   }
 
-  const rename = async (f: main.Attachment) => {
+  const rename = async (f: app.Attachment) => {
     const label = await promptDialog({ title: 'Rename file', label: 'Label', initial: f.label })
     if (label && label !== f.label && (await apiOk(RenameAttachment(f.id, label)))) notifyDataChanged()
   }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { SourceMark } from '../../components/SourceMark'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { formatMoneyFull, percentileLabel } from '../../lib/comp'
 import { formatMoney } from '../../lib/format'
 import { marketDetail } from '../../lib/sources'
@@ -10,7 +10,7 @@ import { marketDetail } from '../../lib/sources'
 const POINT_LABELS = ['p10', 'p25', 'median', 'p75', 'p90']
 
 /** Where each base salary sits on the local pay curve for its occupation. */
-export function MarketStrips({ items, sources }: { items: main.ComparisonItem[]; sources?: main.DataSources }) {
+export function MarketStrips({ items, sources }: { items: app.ComparisonItem[]; sources?: app.DataSources }) {
   const withMarket = items.filter((it) => it.result.market)
   if (withMarket.length === 0) return null
   return (
@@ -58,7 +58,7 @@ export function MarketStrips({ items, sources }: { items: main.ComparisonItem[];
 }
 
 /** What the equity is worth over 4 years if the share price changes. */
-export function ScenariosTable({ items }: { items: main.ComparisonItem[] }) {
+export function ScenariosTable({ items }: { items: app.ComparisonItem[] }) {
   const withEquity = items.filter((it) => it.result.scenarios.length > 0)
   if (withEquity.length === 0) return null
   const multipliers = withEquity[0].result.scenarios.map((s) => s.multiplier)

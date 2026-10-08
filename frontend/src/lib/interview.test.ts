@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main } from './backend'
+import type { app } from './backend'
 import { attachTips, filterByJob, gradeActions, holdSession, peekSession, releaseSession } from './interview'
 
 describe('pending live sessions', () => {
   it('can be read repeatedly (React may run state setup twice) until released', () => {
-    holdSession({ sessionId: 's1', token: 't' } as main.LiveSession)
+    holdSession({ sessionId: 's1', token: 't' } as app.LiveSession)
     expect(peekSession('s1')?.token).toBe('t')
     expect(peekSession('s1')?.token).toBe('t')
     releaseSession('s1')
@@ -21,8 +21,8 @@ describe('attachTips', () => {
     { speaker: 'you', text: 'I started in recruiting.', atMs: 4000 },
     { speaker: 'interviewer', text: 'And then?', atMs: 9000 },
     { speaker: 'you', text: 'Chief AI Officer.', atMs: 12000 },
-  ] as main.TranscriptLine[]
-  const tip = (answerAtMs: number, text: string) => ({ answerAtMs, kind: 'tip', text, provider: 'gemini-live', model: 'm' }) as main.InterviewTip
+  ] as app.TranscriptLine[]
+  const tip = (answerAtMs: number, text: string) => ({ answerAtMs, kind: 'tip', text, provider: 'gemini-live', model: 'm' }) as app.InterviewTip
 
   it('matches tips to the answer they were about', () => {
     const { byLine, unmatched } = attachTips(lines, [tip(4000, 'Lead with the result'), tip(12300, 'Own the title')])

@@ -13,7 +13,7 @@ import { PackageEditor } from '../../components/comp/PackageEditor'
 import { Panel } from '../../components/Panel'
 import { SourceMark } from '../../components/SourceMark'
 import { api, apiOk } from '../../lib/api'
-import { DeleteCompPackage, DraftCounter, ListCompForJob, NewEstimate, type main, type comp } from '../../lib/backend'
+import { DeleteCompPackage, DraftCounter, ListCompForJob, NewEstimate, type app, type comp } from '../../lib/backend'
 import { formatMoneyFull, KIND_LABEL, KIND_TONE } from '../../lib/comp'
 import { taxDetail } from '../../lib/sources'
 import { useLoad } from '../../lib/useLoad'
@@ -36,7 +36,7 @@ export function CompPanel({ jobId }: { jobId: string }) {
     setEditing(c)
   }
 
-  const remove = async (it: main.ComparisonItem) => {
+  const remove = async (it: app.ComparisonItem) => {
     const ok = await confirmDialog({ title: 'Delete this package?', message: `Delete "${it.package.label}"?`, confirmLabel: 'Delete', danger: true })
     if (ok && (await apiOk(DeleteCompPackage(it.package.id)))) notifyDataChanged()
   }

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main } from './backend'
+import type { app } from './backend'
 import { parseSalaryInput } from './format'
 
 /** Form state for creating or editing a job: every field as the user typed it. */
@@ -33,7 +33,7 @@ export function emptyDraft(): JobDraft {
   }
 }
 
-export function draftFromJob(job: main.Job): JobDraft {
+export function draftFromJob(job: app.Job): JobDraft {
   return {
     company: job.company,
     position: job.position,
@@ -49,7 +49,7 @@ export function draftFromJob(job: main.Job): JobDraft {
 }
 
 /** Builds a Job from the form; `base` supplies everything the form doesn't edit. */
-export function jobFromDraft(d: JobDraft, base?: main.Job): main.Job {
+export function jobFromDraft(d: JobDraft, base?: app.Job): app.Job {
   return {
     id: base?.id ?? '',
     company: d.company.trim(),

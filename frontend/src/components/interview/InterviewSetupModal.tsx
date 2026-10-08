@@ -5,7 +5,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { LoaderCircle, Mic, TriangleAlert } from 'lucide-react'
 import { api, errorMessage } from '../../lib/api'
-import { GetProfile, GetSettings, ListAIProviders, PrepareInterview, type main } from '../../lib/backend'
+import { GetProfile, GetSettings, ListAIProviders, PrepareInterview, type app } from '../../lib/backend'
 import { formatDate } from '../../lib/format'
 import { holdSession } from '../../lib/interview'
 import { useInterviewOptions } from '../../lib/interviewOptions'
@@ -16,26 +16,26 @@ import { closeUnlessStarting, initialSetup, preparingLabel, type RetryInfo } fro
 import { VoicePicker } from './VoicePicker'
 
 /** Sets up a mock interview; with retry, a new attempt at that interview's question plan. */
-export function InterviewSetupModal({ job, onClose, retry }: { job: main.Job; onClose: () => void; retry?: RetryInfo }) {
+export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onClose: () => void; retry?: RetryInfo }) {
   const navigate = useNavigate()
   const { data: settings } = useLoad(() => api(GetSettings()), [])
   const { data: profile } = useLoad(() => api(GetProfile()), [])
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
-  const [setup, setSetup] = useState<main.InterviewSetup>(() => initialSetup(job, retry))
+  const [setup, setSetup] = useState<app.InterviewSetup>(() => initialSetup(job, retry))
   const [starting, setStarting] = useState(false)
   // What was actually submitted (Start without a plan differs from the form), for the button label.
-  const [startingWith, setStartingWith] = useState<main.InterviewSetup>(setup)
+  const [startingWith, setStartingWith] = useState<app.InterviewSetup>(setup)
   const [failure, setFailure] = useState('')
   const options = useInterviewOptions()
 
   const noKey = settings && !settings.geminiKey
   const noResume = profile && !profile.resumeText.trim()
-  const plannerLabel = (s: main.InterviewSetup) => {
+  const plannerLabel = (s: app.InterviewSetup) => {
     const id = s.planProvider || settings?.planProvider || ''
     return providers?.find((p) => p.id === id)?.label ?? id
   }
 
-  const begin = async (s: main.InterviewSetup) => {
+  const begin = async (s: app.InterviewSetup) => {
     setStarting(true)
     setStartingWith(s)
     setFailure('')

@@ -9,7 +9,7 @@ import { confirmDialog } from '../../components/ConfirmDialog'
 import { InterviewSetupModal } from '../../components/interview/InterviewSetupModal'
 import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
-import { DeleteMockInterview, ListMockInterviews, type main } from '../../lib/backend'
+import { DeleteMockInterview, ListMockInterviews, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
 import { averageScore } from '../../lib/interview'
@@ -17,13 +17,13 @@ import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { openMenu } from '../../lib/menu'
 import { useLoad } from '../../lib/useLoad'
 
-export function MockInterviewsPanel({ job }: { job: main.Job }) {
+export function MockInterviewsPanel({ job }: { job: app.Job }) {
   const navigate = useNavigate()
   const options = useInterviewOptions()
   const { data: sessions } = useLoad(() => api(ListMockInterviews(job.id)), [job.id])
   const [setup, setSetup] = useState(false)
 
-  const remove = async (m: main.MockInterview) => {
+  const remove = async (m: app.MockInterview) => {
     const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, tips, scorecards and recording will be deleted.', confirmLabel: 'Delete', danger: true })
     if (ok && (await apiOk(DeleteMockInterview(m.id)))) notifyDataChanged()
   }

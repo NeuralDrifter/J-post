@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Dices, LoaderCircle, Play, Square } from 'lucide-react'
 import { api } from '../../lib/api'
-import { ListVoices, VoicePreview, type main } from '../../lib/backend'
+import { ListVoices, VoicePreview, type app } from '../../lib/backend'
 import { useLoad } from '../../lib/useLoad'
 
 type GenderFilter = 'all' | 'female' | 'male'
@@ -41,7 +41,7 @@ export function VoicePicker({ value, onChange }: { value: string; onChange: (voi
     void el.play().catch(() => setPlaying(null))
   }
 
-  const shown = (voices ?? []).filter((v: main.VoiceOption) => filter === 'all' || v.gender === filter)
+  const shown = (voices ?? []).filter((v: app.VoiceOption) => filter === 'all' || v.gender === filter)
 
   return (
     <div>
@@ -73,7 +73,7 @@ export function VoicePicker({ value, onChange }: { value: string; onChange: (voi
         </div>
       </div>
       <div className="grid max-h-52 grid-cols-2 gap-1.5 overflow-y-auto rounded-xl border border-line p-1.5 min-[700px]:grid-cols-3">
-        {shown.map((v: main.VoiceOption) => {
+        {shown.map((v: app.VoiceOption) => {
           const selected = v.name === value
           return (
             <div

@@ -3,10 +3,10 @@
 
 import { CalendarClock, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { formatDateTime, INTERVIEW_KIND_LABEL, labelFor } from '../../lib/format'
 
-export function NextUpBanner({ nextUp }: { nextUp?: main.NextUp }) {
+export function NextUpBanner({ nextUp }: { nextUp?: app.NextUp }) {
   const navigate = useNavigate()
   if (!nextUp) return null
   const iv = nextUp.interview

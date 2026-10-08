@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { apiOk } from '../../lib/api'
-import { main, NudgeAnswer, SaveInterviewRecording, SaveInterviewTranscript } from '../../lib/backend'
+import { app, NudgeAnswer, SaveInterviewRecording, SaveInterviewTranscript } from '../../lib/backend'
 import { releaseSession } from '../../lib/interview'
 import { bytesToBase64 } from '../../lib/live/audio'
 import type { LiveEffect, Line, Speaker } from '../../lib/live/reducer'
@@ -20,7 +20,7 @@ const AUTOSAVE_MS = 30_000 // crash safety: what was said survives a hard quit
 const MAX_NUDGES = 6
 
 /** Runs one live interview: the session, its clock, autosave, and saving at the end. */
-export function useLiveInterview(id: string, live: main.LiveSession | undefined) {
+export function useLiveInterview(id: string, live: app.LiveSession | undefined) {
   const navigate = useNavigate()
   const sessionRef = useRef<InterviewSession | null>(null)
   const [started, setStarted] = useState(false)
@@ -117,9 +117,9 @@ export function useLiveInterview(id: string, live: main.LiveSession | undefined)
   return { started, status, detail, lines, speaking, muted, nudges, elapsed, ending, micLevel, begin, finish, reconnect, toggleMute }
 }
 
-function toTranscript(lines: Line[]): main.TranscriptLine[] {
+function toTranscript(lines: Line[]): app.TranscriptLine[] {
   return lines.map((l) =>
-    main.TranscriptLine.createFrom({
+    app.TranscriptLine.createFrom({
       speaker: l.speaker,
       text: l.text,
       atMs: Math.round(l.atMs),

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { formatMoney } from '../../lib/format'
 import { formatMoneyFull, PART_COLORS } from '../../lib/comp'
 
@@ -15,7 +15,7 @@ const PART_LABEL: Record<(typeof PARTS)[number], string> = {
 }
 
 /** Stacked bars: one group per year, one bar per selected package. Inline SVG, no chart library. */
-export function CompChart({ items }: { items: main.ComparisonItem[] }) {
+export function CompChart({ items }: { items: app.ComparisonItem[] }) {
   const H = 220
   const barW = 18
   const gap = 6

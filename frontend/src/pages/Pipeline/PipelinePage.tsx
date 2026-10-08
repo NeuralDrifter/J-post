@@ -7,7 +7,7 @@ import { PageTitle } from '../../components/PageTitle'
 import { useJobMenu } from '../../components/useJobMenu'
 import { useStatusChange } from '../../components/useStatusChange'
 import { api } from '../../lib/api'
-import { GetMetrics, ListJobSummaries, main } from '../../lib/backend'
+import { GetMetrics, ListJobSummaries, app } from '../../lib/backend'
 import { filterSummaries } from '../../lib/filter'
 import { openMenu } from '../../lib/menu'
 import type { Status } from '../../lib/format'
@@ -46,7 +46,7 @@ export default function PipelinePage() {
       // Move the card immediately; the reload after ChangeStatus confirms it.
       setData(
         summaries.map((s) =>
-          s.job.id === jobId ? main.JobSummary.createFrom({ ...s, job: { ...s.job, status }, daysInStage: 0, stale: false }) : s,
+          s.job.id === jobId ? app.JobSummary.createFrom({ ...s, job: { ...s.job, status }, daysInStage: 0, stale: false }) : s,
         ),
       )
     }

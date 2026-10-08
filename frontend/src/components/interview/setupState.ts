@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 
 /** The interview being retried with the same question plan. */
 export type RetryInfo = { id: string; kind: string; minutes: number; startedAt: string }
 
-export function initialSetup(job: main.Job, retry?: RetryInfo): main.InterviewSetup {
+export function initialSetup(job: app.Job, retry?: RetryInfo): app.InterviewSetup {
   return {
     kind: retry?.kind ?? (job.status === 'interviewing' ? 'behavioral' : 'phone_screen'),
     minutes: retry?.minutes ?? 25,
@@ -20,7 +20,7 @@ export function initialSetup(job: main.Job, retry?: RetryInfo): main.InterviewSe
 }
 
 /** The Start button while s is being prepared. A retry or "none" writes no plan, so it just starts. */
-export function preparingLabel(providerLabel: string, s: main.InterviewSetup): string {
+export function preparingLabel(providerLabel: string, s: app.InterviewSetup): string {
   return s.retryOf || s.planProvider === 'none' ? 'Starting…' : `Preparing your questions with ${providerLabel}…`
 }
 

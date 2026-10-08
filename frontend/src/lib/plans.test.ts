@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main } from './backend'
+import type { app } from './backend'
 import { attemptLabel, canRetry, compareAttempts } from './plans'
 
 const plan = {
@@ -11,16 +11,16 @@ const plan = {
     { question: 'A conflict?', tests: 'collaboration', minutes: 5, probes: ['p'], strongAnswer: ['s'] },
   ],
   resumeClaims: [],
-} as unknown as main.InterviewPlan
+} as unknown as app.InterviewPlan
 
 const review = (question: string, planIndex?: number) =>
-  ({ question, answerSummary: `summary of ${question}`, worked: '', improve: `improve ${question}`, strongerAnswer: '', planIndex }) as main.QuestionReview
+  ({ question, answerSummary: `summary of ${question}`, worked: '', improve: `improve ${question}`, strongerAnswer: '', planIndex }) as app.QuestionReview
 
-const attempt = (id: string, questions: main.QuestionReview[] | null) =>
+const attempt = (id: string, questions: app.QuestionReview[] | null) =>
   ({
     id,
     scorecards: questions ? [{ provider: 'gemini-live', model: '', createdAt: '', scorecard: { questions } }] : [],
-  }) as unknown as main.MockInterview
+  }) as unknown as app.MockInterview
 
 describe('attemptLabel', () => {
   it('numbers attempts only when there is more than one', () => {
@@ -31,7 +31,7 @@ describe('attemptLabel', () => {
 })
 
 describe('canRetry', () => {
-  const record = {} as main.InterviewPlanRecord
+  const record = {} as app.InterviewPlanRecord
   it('needs a plan that actually loaded', () => {
     expect(canRetry({ plan: record, planError: '' })).toBe(true)
     expect(canRetry({ plan: undefined, planError: '' })).toBe(false)

@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main } from './backend'
+import type { app } from './backend'
 import { STATUSES } from './format'
 
 export type Filters = { query: string; workMode: string; source: string }
 
-export function filterSummaries(list: main.JobSummary[], f: Filters): main.JobSummary[] {
+export function filterSummaries(list: app.JobSummary[], f: Filters): app.JobSummary[] {
   const q = f.query.trim().toLowerCase()
   return list.filter(({ job }) => {
     if (q && ![job.company, job.position, job.location].some((v) => v.toLowerCase().includes(q))) return false
@@ -19,7 +19,7 @@ export function filterSummaries(list: main.JobSummary[], f: Filters): main.JobSu
 export type SortKey = 'company' | 'position' | 'status' | 'salary' | 'dateApplied' | 'daysInStage'
 export type SortDir = 'asc' | 'desc'
 
-function sortValue(s: main.JobSummary, key: SortKey): string | number {
+function sortValue(s: app.JobSummary, key: SortKey): string | number {
   switch (key) {
     case 'company':
       return s.job.company.toLowerCase()
@@ -36,7 +36,7 @@ function sortValue(s: main.JobSummary, key: SortKey): string | number {
   }
 }
 
-export function sortSummaries(list: main.JobSummary[], key: SortKey, dir: SortDir): main.JobSummary[] {
+export function sortSummaries(list: app.JobSummary[], key: SortKey, dir: SortDir): app.JobSummary[] {
   const sign = dir === 'asc' ? 1 : -1
   return [...list].sort((a, b) => {
     const va = sortValue(a, key)

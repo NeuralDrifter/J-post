@@ -11,12 +11,12 @@ import { Field } from '../../components/JobForm'
 import { Modal } from '../../components/Modal'
 import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
-import { BrowserOpenURL, DeleteInterview, ListInterviews, SaveInterview, type main } from '../../lib/backend'
+import { BrowserOpenURL, DeleteInterview, ListInterviews, SaveInterview, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime, fromLocalInputValue, INTERVIEW_KIND_LABEL, INTERVIEW_KINDS, labelFor, toLocalInputValue } from '../../lib/format'
 import { useLoad } from '../../lib/useLoad'
 
-const blankInterview = (jobId: string): main.Interview => ({
+const blankInterview = (jobId: string): app.Interview => ({
   id: '',
   jobId,
   kind: 'phone_screen',
@@ -29,13 +29,13 @@ const blankInterview = (jobId: string): main.Interview => ({
 
 export function InterviewsPanel({ jobId }: { jobId: string }) {
   const { data: interviews } = useLoad(() => api(ListInterviews(jobId)), [jobId])
-  const [editing, setEditing] = useState<main.Interview | null>(null)
+  const [editing, setEditing] = useState<app.Interview | null>(null)
 
-  const toggle = async (iv: main.Interview) => {
+  const toggle = async (iv: app.Interview) => {
     if (await api(SaveInterview({ ...iv, completed: !iv.completed }))) notifyDataChanged()
   }
 
-  const remove = async (iv: main.Interview) => {
+  const remove = async (iv: app.Interview) => {
     const ok = await confirmDialog({
       title: 'Delete interview?',
       message: `Delete the ${labelFor(INTERVIEW_KIND_LABEL, iv.kind).toLowerCase()} on ${formatDateTime(iv.scheduledAt)}?`,
@@ -121,7 +121,7 @@ export function InterviewsPanel({ jobId }: { jobId: string }) {
   )
 }
 
-function InterviewModal({ interview, onClose }: { interview: main.Interview; onClose: () => void }) {
+function InterviewModal({ interview, onClose }: { interview: app.Interview; onClose: () => void }) {
   const [iv, setIv] = useState(interview)
   const [when, setWhen] = useState(() => toLocalInputValue(interview.scheduledAt))
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { main } from './backend'
+import type { app } from './backend'
 
 // Question plans: attempts at the same plan, retrying, and comparing attempts.
 
@@ -20,16 +20,16 @@ export type AttemptAnswer = { attemptId: string; answerSummary: string; improve:
 export type AttemptComparison = {
   questions: { question: string; byAttempt: AttemptAnswer[] }[]
   /** Reviews that don't match a planned question (off-plan, or no usable planIndex). */
-  other: { attemptId: string; reviews: main.QuestionReview[] }[]
+  other: { attemptId: string; reviews: app.QuestionReview[] }[]
 }
 
 /** Lines up each attempt's answers (from its newest scorecard) under the planned questions. */
-export function compareAttempts(plan: main.InterviewPlan, attempts: main.MockInterview[]): AttemptComparison {
+export function compareAttempts(plan: app.InterviewPlan, attempts: app.MockInterview[]): AttemptComparison {
   const questions = plan.questions.map((q) => ({ question: q.question, byAttempt: [] as AttemptAnswer[] }))
   const other: AttemptComparison['other'] = []
   for (const a of attempts) {
     const reviews = a.scorecards[0]?.scorecard.questions ?? []
-    const unmatched: main.QuestionReview[] = []
+    const unmatched: app.QuestionReview[] = []
     for (const r of reviews) {
       const i = r.planIndex
       if (i === undefined || i === null || i < 0 || i >= questions.length) {

@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import type { main } from '../../lib/backend'
+import type { app } from '../../lib/backend'
 import { peekSession } from '../../lib/interview'
 import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { readPref, writePref } from '../../lib/prefs'
@@ -17,7 +17,7 @@ export default function LiveInterviewPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const options = useInterviewOptions()
-  const [live] = useState<main.LiveSession | undefined>(() => peekSession(id))
+  const [live] = useState<app.LiveSession | undefined>(() => peekSession(id))
   const interview = useLiveInterview(id, live)
   const [showCues, setShowCues] = useState(() => readPref(CUES_PREF, 'true') === 'true')
   const [devices, setDevices] = useState<DeviceChoice>({ micDeviceId: '', outputDeviceId: '' })

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { SourceMark } from '../../components/SourceMark'
-import type { main, comp } from '../../lib/backend'
+import type { app, comp } from '../../lib/backend'
 import { formatDelta, formatMoneyFull, percentileLabel } from '../../lib/comp'
 import { formatMoney } from '../../lib/format'
 import { baselineDetail, colDetail, marketDetail, taxDetail } from '../../lib/sources'
@@ -26,7 +26,7 @@ const ROWS: Row[] = [
   { label: 'PTO value (info)', value: (r) => r.ptoValue, sub: true },
 ]
 
-export function BreakdownTable({ items, sources }: { items: main.ComparisonItem[]; sources?: main.DataSources }) {
+export function BreakdownTable({ items, sources }: { items: app.ComparisonItem[]; sources?: app.DataSources }) {
   return (
     <div className="glass overflow-x-auto rounded-2xl">
       <table className="w-full min-w-[560px] text-sm">

@@ -33,227 +33,7 @@ export namespace ai {
 
 }
 
-export namespace comp {
-	
-	export class CompPackage {
-	    id: string;
-	    jobId: string;
-	    kind: string;
-	    label: string;
-	    parentId: string;
-	    baseSalary: number;
-	    signingBonus: number;
-	    signingClawbackMonths: number;
-	    targetBonusPct: number;
-	    annualRaisePct: number;
-	    equityType: string;
-	    rsuGrantValue: number;
-	    optionShares: number;
-	    optionStrike: number;
-	    shareValue: number;
-	    vesting: string;
-	    vestingCustom: string;
-	    k401MatchPct: number;
-	    k401MatchCapPct: number;
-	    k401ContribPct: number;
-	    healthPremiumAnnual: number;
-	    stipendsAnnual: number;
-	    otherAnnual: number;
-	    ptoDays: number;
-	    occupationCode: string;
-	    areaCode: string;
-	    taxState: string;
-	    localTaxPct: number;
-	    notes: string;
-	    createdAt: string;
-	    updatedAt: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new CompPackage(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.jobId = source["jobId"];
-	        this.kind = source["kind"];
-	        this.label = source["label"];
-	        this.parentId = source["parentId"];
-	        this.baseSalary = source["baseSalary"];
-	        this.signingBonus = source["signingBonus"];
-	        this.signingClawbackMonths = source["signingClawbackMonths"];
-	        this.targetBonusPct = source["targetBonusPct"];
-	        this.annualRaisePct = source["annualRaisePct"];
-	        this.equityType = source["equityType"];
-	        this.rsuGrantValue = source["rsuGrantValue"];
-	        this.optionShares = source["optionShares"];
-	        this.optionStrike = source["optionStrike"];
-	        this.shareValue = source["shareValue"];
-	        this.vesting = source["vesting"];
-	        this.vestingCustom = source["vestingCustom"];
-	        this.k401MatchPct = source["k401MatchPct"];
-	        this.k401MatchCapPct = source["k401MatchCapPct"];
-	        this.k401ContribPct = source["k401ContribPct"];
-	        this.healthPremiumAnnual = source["healthPremiumAnnual"];
-	        this.stipendsAnnual = source["stipendsAnnual"];
-	        this.otherAnnual = source["otherAnnual"];
-	        this.ptoDays = source["ptoDays"];
-	        this.occupationCode = source["occupationCode"];
-	        this.areaCode = source["areaCode"];
-	        this.taxState = source["taxState"];
-	        this.localTaxPct = source["localTaxPct"];
-	        this.notes = source["notes"];
-	        this.createdAt = source["createdAt"];
-	        this.updatedAt = source["updatedAt"];
-	    }
-	}
-	export class Deltas {
-	    year1Total: number;
-	    avgPerYear: number;
-	    year1TakeHome: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new Deltas(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.year1Total = source["year1Total"];
-	        this.avgPerYear = source["avgPerYear"];
-	        this.year1TakeHome = source["year1TakeHome"];
-	    }
-	}
-	export class MarketBaseline {
-	    occTitle: string;
-	    areaTitle: string;
-	    level: string;
-	    median: number;
-	    baseDelta: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new MarketBaseline(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.occTitle = source["occTitle"];
-	        this.areaTitle = source["areaTitle"];
-	        this.level = source["level"];
-	        this.median = source["median"];
-	        this.baseDelta = source["baseDelta"];
-	    }
-	}
-	export class Scenario {
-	    multiplier: number;
-	    value: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new Scenario(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.multiplier = source["multiplier"];
-	        this.value = source["value"];
-	    }
-	}
-	export class YearBreakdown {
-	    year: number;
-	    base: number;
-	    bonus: number;
-	    signing: number;
-	    equity: number;
-	    benefits: number;
-	    total: number;
-	    taxable: number;
-	    takeHome: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new YearBreakdown(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.year = source["year"];
-	        this.base = source["base"];
-	        this.bonus = source["bonus"];
-	        this.signing = source["signing"];
-	        this.equity = source["equity"];
-	        this.benefits = source["benefits"];
-	        this.total = source["total"];
-	        this.taxable = source["taxable"];
-	        this.takeHome = source["takeHome"];
-	    }
-	}
-	export class PackageResult {
-	    years: YearBreakdown[];
-	    year1Total: number;
-	    fourYearTotal: number;
-	    avgPerYear: number;
-	    year1TakeHome: number;
-	    tax1: taxes.TaxResult;
-	    deltaVsCurrent?: Deltas;
-	    marketBaseline?: MarketBaseline;
-	    ptoValue: number;
-	    scenarios: Scenario[];
-	    market?: marketdata.MarketResult;
-	    colIndex: number;
-	    homeColIndex: number;
-	    colLevel: string;
-	    colAreaTitle: string;
-	    homeAreaTitle: string;
-	    year1ColAdjusted: number;
-	    warnings: string[];
-	
-	    static createFrom(source: any = {}) {
-	        return new PackageResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.years = this.convertValues(source["years"], YearBreakdown);
-	        this.year1Total = source["year1Total"];
-	        this.fourYearTotal = source["fourYearTotal"];
-	        this.avgPerYear = source["avgPerYear"];
-	        this.year1TakeHome = source["year1TakeHome"];
-	        this.tax1 = this.convertValues(source["tax1"], taxes.TaxResult);
-	        this.deltaVsCurrent = this.convertValues(source["deltaVsCurrent"], Deltas);
-	        this.marketBaseline = this.convertValues(source["marketBaseline"], MarketBaseline);
-	        this.ptoValue = source["ptoValue"];
-	        this.scenarios = this.convertValues(source["scenarios"], Scenario);
-	        this.market = this.convertValues(source["market"], marketdata.MarketResult);
-	        this.colIndex = source["colIndex"];
-	        this.homeColIndex = source["homeColIndex"];
-	        this.colLevel = source["colLevel"];
-	        this.colAreaTitle = source["colAreaTitle"];
-	        this.homeAreaTitle = source["homeAreaTitle"];
-	        this.year1ColAdjusted = source["year1ColAdjusted"];
-	        this.warnings = source["warnings"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	
-
-}
-
-export namespace main {
+export namespace app {
 	
 	export class Attachment {
 	    id: string;
@@ -1450,6 +1230,226 @@ export namespace main {
 	        this.gender = source["gender"];
 	    }
 	}
+
+}
+
+export namespace comp {
+	
+	export class CompPackage {
+	    id: string;
+	    jobId: string;
+	    kind: string;
+	    label: string;
+	    parentId: string;
+	    baseSalary: number;
+	    signingBonus: number;
+	    signingClawbackMonths: number;
+	    targetBonusPct: number;
+	    annualRaisePct: number;
+	    equityType: string;
+	    rsuGrantValue: number;
+	    optionShares: number;
+	    optionStrike: number;
+	    shareValue: number;
+	    vesting: string;
+	    vestingCustom: string;
+	    k401MatchPct: number;
+	    k401MatchCapPct: number;
+	    k401ContribPct: number;
+	    healthPremiumAnnual: number;
+	    stipendsAnnual: number;
+	    otherAnnual: number;
+	    ptoDays: number;
+	    occupationCode: string;
+	    areaCode: string;
+	    taxState: string;
+	    localTaxPct: number;
+	    notes: string;
+	    createdAt: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CompPackage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.jobId = source["jobId"];
+	        this.kind = source["kind"];
+	        this.label = source["label"];
+	        this.parentId = source["parentId"];
+	        this.baseSalary = source["baseSalary"];
+	        this.signingBonus = source["signingBonus"];
+	        this.signingClawbackMonths = source["signingClawbackMonths"];
+	        this.targetBonusPct = source["targetBonusPct"];
+	        this.annualRaisePct = source["annualRaisePct"];
+	        this.equityType = source["equityType"];
+	        this.rsuGrantValue = source["rsuGrantValue"];
+	        this.optionShares = source["optionShares"];
+	        this.optionStrike = source["optionStrike"];
+	        this.shareValue = source["shareValue"];
+	        this.vesting = source["vesting"];
+	        this.vestingCustom = source["vestingCustom"];
+	        this.k401MatchPct = source["k401MatchPct"];
+	        this.k401MatchCapPct = source["k401MatchCapPct"];
+	        this.k401ContribPct = source["k401ContribPct"];
+	        this.healthPremiumAnnual = source["healthPremiumAnnual"];
+	        this.stipendsAnnual = source["stipendsAnnual"];
+	        this.otherAnnual = source["otherAnnual"];
+	        this.ptoDays = source["ptoDays"];
+	        this.occupationCode = source["occupationCode"];
+	        this.areaCode = source["areaCode"];
+	        this.taxState = source["taxState"];
+	        this.localTaxPct = source["localTaxPct"];
+	        this.notes = source["notes"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+	export class Deltas {
+	    year1Total: number;
+	    avgPerYear: number;
+	    year1TakeHome: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Deltas(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.year1Total = source["year1Total"];
+	        this.avgPerYear = source["avgPerYear"];
+	        this.year1TakeHome = source["year1TakeHome"];
+	    }
+	}
+	export class MarketBaseline {
+	    occTitle: string;
+	    areaTitle: string;
+	    level: string;
+	    median: number;
+	    baseDelta: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MarketBaseline(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.occTitle = source["occTitle"];
+	        this.areaTitle = source["areaTitle"];
+	        this.level = source["level"];
+	        this.median = source["median"];
+	        this.baseDelta = source["baseDelta"];
+	    }
+	}
+	export class Scenario {
+	    multiplier: number;
+	    value: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Scenario(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.multiplier = source["multiplier"];
+	        this.value = source["value"];
+	    }
+	}
+	export class YearBreakdown {
+	    year: number;
+	    base: number;
+	    bonus: number;
+	    signing: number;
+	    equity: number;
+	    benefits: number;
+	    total: number;
+	    taxable: number;
+	    takeHome: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new YearBreakdown(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.year = source["year"];
+	        this.base = source["base"];
+	        this.bonus = source["bonus"];
+	        this.signing = source["signing"];
+	        this.equity = source["equity"];
+	        this.benefits = source["benefits"];
+	        this.total = source["total"];
+	        this.taxable = source["taxable"];
+	        this.takeHome = source["takeHome"];
+	    }
+	}
+	export class PackageResult {
+	    years: YearBreakdown[];
+	    year1Total: number;
+	    fourYearTotal: number;
+	    avgPerYear: number;
+	    year1TakeHome: number;
+	    tax1: taxes.TaxResult;
+	    deltaVsCurrent?: Deltas;
+	    marketBaseline?: MarketBaseline;
+	    ptoValue: number;
+	    scenarios: Scenario[];
+	    market?: marketdata.MarketResult;
+	    colIndex: number;
+	    homeColIndex: number;
+	    colLevel: string;
+	    colAreaTitle: string;
+	    homeAreaTitle: string;
+	    year1ColAdjusted: number;
+	    warnings: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PackageResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.years = this.convertValues(source["years"], YearBreakdown);
+	        this.year1Total = source["year1Total"];
+	        this.fourYearTotal = source["fourYearTotal"];
+	        this.avgPerYear = source["avgPerYear"];
+	        this.year1TakeHome = source["year1TakeHome"];
+	        this.tax1 = this.convertValues(source["tax1"], taxes.TaxResult);
+	        this.deltaVsCurrent = this.convertValues(source["deltaVsCurrent"], Deltas);
+	        this.marketBaseline = this.convertValues(source["marketBaseline"], MarketBaseline);
+	        this.ptoValue = source["ptoValue"];
+	        this.scenarios = this.convertValues(source["scenarios"], Scenario);
+	        this.market = this.convertValues(source["market"], marketdata.MarketResult);
+	        this.colIndex = source["colIndex"];
+	        this.homeColIndex = source["homeColIndex"];
+	        this.colLevel = source["colLevel"];
+	        this.colAreaTitle = source["colAreaTitle"];
+	        this.homeAreaTitle = source["homeAreaTitle"];
+	        this.year1ColAdjusted = source["year1ColAdjusted"];
+	        this.warnings = source["warnings"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 
 }
 

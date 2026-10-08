@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { api } from '../lib/api'
-import { ChangeStatus, type main } from '../lib/backend'
+import { ChangeStatus, type app } from '../lib/backend'
 import { notifyDataChanged } from '../lib/events'
 import { CloseReasonPicker } from './CloseReasonPicker'
 
@@ -12,14 +12,14 @@ import { CloseReasonPicker } from './CloseReasonPicker'
  * for a reason first. Always re-syncs afterwards, so optimistic UI can't drift.
  */
 export function useStatusChange() {
-  const [closing, setClosing] = useState<main.Job | null>(null)
+  const [closing, setClosing] = useState<app.Job | null>(null)
 
   const apply = async (jobId: string, status: string, reason = '', note = '') => {
     await api(ChangeStatus(jobId, status, reason, note))
     notifyDataChanged()
   }
 
-  const request = (job: main.Job, status: string) => {
+  const request = (job: app.Job, status: string) => {
     if (status === job.status) return
     if (status === 'closed') {
       setClosing(job)

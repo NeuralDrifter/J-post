@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { Panel } from '../../components/Panel'
-import type { main, ai } from '../../lib/backend'
+import type { app, ai } from '../../lib/backend'
 import { formatDate } from '../../lib/format'
 import { averageScore, SCORE_DIMENSIONS } from '../../lib/interview'
 import { attemptLabel, compareAttempts } from '../../lib/plans'
 
 /** The question plan the interviewer was given, shown only after the interview. */
-export function PlanView({ record, providers }: { record: main.InterviewPlanRecord; providers?: ai.AIProvider[] }) {
+export function PlanView({ record, providers }: { record: app.InterviewPlanRecord; providers?: ai.AIProvider[] }) {
   const name = providers?.find((p) => p.id === record.provider)?.label ?? record.provider
   return (
     <>
@@ -52,7 +52,7 @@ export function PlanView({ record, providers }: { record: main.InterviewPlanReco
 }
 
 /** "Attempt 2 of 3" and a chip per attempt at the same plan; nothing for a single attempt. */
-export function AttemptsStrip({ current, attempts, onOpen }: { current: string; attempts: main.AttemptSummary[]; onOpen: (id: string) => void }) {
+export function AttemptsStrip({ current, attempts, onOpen }: { current: string; attempts: app.AttemptSummary[]; onOpen: (id: string) => void }) {
   if (attempts.length < 2) return null
   const n = attempts.findIndex((a) => a.id === current) + 1
   return (
@@ -76,7 +76,7 @@ export function AttemptsStrip({ current, attempts, onOpen }: { current: string; 
 }
 
 /** Scores and answers side by side across every attempt at the same plan. */
-export function CompareAttempts({ plan, attempts }: { plan: main.InterviewPlan; attempts: main.MockInterview[] }) {
+export function CompareAttempts({ plan, attempts }: { plan: app.InterviewPlan; attempts: app.MockInterview[] }) {
   const { questions, other } = compareAttempts(plan, attempts)
   const label = (id: string) => `Attempt ${attempts.findIndex((a) => a.id === id) + 1}`
   return (
