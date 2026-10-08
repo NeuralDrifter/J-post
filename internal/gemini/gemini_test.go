@@ -1,13 +1,14 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package gemini
 
 import (
 	"context"
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -49,7 +50,7 @@ func TestCreateLiveToken(t *testing.T) {
 		w.Write([]byte(`{"name":"auth_tokens/abc123"}`))
 	})
 	setup := map[string]any{"model": "models/gemini-3.8-live", "sessionResumption": map[string]any{}, "systemInstruction": map[string]any{}}
-	tok, err := createLiveToken(context.Background(), "k3y", setup, 25, now)
+	tok, err := CreateLiveToken(context.Background(), "k3y", setup, 25, now)
 	if err != nil || tok != "auth_tokens/abc123" {
 		t.Fatalf("tok=%q err=%v", tok, err)
 	}
@@ -91,4 +92,10 @@ func TestGeminiRetriesBusyErrors(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("other errors must not be retried: calls=%d", calls)
 	}
+}
+
+func fakeServer(t *testing.T, handler http.HandlerFunc) string {
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	return srv.URL
 }

@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	"jobtrack/internal/gemini"
 	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
@@ -240,7 +241,7 @@ const thinkingPauseMs = 1500
 // the voice setup plus patient turn detection, transcripts, long-session
 // compression and resumption.
 func liveSetup(model, voice, brief string) map[string]any {
-	setup := liveVoiceSetup(model, voice, brief)
+	setup := gemini.LiveVoiceSetup(model, voice, brief)
 	// Only end-of-speech is relaxed; start-of-speech stays default so the
 	// candidate can still interrupt the interviewer.
 	setup["realtimeInputConfig"] = map[string]any{
@@ -441,7 +442,7 @@ func (r *Repo) DeleteMockInterview(id string) error {
 func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID string, setup InterviewSetup) (LiveSession, error) {
 	settings.ApplyDefaults(&s)
 	if s.GeminiKey == "" {
-		return LiveSession{}, errNoGeminiKey
+		return LiveSession{}, gemini.ErrNoKey
 	}
 	var reused *InterviewPlanRecord
 	if setup.RetryOf != "" {
@@ -484,7 +485,7 @@ func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID s
 		brief = &plan.Plan
 	}
 	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup, brief))
-	token, err := createLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
+	token, err := gemini.CreateLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
 		if keptKey != "" && plan != nil {
 			r.kept.keep(keptKey, plan, r.now()) // so Try again doesn't write a new plan
@@ -495,7 +496,7 @@ func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID s
 	if err != nil {
 		return LiveSession{}, err
 	}
-	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
+	return LiveSession{SessionID: mi.ID, Token: token, WSURL: gemini.LiveURL, Setup: setupMsg, Minutes: setup.Minutes,
 		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName,
 		Cues: liveCues(setup.Minutes, plan != nil)}, nil
 }

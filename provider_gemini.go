@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"jobtrack/internal/gemini"
 	"jobtrack/internal/settings"
 )
 
@@ -27,11 +28,11 @@ func (geminiProvider) unavailable(s settings.Settings) string {
 
 func (geminiProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
 	var raw json.RawMessage
-	err := liveStructured(ctx, s.GeminiKey, jsonPrompt{
-		model:  s.GeminiLiveModel,
-		system: t.instruction,
-		parts:  []geminiPart{{Text: t.input}},
-		schema: geminiSchema(t.schema),
+	err := gemini.LiveStructured(ctx, s.GeminiKey, gemini.JSONPrompt{
+		Model:  s.GeminiLiveModel,
+		System: t.instruction,
+		Parts:  []gemini.Part{{Text: t.input}},
+		Schema: geminiSchema(t.schema),
 	}, &raw)
 	return aiResult{raw: raw, model: s.GeminiLiveModel}, err
 }

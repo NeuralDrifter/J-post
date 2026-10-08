@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package gemini
 
 import (
 	"context"
@@ -35,8 +35,8 @@ func liveBaseSetup(model, instruction string) map[string]any {
 	}
 }
 
-// liveVoiceSetup adds the prebuilt voice the model speaks with.
-func liveVoiceSetup(model, voice, instruction string) map[string]any {
+// LiveVoiceSetup adds the prebuilt voice the model speaks with.
+func LiveVoiceSetup(model, voice, instruction string) map[string]any {
 	setup := liveBaseSetup(model, instruction)
 	setup["generationConfig"].(map[string]any)["speechConfig"] = map[string]any{
 		"voiceConfig": map[string]any{"prebuiltVoiceConfig": map[string]any{"voiceName": voice}},
@@ -50,7 +50,7 @@ type liveMessage struct {
 	ServerContent *struct {
 		ModelTurn *struct {
 			Parts []struct {
-				InlineData *geminiBlob `json:"inlineData"`
+				InlineData *Blob `json:"inlineData"`
 			} `json:"parts"`
 		} `json:"modelTurn"`
 		TurnComplete bool `json:"turnComplete"`
@@ -75,7 +75,7 @@ type liveSession struct {
 func openLiveSession(ctx context.Context, key string, setup map[string]any) (*liveSession, error) {
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, geminiLiveWSBase+liveWSPath+"?key="+url.QueryEscape(key), nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not reach Gemini Live: %s", hideKey(err.Error(), key))
+		return nil, fmt.Errorf("could not reach Gemini Live: %s", HideKey(err.Error(), key))
 	}
 	s := &liveSession{ctx: ctx, conn: conn, key: key}
 	if dl, ok := ctx.Deadline(); ok {
@@ -90,7 +90,7 @@ func openLiveSession(ctx context.Context, key string, setup map[string]any) (*li
 }
 
 // sendTurn sends one complete user turn.
-func (s *liveSession) sendTurn(parts []geminiPart) error {
+func (s *liveSession) sendTurn(parts []Part) error {
 	turn := map[string]any{"clientContent": map[string]any{
 		"turns":        []any{map[string]any{"role": "user", "parts": parts}},
 		"turnComplete": true,
@@ -124,44 +124,44 @@ func (s *liveSession) wrap(err error) error {
 	}
 	var ce *websocket.CloseError
 	if errors.As(err, &ce) && ce.Text != "" {
-		return fmt.Errorf("Gemini Live closed the session: %s", hideKey(ce.Text, s.key))
+		return fmt.Errorf("Gemini Live closed the session: %s", HideKey(ce.Text, s.key))
 	}
 	if errors.Is(s.ctx.Err(), context.DeadlineExceeded) {
 		return errors.New("Gemini Live took too long to answer")
 	}
-	return fmt.Errorf("Gemini Live: %s", hideKey(err.Error(), s.key))
+	return fmt.Errorf("Gemini Live: %s", HideKey(err.Error(), s.key))
 }
 
-func hideKey(text, key string) string { return strings.ReplaceAll(text, key, "[key]") }
+func HideKey(text, key string) string { return strings.ReplaceAll(text, key, "[key]") }
 
-// jsonPrompt asks the Live model for a structured result.
-type jsonPrompt struct {
-	model  string
-	system string
-	parts  []geminiPart
-	schema map[string]any // the result's shape, declared as the tool's parameters
+// JSONPrompt asks the Live model for a structured result.
+type JSONPrompt struct {
+	Model  string
+	System string
+	Parts  []Part
+	Schema map[string]any // the result's shape, declared as the tool's parameters
 }
 
 const (
-	liveResultTool  = "submit_result"
+	LiveResultTool  = "submit_result"
 	liveResultLimit = 90 * time.Second
 )
 
-// liveStructured runs a one-turn Live session in which the model returns its
+// LiveStructured runs a one-turn Live session in which the model returns its
 // answer by calling submit_result, and decodes the call's arguments into out.
 // Tested against gemini-3.8-live: a full scorecard arrives in a few seconds with
 // no speech, where asking it to speak the JSON took about a minute and came back cut off.
-func liveStructured(ctx context.Context, key string, p jsonPrompt, out any) error {
+func LiveStructured(ctx context.Context, key string, p JSONPrompt, out any) error {
 	if key == "" {
-		return errNoGeminiKey
+		return ErrNoKey
 	}
 	ctx, cancel := context.WithTimeout(ctx, liveResultLimit)
 	defer cancel()
-	setup := liveBaseSetup(p.model, p.system+" Deliver your answer only by calling "+liveResultTool+" once. Do not speak.")
+	setup := liveBaseSetup(p.Model, p.System+" Deliver your answer only by calling "+LiveResultTool+" once. Do not speak.")
 	setup["tools"] = []any{map[string]any{"functionDeclarations": []any{map[string]any{
-		"name":        liveResultTool,
+		"name":        LiveResultTool,
 		"description": "Submit the finished result.",
-		"parameters":  p.schema,
+		"parameters":  p.Schema,
 	}}}}
 	s, err := openLiveSession(ctx, key, setup)
 	if err != nil {
@@ -175,12 +175,12 @@ func liveStructured(ctx context.Context, key string, p jsonPrompt, out any) erro
 		}
 		switch {
 		case msg.SetupComplete != nil:
-			if err := s.sendTurn(p.parts); err != nil {
+			if err := s.sendTurn(p.Parts); err != nil {
 				return err
 			}
 		case msg.ToolCall != nil:
 			for _, call := range msg.ToolCall.FunctionCalls {
-				if call.Name != liveResultTool {
+				if call.Name != LiveResultTool {
 					continue
 				}
 				if err := json.Unmarshal(call.Args, out); err != nil {

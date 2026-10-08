@@ -16,6 +16,7 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
 
+	"jobtrack/internal/gemini"
 	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
@@ -94,7 +95,7 @@ func (anthropicProvider) run(ctx context.Context, s settings.Settings, t aiTask)
 func anthropicError(err error, key string) error {
 	var apiErr *anthropic.Error
 	if !errors.As(err, &apiErr) {
-		return fmt.Errorf("could not reach Anthropic: %s", hideKey(err.Error(), key))
+		return fmt.Errorf("could not reach Anthropic: %s", gemini.HideKey(err.Error(), key))
 	}
 	switch status := apiErr.StatusCode; {
 	case status == http.StatusUnauthorized || status == http.StatusForbidden:
@@ -107,7 +108,7 @@ func anthropicError(err error, key string) error {
 	case status >= 500:
 		return fmt.Errorf("Anthropic is temporarily unavailable (%d). Try again later.", status)
 	default:
-		return fmt.Errorf("Anthropic error %d: %s", status, textproc.Truncate(hideKey(anthropicErrorMessage(apiErr), key), 300))
+		return fmt.Errorf("Anthropic error %d: %s", status, textproc.Truncate(gemini.HideKey(anthropicErrorMessage(apiErr), key), 300))
 	}
 }
 

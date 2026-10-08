@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package gemini
 
 import (
 	"bytes"
@@ -55,7 +55,7 @@ func fakeLive(t *testing.T, chunks [][]byte, calls *int, sawVoice *string) {
 func TestLiveVoiceSample(t *testing.T) {
 	calls, voice := 0, ""
 	fakeLive(t, [][]byte{{1, 0, 2, 0}, {3, 0, 4, 0}}, &calls, &voice)
-	wav, err := liveVoiceSample(context.Background(), "k3y", "gemini-3.8-live", "Sulafat", "Hello")
+	wav, err := LiveVoiceSample(context.Background(), "k3y", "gemini-3.8-live", "Sulafat", "Hello")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestLiveVoiceSampleErrorsHideKey(t *testing.T) {
 	old := geminiLiveWSBase
 	geminiLiveWSBase = "ws://127.0.0.1:1"
 	t.Cleanup(func() { geminiLiveWSBase = old })
-	_, err := liveVoiceSample(context.Background(), "s3cretkey", "m", "Kore", "Hi")
+	_, err := LiveVoiceSample(context.Background(), "s3cretkey", "m", "Kore", "Hi")
 	if err == nil || strings.Contains(err.Error(), "s3cretkey") {
 		t.Fatalf("err = %v", err)
 	}

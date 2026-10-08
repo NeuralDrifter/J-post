@@ -77,7 +77,7 @@ Each line is one commit, green before the next.
 - [x] prep: provider IDs and answer modes move to settings.go (break settings <-> ai); Save checks a fixed ID list, guarded by TestProviderIDsMatchRegistry
 - [x] extract-data-types: settings and window state store -> internal/settings
 - [x] prep: voice sampling (voice_sample.go) splits from the voice catalog; interview-typed Live tests move to interviews_ai_test.go
-- [ ] extract-leaf-module: Gemini REST, Live sessions, voice sampling -> internal/gemini (+ geminitest helpers)
+- [x] extract-leaf-module: Gemini REST, Live sessions, voice sampling -> internal/gemini (+ geminitest helpers)
 - [ ] extract-leaf-module: AI task runner and providers -> internal/ai (+ testdata/fakeclaude)
 - [ ] prep: split the CompPackage type from its Repo persistence in comp.go
 - [ ] extract-pure-core: CompPackage + Evaluate -> internal/comp

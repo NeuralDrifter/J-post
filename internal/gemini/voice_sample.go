@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package gemini
 
 import (
 	"bytes"
@@ -18,16 +18,16 @@ const (
 	voiceSampleLimit = 45 * time.Second
 )
 
-// liveVoiceSample has the Live model (the same one that runs interviews) speak
+// LiveVoiceSample has the Live model (the same one that runs interviews) speak
 // one line in the given voice, and returns it as WAV. Runs in the backend, so
 // the API key never reaches the page.
-func liveVoiceSample(ctx context.Context, key, model, voice, text string) ([]byte, error) {
+func LiveVoiceSample(ctx context.Context, key, model, voice, text string) ([]byte, error) {
 	if key == "" {
-		return nil, errNoGeminiKey
+		return nil, ErrNoKey
 	}
 	ctx, cancel := context.WithTimeout(ctx, voiceSampleLimit)
 	defer cancel()
-	s, err := openLiveSession(ctx, key, liveVoiceSetup(model, voice, "You are recording a voice sample for an interview app. "+
+	s, err := openLiveSession(ctx, key, LiveVoiceSetup(model, voice, "You are recording a voice sample for an interview app. "+
 		"When given a line, say exactly that line in a natural, friendly, professional interviewer tone. Say nothing else."))
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func liveVoiceSample(ctx context.Context, key, model, voice, text string) ([]byt
 			return nil, err
 		}
 		if msg.SetupComplete != nil {
-			if err := s.sendTurn([]geminiPart{{Text: "Say exactly: " + text}}); err != nil {
+			if err := s.sendTurn([]Part{{Text: "Say exactly: " + text}}); err != nil {
 				return nil, err
 			}
 			continue

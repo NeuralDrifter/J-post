@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"jobtrack/internal/gemini/geminitest"
 	"jobtrack/internal/settings"
 )
 
@@ -28,7 +29,7 @@ func TestVoicesCatalog(t *testing.T) {
 
 func TestVoicePreviewIsCached(t *testing.T) {
 	calls, voice := 0, ""
-	fakeLive(t, [][]byte{{1, 0, 2, 0}}, &calls, &voice)
+	geminitest.FakeLiveAudio(t, [][]byte{{1, 0, 2, 0}}, &calls, &voice)
 	dir := t.TempDir()
 	s := settings.Settings{GeminiKey: "k3y", GeminiLiveModel: "gemini-3.8-live"}
 	first, err := voicePreview(context.Background(), s, dir, "Sulafat")

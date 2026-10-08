@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package gemini
 
 import (
 	"context"
@@ -25,8 +25,8 @@ var (
 	geminiRetryDelays = []time.Duration{2 * time.Second, 5 * time.Second}
 )
 
-// geminiLiveURL is where the frontend opens the voice session with an ephemeral token.
-const geminiLiveURL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained"
+// LiveURL is where the frontend opens the voice session with an ephemeral token.
+const LiveURL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained"
 
 // liveLockedFields are fixed by the token; sessionResumption stays with the
 // client so it can reconnect with a handle.
@@ -35,21 +35,21 @@ var liveLockedFields = []string{
 	"outputAudioTranscription", "contextWindowCompression", "realtimeInputConfig",
 }
 
-var errNoGeminiKey = errors.New("add your Gemini API key in Settings → AI first")
+var ErrNoKey = errors.New("add your Gemini API key in Settings → AI first")
 
-type geminiBlob struct {
+type Blob struct {
 	MimeType string `json:"mimeType"`
 	Data     string `json:"data"` // base64
 }
 
-type geminiPart struct {
-	Text       string      `json:"text,omitempty"`
-	InlineData *geminiBlob `json:"inlineData,omitempty"`
+type Part struct {
+	Text       string `json:"text,omitempty"`
+	InlineData *Blob  `json:"inlineData,omitempty"`
 }
 
 func geminiPost(ctx context.Context, key, path string, body any, out any) error {
 	if key == "" {
-		return errNoGeminiKey
+		return ErrNoKey
 	}
 	payload, err := json.Marshal(body)
 	if err != nil {
@@ -103,9 +103,9 @@ func geminiErrorText(body []byte) string {
 	return strings.TrimSpace(string(body))
 }
 
-// createLiveToken mints a short-lived token that locks the session's setup
+// CreateLiveToken mints a short-lived token that locks the session's setup
 // (model, voice, brief) so the page never holds the real API key.
-func createLiveToken(ctx context.Context, key string, setup map[string]any, minutes int, now time.Time) (string, error) {
+func CreateLiveToken(ctx context.Context, key string, setup map[string]any, minutes int, now time.Time) (string, error) {
 	expires := now.Add(time.Duration(minutes)*time.Minute + 30*time.Minute).UTC().Format(time.RFC3339)
 	// The locked setup may only contain fields named in fieldMask (Google returns
 	// 400 otherwise); the rest, e.g. sessionResumption, comes from the page.

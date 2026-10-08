@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package gemini
 
 import (
 	"net/http"
@@ -46,7 +46,7 @@ func replyWithToolCall(t *testing.T, args map[string]any, sawPrompt *string) fun
 			*sawPrompt = parts[0].(map[string]any)["text"].(string)
 		}
 		c.WriteJSON(map[string]any{"toolCall": map[string]any{"functionCalls": []any{
-			map[string]any{"id": "call-1", "name": liveResultTool, "args": args},
+			map[string]any{"id": "call-1", "name": LiveResultTool, "args": args},
 		}}})
 		c.ReadMessage() // wait for the client to close
 	}

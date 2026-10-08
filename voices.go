@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"jobtrack/internal/gemini"
 	"jobtrack/internal/settings"
 )
 
@@ -77,7 +78,7 @@ func voicePreview(ctx context.Context, s settings.Settings, dir, voice string) (
 	if cached, err := os.ReadFile(path); err == nil && len(cached) > 44 {
 		return cached, nil
 	}
-	wav, err := liveVoiceSample(ctx, s.GeminiKey, s.GeminiLiveModel, voice, voicePreviewLine)
+	wav, err := gemini.LiveVoiceSample(ctx, s.GeminiKey, s.GeminiLiveModel, voice, voicePreviewLine)
 	if err != nil {
 		return nil, err
 	}

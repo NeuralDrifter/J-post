@@ -16,6 +16,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"jobtrack/internal/gemini"
+	"jobtrack/internal/gemini/geminitest"
 	"jobtrack/internal/settings"
 )
 
@@ -68,7 +70,7 @@ func TestInterviewSetupValidation(t *testing.T) {
 func TestPrepareInterviewNoKey(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	if _, err := prepareInterview(context.Background(), r, settings.Settings{GeminiLiveModel: "gemini-3.8-live"}, j.ID, testSetup); !errors.Is(err, errNoGeminiKey) {
+	if _, err := prepareInterview(context.Background(), r, settings.Settings{GeminiLiveModel: "gemini-3.8-live"}, j.ID, testSetup); !errors.Is(err, gemini.ErrNoKey) {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -78,7 +80,7 @@ func TestPrepareInterview(t *testing.T) {
 	j := interviewJob(t, r)
 	r.SaveResume("cv.md", "", "# Jane\n- Go")
 	var sentSetup map[string]any
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) {
 		var body map[string]any
 		json.NewDecoder(req.Body).Decode(&body)
 		sentSetup = body["bidiGenerateContentSetup"].(map[string]any)
@@ -138,7 +140,7 @@ func TestScoreInterview(t *testing.T) {
 		"questions":[{"question":"Conflict","answerSummary":"Design review","worked":"Clear outcome","improve":"Say your role","strongerAnswer":"..."}],
 		"practiceNext":["Quantify impact","Name your role","Pause before answering"]}`), &card)
 	var prompt string
-	fakeLiveServer(t, replyWithToolCall(t, card, &prompt))
+	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, card, &prompt))
 	done, err := scoreInterview(context.Background(), r, settings.Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
 	if err != nil || done.Status != "done" || done.Scorecard == nil {
 		t.Fatalf("done = %+v, %v", done, err)
@@ -159,7 +161,7 @@ func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 	j := interviewJob(t, r)
 	mi, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	r.SaveInterviewTranscript(mi.ID, sampleTranscript)
-	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
+	geminitest.FakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
 		c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1011, "model overloaded"))
 	})
 	failed, err := scoreInterview(context.Background(), r, settings.Settings{GeminiKey: "k", GeminiLiveModel: "m"}, mi.ID)
@@ -395,7 +397,7 @@ func TestScoreInterviewUsesGradingProviderAndSavesCard(t *testing.T) {
 func TestRegradeAddsSecondCard(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
-	fakeLiveServer(t, replyWithToolCall(t, scorecardArgs(), nil))
+	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, scorecardArgs(), nil))
 	s := anthropicSettings
 	s.GeminiKey, s.GeminiLiveModel = "k", "gemini-3.8-live"
 	if _, err := scoreInterview(context.Background(), r, s, mi.ID); err != nil {
@@ -446,7 +448,7 @@ func TestRegradeWithUnavailableProvider(t *testing.T) {
 func TestNudgeSavesTip(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
-	fakeLiveServer(t, replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
+	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
 	n, err := nudgeAnswer(context.Background(), r, settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, mi.ID, "Q?", "A long answer.", 4000)
 	if err != nil || n.Nudge != "Lead with the result" {
 		t.Fatalf("n = %+v, err = %v", n, err)
@@ -460,46 +462,44 @@ func TestNudgeSavesTip(t *testing.T) {
 func TestLiveStructuredReturnsToolCallArgs(t *testing.T) {
 	var prompt string
 	var declared map[string]any
-	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
+	geminitest.FakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
 		if setup["model"] != "models/gemini-3.8-live" {
 			t.Errorf("model = %v", setup["model"])
 		}
 		tools := setup["tools"].([]any)[0].(map[string]any)["functionDeclarations"].([]any)
 		declared = tools[0].(map[string]any)
-		replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, &prompt)(c, setup)
+		geminitest.ReplyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, &prompt)(c, setup)
 	})
 	var n Nudge
-	err := liveStructured(context.Background(), "k3y", jsonPrompt{model: "gemini-3.8-live", system: "coach", parts: []geminiPart{{Text: "the answer"}}, schema: geminiSchema(nudgeSchema)}, &n)
+	err := gemini.LiveStructured(context.Background(), "k3y", gemini.JSONPrompt{Model: "gemini-3.8-live", System: "coach", Parts: []gemini.Part{{Text: "the answer"}}, Schema: geminiSchema(nudgeSchema)}, &n)
 	if err != nil || n.Nudge != "Lead with the result" || n.Kind != "tip" {
 		t.Fatalf("n = %+v, err = %v", n, err)
 	}
-	if declared["name"] != liveResultTool || declared["parameters"] == nil || prompt != "the answer" {
+	if declared["name"] != gemini.LiveResultTool || declared["parameters"] == nil || prompt != "the answer" {
 		t.Fatalf("declared = %v, prompt = %q", declared, prompt)
 	}
 }
 
 func TestLiveStructuredWithoutToolCallFails(t *testing.T) {
-	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
+	geminitest.FakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
 		c.WriteJSON(map[string]any{"setupComplete": map[string]any{}})
 		c.ReadMessage()
 		c.WriteJSON(map[string]any{"serverContent": map[string]any{"turnComplete": true}})
 		c.ReadMessage()
 	})
 	var n Nudge
-	if err := liveStructured(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}, schema: geminiSchema(nudgeSchema)}, &n); err == nil {
+	if err := gemini.LiveStructured(context.Background(), "k", gemini.JSONPrompt{Model: "m", Parts: []gemini.Part{{Text: "x"}}, Schema: geminiSchema(nudgeSchema)}, &n); err == nil {
 		t.Fatal("a turn with no tool call should fail")
 	}
 }
 
 func TestLiveStructuredErrors(t *testing.T) {
 	var n Nudge
-	if err := liveStructured(context.Background(), "", jsonPrompt{model: "m"}, &n); err != errNoGeminiKey {
+	if err := gemini.LiveStructured(context.Background(), "", gemini.JSONPrompt{Model: "m"}, &n); err != gemini.ErrNoKey {
 		t.Fatalf("no key: %v", err)
 	}
-	old := geminiLiveWSBase
-	geminiLiveWSBase = "ws://127.0.0.1:1"
-	t.Cleanup(func() { geminiLiveWSBase = old })
-	if err := liveStructured(context.Background(), "s3cretkey", jsonPrompt{model: "m"}, &n); err == nil || strings.Contains(err.Error(), "s3cretkey") {
+	gemini.SetTestEndpoints(t, "", "ws://127.0.0.1:1")
+	if err := gemini.LiveStructured(context.Background(), "s3cretkey", gemini.JSONPrompt{Model: "m"}, &n); err == nil || strings.Contains(err.Error(), "s3cretkey") {
 		t.Fatalf("unreachable: %v", err)
 	}
 }

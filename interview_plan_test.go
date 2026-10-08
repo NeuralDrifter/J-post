@@ -15,6 +15,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"jobtrack/internal/gemini/geminitest"
 	"jobtrack/internal/settings"
 )
 
@@ -110,8 +111,8 @@ var planJob = Job{Company: "Acme", Position: "Staff Engineer", Description: "Bui
 var planSetup = InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough"}
 
 func TestPlanThroughGeminiLive(t *testing.T) {
-	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
-		replyWithToolCall(t, samplePlanArgs(5), nil)(c, setup)
+	geminitest.FakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
+		geminitest.ReplyWithToolCall(t, samplePlanArgs(5), nil)(c, setup)
 	})
 	var p InterviewPlan
 	s := settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
@@ -198,7 +199,7 @@ func TestWrapUpCueMentionsPlan(t *testing.T) {
 func tokenServer(t *testing.T) *[]string {
 	t.Helper()
 	briefs := &[]string{}
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) {
 		var body map[string]any
 		json.NewDecoder(req.Body).Decode(&body)
 		setup := body["bidiGenerateContentSetup"].(map[string]any)
@@ -210,7 +211,7 @@ func tokenServer(t *testing.T) *[]string {
 
 // noLivePlanning fails the test if a Live socket is opened.
 func noLivePlanning(t *testing.T) {
-	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
+	geminitest.FakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
 		t.Error("no Live planning call expected")
 	})
 }
@@ -307,7 +308,7 @@ func TestPrepareInterviewInvalidPlanFails(t *testing.T) {
 func TestPrepareInterviewTokenFailureCreatesNothing(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) { w.WriteHeader(http.StatusBadRequest) })
+	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) { w.WriteHeader(http.StatusBadRequest) })
 	anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
 	s.PlanProvider = settings.ProviderAnthropic
@@ -483,7 +484,7 @@ func TestTryAgainAfterTokenFailureReusesThePlan(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
 	tokenFails := true
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) {
 		if tokenFails {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -514,7 +515,7 @@ func TestKeptPlanOnlyMatchesTheSameSetup(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
 	tokenFails := true
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) {
 		if tokenFails {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -537,7 +538,7 @@ func TestKeptPlanExpires(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
 	tokenFails := true
-	withGeminiServer(t, func(w http.ResponseWriter, req *http.Request) {
+	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) {
 		if tokenFails {
 			w.WriteHeader(http.StatusBadRequest)
 			return

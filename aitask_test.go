@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"jobtrack/internal/gemini"
+	"jobtrack/internal/gemini/geminitest"
 	"jobtrack/internal/settings"
 )
 
@@ -75,9 +77,7 @@ func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 	if _, err := runAITask(context.Background(), settings.Settings{}, "nope", nudgeTask("q", "a"), &n); err == nil {
 		t.Fatal("unknown provider should fail")
 	}
-	old := geminiLiveWSBase
-	geminiLiveWSBase = "ws://127.0.0.1:1" // a dial here would fail with a connection error
-	t.Cleanup(func() { geminiLiveWSBase = old })
+	gemini.SetTestEndpoints(t, "", "ws://127.0.0.1:1") // a dial here would fail with a connection error
 	_, err := runAITask(context.Background(), settings.Settings{}, settings.ProviderGeminiLive, nudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Gemini API key") || strings.Contains(err.Error(), "reach") {
 		t.Fatalf("an unconfigured provider should fail with its setup reason before connecting: %v", err)
@@ -85,7 +85,7 @@ func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 }
 
 func TestRunAITaskReturnsModel(t *testing.T) {
-	fakeLiveServer(t, replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
+	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
 	var n Nudge
 	model, err := runAITask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.ProviderGeminiLive, nudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "gemini-3.8-live" {

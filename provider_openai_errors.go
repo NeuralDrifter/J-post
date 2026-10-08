@@ -15,6 +15,7 @@ import (
 
 	"github.com/openai/openai-go/v3"
 
+	"jobtrack/internal/gemini"
 	"jobtrack/internal/textproc"
 )
 
@@ -89,5 +90,5 @@ func scrubKey(text, key string) string {
 	if key == "" {
 		return text
 	}
-	return hideKey(text, key)
+	return gemini.HideKey(text, key)
 }
