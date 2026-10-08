@@ -80,14 +80,17 @@ CREATE TABLE posting_scores (
 A failed score is **not** stored: the posting simply stays unscored and the
 UI offers "Score this".
 
-**Profile fingerprint:** SHA-256 over the resume text plus the eight `match*`
-preference fields (normalized: trimmed, work modes sorted). It is computed when
+**Profile fingerprint:** SHA-256 over the resume text plus the five preference
+fields (`matchMinSalary`, `matchWorkModes`, `matchLocations`, `matchSeniority`,
+`matchGoals`; normalized: trimmed, work modes sorted). It is computed when
 scoring and when listing postings. A stored score whose fingerprint differs
 from the current one is **outdated**. Changing the provider, the on/off switch
 or `matchPerRequest` does not make scores outdated.
 
 `Posting` gains `Match *MatchScore` (`json:"match,omitempty"`), filled by
-`ListPostings`/`GetPosting` with a LEFT JOIN. `MatchScore` carries `overall`,
+`ListPostings`/`GetPosting` with a LEFT JOIN. `App.ListPostings` then sets
+`outdated` by comparing each score's fingerprint with the current one (the
+Repo doesn't read settings). `MatchScore` carries `overall`,
 `factors`, `strengths`, `gaps`, `provider`, `model`, `scoredAt` and
 `outdated bool`.
 
