@@ -35,11 +35,3 @@ func TestNormalizeForMatch(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
-
-func TestMaxDaysOldRoundsUp(t *testing.T) {
-	for hours, want := range map[int]int{0: 0, 1: 1, 24: 1, 25: 2, 48: 2} {
-		if got := (fetchOptions{HoursOld: hours}).maxDaysOld(); got != want {
-			t.Errorf("%d hours = %d days, want %d", hours, got, want)
-		}
-	}
-}

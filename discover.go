@@ -116,16 +116,6 @@ func exeDir() string {
 
 var errUnreadableOutput = errors.New("unreadable scraper output")
 
-func lastLine(s, fallback string) string {
-	lines := strings.Split(strings.TrimSpace(s), "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		if l := strings.TrimSpace(lines[i]); l != "" {
-			return l
-		}
-	}
-	return fallback
-}
-
 // parseScraperOutput reads the JSON payload from the last non-empty stdout
 // line, ignoring any log noise printed before it.
 func parseScraperOutput(out []byte) ([]rawJob, error) {

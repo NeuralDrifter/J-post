@@ -187,3 +187,7 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	_ = a.window.Save(w) // best effort: losing it only means the default size next time
 	return false
 }
+
+func clamp(v, lo, hi int) int {
+	return max(lo, min(v, hi))
+}

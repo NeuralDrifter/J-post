@@ -23,9 +23,6 @@ var ErrNotFound = errors.New("not found")
 // exchange timestamps without conversion. Always UTC.
 const tsLayout = "2006-01-02T15:04:05.000Z"
 
-// dateLayout is used for calendar dates (date applied, follow-up date), local time.
-const dateLayout = "2006-01-02"
-
 func ts(t time.Time) string { return t.UTC().Format(tsLayout) }
 
 func newID() string {

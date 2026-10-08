@@ -5,7 +5,10 @@ package main
 
 import "strings"
 
-// Small string and number helpers shared across the app.
+// Small string helpers shared across the app.
+
+// dateLayout is used for calendar dates (date applied, follow-up date), local time.
+const dateLayout = "2006-01-02"
 
 // firstN returns at most the first n characters of s (whole characters, never a
 // split UTF-8 sequence).
@@ -45,6 +48,12 @@ func normalizeForMatch(s string) string {
 	return strings.Join(strings.Fields(strings.ToLower(s)), " ")
 }
 
-func clamp(v, lo, hi int) int {
-	return max(lo, min(v, hi))
+func lastLine(s, fallback string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if l := strings.TrimSpace(lines[i]); l != "" {
+			return l
+		}
+	}
+	return fallback
 }
