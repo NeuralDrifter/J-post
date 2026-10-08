@@ -36,10 +36,11 @@ func TestDetectLicense(t *testing.T) {
 		"Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n1. ...\n2. ...\n3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse": "BSD-3-Clause",
 		"Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n1. ...\n2. ... THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS":                                                    "BSD-2-Clause",
 		"ISC License\n\nPermission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted":                                                                                                                                "ISC",
-		"Mozilla Public License Version 2.0":                                      "MPL-2.0",
-		"This is free and unencumbered software released into the public domain.": "Unlicense",
-		"SIL OPEN FONT LICENSE Version 1.1":                                       "OFL-1.1",
-		"All rights reserved. Do whatever.":                                       "Other",
+		"Mozilla Public License Version 2.0": "MPL-2.0",
+		"Copyright (c) 2025 Coder\n\nPermission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted": "ISC",
+		"This is free and unencumbered software released into the public domain.":                                                                         "Unlicense",
+		"SIL OPEN FONT LICENSE Version 1.1": "OFL-1.1",
+		"All rights reserved. Do whatever.": "Other",
 	}
 	for text, want := range cases {
 		if got := DetectLicense(text); got != want {
@@ -87,7 +88,8 @@ func npmFixture(t *testing.T) string {
 		"frontend/node_modules/nolicense/package.json":                        `{"name": "nolicense", "version": "1.0.0", "license": "MIT"}`,
 		"frontend/node_modules/vite/package.json":                             `{"name": "vite", "version": "6.4.3", "license": "MIT"}`,
 		"frontend/node_modules/vite/LICENSE.md":                               mitText,
-		"frontend/node_modules/tailwindcss/package.json":                      `{"name": "tailwindcss", "version": "4.3.3", "license": "MIT"}`,
+		"frontend/node_modules/tailwindcss/package.json":                      `{"name": "tailwindcss", "version": "4.3.3", "license": "MIT", "dependencies": {"build-only": "^1"}}`,
+		"frontend/node_modules/build-only/package.json":                       `{"name": "build-only", "version": "1.0.0", "license": "MIT"}`,
 		"frontend/node_modules/tailwindcss/LICENSE":                           mitText,
 	})
 }
@@ -112,6 +114,10 @@ func TestNpmProductionOnly(t *testing.T) {
 	}
 	if !strings.Contains(list, "tailwindcss@4.3.3") {
 		t.Errorf("extra tailwindcss missing: %s", list)
+	}
+	// Only the shipped tool's own output is in the app, not the tools it runs on.
+	if strings.Contains(list, "build-only@") {
+		t.Errorf("a build tool's dependency was listed: %s", list)
 	}
 }
 

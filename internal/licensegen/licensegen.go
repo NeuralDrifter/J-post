@@ -39,7 +39,7 @@ func DetectLicense(text string) string {
 		return "OFL-1.1"
 	case has("permission is hereby granted, free of charge"):
 		return "MIT"
-	case has("isc license") || has("permission to use, copy, modify, and/or distribute"):
+	case has("isc license") || has("permission to use, copy, modify, and/or distribute") || has("permission to use, copy, modify, and distribute"):
 		return "ISC"
 	case has("redistribution and use in source and binary forms"):
 		if has("neither the name") || has("endorse or promote") {
@@ -152,12 +152,12 @@ func CollectNpm(frontendDir string, extra ...string) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	start := slices.Sorted(maps.Keys(root.Dependencies))
-	start = append(start, extra...)
 	seen := map[string]bool{} // package dirs already listed
 	var entries []Entry
-	var visit func(name, fromDir string, optional bool) error
-	visit = func(name, fromDir string, optional bool) error {
+	// withDeps is false for the shipped build tools: only their own output is in
+	// the app, not the tools they run on (which also differ per platform).
+	var visit func(name, fromDir string, optional, withDeps bool) error
+	visit = func(name, fromDir string, optional, withDeps bool) error {
 		dir, ok := resolve(name, fromDir, frontendDir)
 		if !ok {
 			if optional {
@@ -179,20 +179,28 @@ func CollectNpm(frontendDir string, extra ...string) ([]Entry, error) {
 			license = DetectLicense(text)
 		}
 		entries = append(entries, Entry{Name: pkg.Name, Version: pkg.Version, License: license, URL: npmURL(pkg), Text: text})
+		if !withDeps {
+			return nil
+		}
 		for _, dep := range slices.Sorted(maps.Keys(pkg.Dependencies)) {
-			if err := visit(dep, dir, false); err != nil {
+			if err := visit(dep, dir, false, true); err != nil {
 				return err
 			}
 		}
 		for _, dep := range slices.Sorted(maps.Keys(pkg.OptionalDependencies)) {
-			if err := visit(dep, dir, true); err != nil {
+			if err := visit(dep, dir, true, true); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	for _, name := range start {
-		if err := visit(name, frontendDir, false); err != nil {
+	for _, name := range slices.Sorted(maps.Keys(root.Dependencies)) {
+		if err := visit(name, frontendDir, false, true); err != nil {
+			return nil, err
+		}
+	}
+	for _, name := range extra {
+		if err := visit(name, frontendDir, false, false); err != nil {
 			return nil, err
 		}
 	}
