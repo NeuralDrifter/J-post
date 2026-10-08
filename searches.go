@@ -20,11 +20,9 @@ import (
 )
 
 const (
-	defaultPerSource = 20
-	minPerSource     = 5
-	maxPerSource     = 100
-	maxAdzunaResults = 50  // Adzuna's results_per_page limit
-	maxHoursOld      = 720 // never look back more than 30 days
+	minPerSource = 5
+	maxPerSource = 100
+	maxHoursOld  = 720 // never look back more than 30 days
 )
 
 // SearchQuery is what the Discover form submits.
@@ -56,15 +54,6 @@ type SearchRun struct {
 	Errors    map[string]string `json:"errors"`
 	LastRunAt string            `json:"lastRunAt"`
 }
-
-// fetchOptions are the per-source limits passed to a scraper or API.
-type fetchOptions struct {
-	Results  int
-	HoursOld int // 0 = no age limit
-}
-
-// maxDaysOld is HoursOld in whole days, rounded up, for APIs that filter by day.
-func (o fetchOptions) maxDaysOld() int { return (o.HoursOld + 23) / 24 }
 
 func normalizeSources(sources []string) []string {
 	out := []string{}

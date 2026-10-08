@@ -35,6 +35,20 @@ var (
 	adzunaBaseURL   = "https://api.adzuna.com/v1/api/jobs/us/search/1"
 )
 
+const (
+	defaultPerSource = 20
+	maxAdzunaResults = 50 // Adzuna's results_per_page limit
+)
+
+// fetchOptions are the per-source limits passed to a scraper or API.
+type fetchOptions struct {
+	Results  int
+	HoursOld int // 0 = no age limit
+}
+
+// maxDaysOld is HoursOld in whole days, rounded up, for APIs that filter by day.
+func (o fetchOptions) maxDaysOld() int { return (o.HoursOld + 23) / 24 }
+
 type DiscoverQuery struct {
 	Term       string   `json:"term"`
 	Location   string   `json:"location"`
