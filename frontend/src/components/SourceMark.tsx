@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { SOURCE_NUMBER, type SourceKey } from '../lib/sources'
 
 const SUPERSCRIPT = ['', '¹', '²', '³']

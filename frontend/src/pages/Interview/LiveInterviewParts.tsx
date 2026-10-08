@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useEffect, useRef } from 'react'
 import { Eye, EyeOff, LoaderCircle, Mic, MicOff, PhoneOff, Sparkles, ThumbsUp } from 'lucide-react'
 import { Chip } from '../../components/Chip'

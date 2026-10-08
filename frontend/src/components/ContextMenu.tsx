@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, ClipboardPaste, Copy, RefreshCw, Plus, Scissors, TextSelect } from 'lucide-react'

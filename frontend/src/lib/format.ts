@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Labels and pure formatting helpers shared by every page.
 
 export const STATUSES = ['interested', 'applied', 'interviewing', 'offer', 'closed'] as const

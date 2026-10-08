@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { SourceMark } from '../../components/SourceMark'
 import type { main } from '../../lib/backend'
 import { formatMoneyFull, percentileLabel } from '../../lib/comp'

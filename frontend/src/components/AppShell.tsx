@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { Outlet, useLocation } from 'react-router'
 import { ErrorBoundary } from './ErrorBoundary'
 import { NavRail } from './NavRail'

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import type { ReactNode } from 'react'
 import { CLOSE_REASON_LABEL, labelFor, lookup, STATUS_DOT, STATUS_LABEL } from '../lib/format'
 

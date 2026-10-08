@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { NavLink } from 'react-router'
 import { BadgeDollarSign, Mic, Search, Settings, SquareKanban } from 'lucide-react'
 

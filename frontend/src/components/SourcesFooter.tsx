@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { BrowserOpenURL } from '../lib/backend'
 import { SOURCE_NUMBER, useSources, type SourceKey } from '../lib/sources'
 

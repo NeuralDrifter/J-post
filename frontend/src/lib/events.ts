@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useSyncExternalStore } from 'react'
 
 // A global "data changed" counter. Any mutation calls notifyDataChanged(); every

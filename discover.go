@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -18,7 +21,7 @@ import (
 	"time"
 )
 
-//go:embed scraper.py
+//go:embed scripts/scraper.py
 var scraperScript []byte
 
 var (

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { Copy } from 'lucide-react'
 import { copyText } from '../../components/ContextMenu'
 import { Panel } from '../../components/Panel'

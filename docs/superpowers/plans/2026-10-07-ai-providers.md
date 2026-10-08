@@ -23,7 +23,7 @@
 - One JSON Schema per task, standard form (lowercase types, `required`, `additionalProperties: false`); Gemini gets a converted copy.
 - Migrations are append-only: add migration 8; never edit 1–7.
 - Every task ends with `go vet ./...`, `go test ./...` and, when frontend files changed, `npx tsc --noEmit -p .` and `npx vitest run` in `frontend/` all passing. After a Go binding change run `wails generate module` and delete the stray `jobtrack.exe` it leaves.
-- Commit messages end with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
+- No AI attribution trailers in commits; AI help is credited by model name on the licenses page (`BUILT_WITH`) and in the README Credits.
 
 ## Review Focus
 

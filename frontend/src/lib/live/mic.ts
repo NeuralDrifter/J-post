@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Microphone capture for a live session: 100 ms chunks of 16 kHz PCM16, plus a
 // loudness reading for the level meter.
 import { encodeMicChunk, micLevel, type AudioChunk } from './audio'

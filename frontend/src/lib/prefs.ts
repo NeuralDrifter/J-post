@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Per-machine UI preferences (view mode, collapsed column), plus values that
 // should outlive navigating between pages but not a restart. Storage may be
 // unavailable, in which case values simply don't persist.

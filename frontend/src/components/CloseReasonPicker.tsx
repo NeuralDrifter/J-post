@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState } from 'react'
 import { CLOSE_REASONS, CLOSE_REASON_LABEL } from '../lib/format'
 import { Modal } from './Modal'

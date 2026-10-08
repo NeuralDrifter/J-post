@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Records a live session (the microphone plus the interviewer) as webm/opus.
 
 const PREFERRED_MIME = 'audio/webm;codecs=opus'

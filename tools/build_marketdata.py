@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+# SPDX-License-Identifier: MIT
+
 """Build marketdata/marketdata.json.gz from the raw government datasets in datasets/.
 
 Inputs (download yearly, see README):

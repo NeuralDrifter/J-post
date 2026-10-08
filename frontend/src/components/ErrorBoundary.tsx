@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { TriangleAlert } from 'lucide-react'
 

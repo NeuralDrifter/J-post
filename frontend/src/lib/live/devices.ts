@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Microphone / output device selection. Headsets (e.g. SteelSeries "Game" vs
 // "Chat") often aren't the Windows default, so the user picks explicitly.
 

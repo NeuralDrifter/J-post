@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { FileText, FolderOpen, Paperclip, PenLine, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import { confirmDialog, promptDialog } from '../../components/ConfirmDialog'
 import { openMenu } from '../../lib/menu'

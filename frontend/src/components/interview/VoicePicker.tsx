@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useEffect, useRef, useState } from 'react'
 import { Dices, LoaderCircle, Play, Square } from 'lucide-react'
 import { api } from '../../lib/api'

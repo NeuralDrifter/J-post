@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState, useSyncExternalStore, type FormEvent } from 'react'
 import { Modal } from './Modal'
 

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+# SPDX-License-Identifier: MIT
+
 """Checks the generated marketdata file against known values in the source data.
 
 Run after build_marketdata.py:  python tools/test_build_marketdata.py

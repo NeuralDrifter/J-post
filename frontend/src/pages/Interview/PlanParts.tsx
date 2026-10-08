@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { Panel } from '../../components/Panel'
 import type { main } from '../../lib/backend'
 import { formatDate } from '../../lib/format'

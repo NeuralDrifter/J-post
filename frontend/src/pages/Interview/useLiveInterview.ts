@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { apiOk } from '../../lib/api'

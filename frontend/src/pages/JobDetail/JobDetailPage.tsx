@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { confirmDialog } from '../../components/ConfirmDialog'

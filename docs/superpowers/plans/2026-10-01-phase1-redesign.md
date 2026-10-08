@@ -54,7 +54,7 @@
 - **Embedding:** `go test` compiles `main.go`, which embeds `frontend/dist`, so `frontend/dist` must exist. Run `npm run build` in `frontend/` once if it is missing.
 - **Commits:**
   - Commit at the end of every task.
-  - Every commit message ends with a blank line, then `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
+  - No AI attribution trailers in commits; AI help is credited by model name on the licenses page (`BUILT_WITH`) and in the README Credits.
 
 ## Review Focus
 
@@ -514,9 +514,7 @@ Expected: all 5 PASS.
 
 ```bash
 git add db.go db_test.go testhelpers_test.go go.mod go.sum
-git commit -m "feat: SQLite database with versioned migrations and backups
-
-Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+git commit -m "feat: SQLite database with versioned migrations and backups"
 ```
 
 ---
@@ -1025,9 +1023,7 @@ Expected: all PASS.
 
 ```bash
 git add jobs.go jobs_test.go
-git commit -m "feat: job repository with automatic stage history
-
-Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+git commit -m "feat: job repository with automatic stage history"
 ```
 
 ---
@@ -1529,9 +1525,7 @@ Expected: all PASS.
 
 ```bash
 git add contacts.go interviews.go attachments.go contacts_test.go interviews_test.go attachments_test.go
-git commit -m "feat: contacts, interviews and file attachments per job
-
-Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+git commit -m "feat: contacts, interviews and file attachments per job"
 ```
 
 ---
@@ -1882,9 +1876,7 @@ Expected: all PASS.
 
 ```bash
 git add metrics.go metrics_test.go
-git commit -m "feat: pipeline metrics, days-in-stage and follow-up rules
-
-Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+git commit -m "feat: pipeline metrics, days-in-stage and follow-up rules"
 ```
 
 ---

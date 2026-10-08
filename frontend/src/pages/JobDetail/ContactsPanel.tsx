@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState, type FormEvent } from 'react'
 import { Copy, Link2, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import { openMenu } from '../../lib/menu'

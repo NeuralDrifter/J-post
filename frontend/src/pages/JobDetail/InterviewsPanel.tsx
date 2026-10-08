@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState, type FormEvent } from 'react'
 import { Circle, CircleCheck, Copy, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { copyText } from '../../components/ContextMenu'

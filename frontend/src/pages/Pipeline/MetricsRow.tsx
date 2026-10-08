@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { BellRing, Briefcase, CalendarClock, TrendingUp, type LucideIcon } from 'lucide-react'
 import type { main } from '../../lib/backend'
 import { percent } from '../../lib/format'

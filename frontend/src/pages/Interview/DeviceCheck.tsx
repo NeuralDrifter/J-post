@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useEffect, useState } from 'react'
 import { Headphones, Mic, RefreshCw, Volume2 } from 'lucide-react'
 import { micLevel } from '../../lib/live/audio'
