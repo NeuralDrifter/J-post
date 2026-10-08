@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { Columns3, Rows3 } from 'lucide-react'
 import { WORK_MODE_LABEL } from '../../lib/format'
 import { sourceOptions, useJobSources } from '../../lib/jobSources'

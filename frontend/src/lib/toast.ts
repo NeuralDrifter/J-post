@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useSyncExternalStore } from 'react'
 
 export type ToastKind = 'error' | 'success' | 'info'

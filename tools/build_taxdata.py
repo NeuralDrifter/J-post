@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+# SPDX-License-Identifier: MIT
+
 """Build taxdata/us_2026.json: federal 2026 figures plus all state income tax tables.
 
 State data: Tax Foundation, "State Individual Income Tax Rates and Brackets, 2026"

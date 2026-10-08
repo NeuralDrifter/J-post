@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 /** One library and its license, as written by `go generate ./...` (internal/licensegen). */
 export type LicenseEntry = { name: string; version: string; license: string; url: string; text: string }
 

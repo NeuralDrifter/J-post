@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { Bookmark, ExternalLink, EyeOff, MapPin, SquareKanban, Undo2, X } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'

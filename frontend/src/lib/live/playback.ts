@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Plays the interviewer's audio chunks back to back, and cuts it off when the
 // candidate interrupts.
 import { decodeModelAudio, OUTPUT_RATE } from './audio'

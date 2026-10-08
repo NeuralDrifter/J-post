@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { CircleAlert, CircleCheck, Info, X } from 'lucide-react'
 import { dismissToast, useToasts, type ToastKind } from '../lib/toast'
 

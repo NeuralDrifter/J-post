@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import type { ReactNode } from 'react'
 
 export function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {

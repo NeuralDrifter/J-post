@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { BellRing, CalendarClock } from 'lucide-react'
 import { Chip } from '../../components/Chip'
 import type { main } from '../../lib/backend'

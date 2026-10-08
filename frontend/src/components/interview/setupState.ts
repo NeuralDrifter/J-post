@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import type { main } from '../../lib/backend'
 
 /** The interview being retried with the same question plan. */

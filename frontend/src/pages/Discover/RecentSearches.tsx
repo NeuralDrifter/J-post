@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { History, Play, RefreshCw, Trash2 } from 'lucide-react'
 import type { main } from '../../lib/backend'
 import { timeAgo } from '../../lib/format'

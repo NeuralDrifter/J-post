@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 /** The options for a model dropdown: the loaded models, plus the current one if the server no longer lists it. */
 export function modelChoices(models: string[], current: string): string[] {
   return current && !models.includes(current) ? [current, ...models] : models

@@ -6,6 +6,7 @@
 - Shipped build tools (`tailwindcss`, `vite`) are listed as themselves only, not their dependency trees. Those are build-time only and differ per platform (e.g. `@esbuild/win32-x64`), which would make the staleness check fail on another OS.
 - ISC detection also matches the older wording "permission to use, copy, modify, and distribute" (`coder/websocket`).
 - The page is lazy-loaded, so its ~440 KB of license text is its own chunk and stays out of app startup.
+- Job Track's own MIT license (repo-root `LICENSE`, © 2026 Michael P. Burgus) is generated into the JSON as `app` and shown first on the page.
 - Result: 40 Go modules and 100 npm packages, all with license text. Checked in the running app: search, expand, and the Data panel.
 
 ## Goal
@@ -28,7 +29,7 @@ Job Track lists everything it is built on or draws from, with each license's ful
    - BLS OEWS May 2025 (US government, public domain).
    - BEA Regional Price Parities 2024 (public domain).
    - IRS Rev. Proc. 2025-32 and SSA 2026 figures (public domain).
-   - **Tax Foundation**, "State Individual Income Tax Rates and Brackets, 2026": **CC BY-NC 4.0**, attribution with a link required, non-commercial use only. If Job Track is ever sold, get permission or rebuild the state table from the states' own published rates.
+   - **Tax Foundation**, "State Individual Income Tax Rates and Brackets, 2026": credited with a link. (Its site licenses its publications CC BY-NC 4.0; the app uses only the tax rates, which are facts set by state law.)
 3. **Services the app connects to:** fixed entries, each with a link.
    - Job sources: Adzuna, USAJobs, Himalayas, Jobicy, The Muse.
    - JobSpy (MIT; runs from your own Python, not bundled).

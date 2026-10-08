@@ -76,8 +76,6 @@ wails build                    # produces build\bin\Job_Track.exe
 
 Tax figures are estimates for wage income only. Credits beyond state exemption credits, AMT, itemizing, and state-specific phase-outs are not modeled. Head-of-household filers use the single state schedules.
 
-**Tax Foundation terms:** its state table is licensed CC BY-NC 4.0 (attribution, non-commercial use only). If Job Track is ever sold, get the Tax Foundation's permission or rebuild the state table from the states' own published rates.
-
 **Refreshing the data each year:** the raw files live in `datasets/` (git-ignored), and the app embeds compact files generated from them.
 1. Download the new BLS OEWS "all data" xlsx, the BEA MARPP, PARPP and SARPP CSVs, and the Tax Foundation state xlsx into `datasets/`. Then update the file names and years at the top of the two build scripts.
 2. Run `python tools/build_marketdata.py` and `python tools/test_build_marketdata.py`. This needs a Python with `openpyxl`.
@@ -95,7 +93,13 @@ Back up this folder to keep your history. Before any schema upgrade the app writ
 
 Set `JOBTRACK_DATA_DIR` to use a different folder, which is useful for testing with throwaway data.
 
-## Licenses
+## License
+
+Job Track is released under the [MIT License](LICENSE). Copyright (c) 2026 Michael P. Burgus ([NeuralDrifter](https://github.com/NeuralDrifter)).
+
+Every source file starts with that copyright line and `SPDX-License-Identifier: MIT`; `go test ./...` checks it, so add both to new files. Third-party libraries, fonts, data and the Wails template files in `build/` keep their own licenses.
+
+## Third-party licenses
 
 Settings → About → **Open-source licenses** lists every library compiled or bundled into the app with its full license text, plus the data sources, the services the app connects to, and the projects that shaped it. The library list is generated: after adding, removing or upgrading a Go module or a frontend dependency, run
 

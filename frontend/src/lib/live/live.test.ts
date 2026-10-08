@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { describe, expect, it } from 'vitest'
 import { base64ToBytes, bytesToBase64, downsample, encodeMicChunk, floatToPCM16, INPUT_RATE, micLevel, pcm16ToFloat } from './audio'
 import { chooseDevice } from './devices'

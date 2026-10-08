@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Local coaching meters, computed from the live transcript of the current answer.
 
 const FILLERS = /\b(?:u+m+|u+h+|erm|like|you know|basically|actually|sort of|kind of|i mean)\b/gi

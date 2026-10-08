@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Runs one voice interview against the Gemini Live API. This class owns the
 // connection (setup, reconnection, timekeeping) and wires together the
 // microphone (mic.ts), the interviewer's voice (playback.ts) and the recording

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState, type FormEvent } from 'react'
 import { JobForm } from '../../components/JobForm'
 import { Modal } from '../../components/Modal'

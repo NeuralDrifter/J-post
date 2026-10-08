@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // PCM helpers for the Gemini Live API: microphone in as 16 kHz PCM16,
 // interviewer audio out as 24 kHz PCM16, both base64 on the wire.
 

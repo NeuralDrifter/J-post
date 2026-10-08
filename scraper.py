@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+# SPDX-License-Identifier: MIT
+
 """Run one JobSpy search for a single site and print the results as one JSON line.
 
 Embedded in the Go binary and run by discover.go. The last line on stdout is always

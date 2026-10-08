@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Scale } from 'lucide-react'

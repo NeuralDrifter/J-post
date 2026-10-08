@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { HashRouter, Route, Routes, useParams } from 'react-router'
 import { AppShell } from './components/AppShell'

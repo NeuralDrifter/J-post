@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, ChevronRight, ExternalLink } from 'lucide-react'
@@ -23,6 +26,13 @@ export default function LicensesPage() {
         <ArrowLeft size={13} /> Settings
       </Link>
       <PageTitle title="Open-source licenses" subtitle="The libraries, data and services Job Track is built on, and the projects that shaped it." />
+
+      <Panel title="Job Track" action={<OpenLink url={licenses.app.url} />}>
+        <p className="mb-2 text-xs text-ink-2">
+          Job Track is open source under the {licenses.app.license} license. Third-party libraries, fonts and data below keep their own licenses.
+        </p>
+        <pre className="max-h-80 overflow-auto rounded-xl bg-black/30 p-3 text-[11px] leading-relaxed whitespace-pre-wrap text-ink-2">{licenses.app.text}</pre>
+      </Panel>
 
       <Panel
         title="Libraries"

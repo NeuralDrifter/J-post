@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Package licensegen collects the licenses of everything compiled or bundled
 // into Job Track: Go modules and the frontend's production npm packages.
 package licensegen

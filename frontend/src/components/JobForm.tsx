@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import type { ChangeEvent, ReactNode } from 'react'
 import { STATUSES, STATUS_LABEL, WORK_MODE_LABEL } from '../lib/format'
 import type { JobDraft } from '../lib/jobDraft'

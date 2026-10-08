@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { LoaderCircle, Mic, TriangleAlert } from 'lucide-react'

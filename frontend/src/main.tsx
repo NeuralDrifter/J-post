@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource/plus-jakarta-sans/400.css'

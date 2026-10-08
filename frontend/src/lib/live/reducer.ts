@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // Pure handling of Gemini Live server messages: builds the transcript and tells
 // the session what to do (play audio, stop playback, reconnect, nudge).
 

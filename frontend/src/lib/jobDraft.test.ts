@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { describe, expect, it } from 'vitest'
 import type { main } from './backend'
 import { draftFromJob, emptyDraft, jobFromDraft } from './jobDraft'

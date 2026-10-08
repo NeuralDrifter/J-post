@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { labelFor } from '../../lib/format'
 import { TriangleAlert } from 'lucide-react'

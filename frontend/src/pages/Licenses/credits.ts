@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 /** Hand-written credits shown under the generated library list. */
 export type Credit = { name: string; detail: string; license?: string; url: string }
 
@@ -23,8 +26,7 @@ export const DATA: Credit[] = [
   },
   {
     name: 'Tax Foundation, State Individual Income Tax Rates and Brackets, 2026',
-    detail: 'State income tax estimates. Used with attribution for non-commercial use only.',
-    license: 'CC BY-NC 4.0',
+    detail: 'State income tax rates and brackets, compiled by the Tax Foundation.',
     url: 'https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/',
   },
 ]

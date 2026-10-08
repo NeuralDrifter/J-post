@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('react-router', async (importOriginal) => ({

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 // fakeclaude stands in for the Claude Code CLI in provider tests. FAKE_MODE:
 //   - ok: read the MCP config, find the task file, write a canned result to its
 //     output path (as the real run does through submit_result), report success

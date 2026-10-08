@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
 import { CalendarClock, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import type { main } from '../../lib/backend'

@@ -7,3 +7,4 @@ example_only_non_functioning_demo content/
 .superpowers/
 datasets/
 *.xlsx
+3rd_party/
