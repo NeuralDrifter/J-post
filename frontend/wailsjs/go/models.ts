@@ -1560,6 +1560,14 @@ export namespace settings {
 	    customAIModel: string;
 	    customAIMode: string;
 	    discoverCacheHours: number;
+	    matchEnabled: boolean;
+	    matchProvider: string;
+	    matchPerRequest: number;
+	    matchMinSalary: number;
+	    matchWorkModes: string[];
+	    matchLocations: string;
+	    matchSeniority: string;
+	    matchGoals: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1602,6 +1610,14 @@ export namespace settings {
 	        this.customAIModel = source["customAIModel"];
 	        this.customAIMode = source["customAIMode"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
+	        this.matchEnabled = source["matchEnabled"];
+	        this.matchProvider = source["matchProvider"];
+	        this.matchPerRequest = source["matchPerRequest"];
+	        this.matchMinSalary = source["matchMinSalary"];
+	        this.matchWorkModes = source["matchWorkModes"];
+	        this.matchLocations = source["matchLocations"];
+	        this.matchSeniority = source["matchSeniority"];
+	        this.matchGoals = source["matchGoals"];
 	    }
 	}
 

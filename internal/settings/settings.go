@@ -27,6 +27,9 @@ const (
 	defaultTipsEffort         = "low"
 	DefaultOllamaURL          = "http://localhost:11434/v1"
 	DefaultLMStudioURL        = "http://localhost:1234/v1"
+	DefaultMatchPerRequest    = 25
+	minMatchPerRequest        = 5
+	maxMatchPerRequest        = 50
 )
 
 // AI provider IDs, as stored in the *Provider settings.
@@ -93,10 +96,26 @@ type Settings struct {
 	CustomAIMode    string `json:"customAIMode"` // an answerMode
 	// DiscoverCacheHours: re-running a search within this window reuses stored results.
 	DiscoverCacheHours int `json:"discoverCacheHours"`
+	// Job matching: Discover postings get an AI match score (see internal/app/match.go).
+	MatchEnabled    bool     `json:"matchEnabled"`    // score new postings after each search
+	MatchProvider   string   `json:"matchProvider"`   // an AI provider ID
+	MatchPerRequest int      `json:"matchPerRequest"` // postings sent per request
+	MatchMinSalary  int64    `json:"matchMinSalary"`  // annual floor in dollars; 0 = none
+	MatchWorkModes  []string `json:"matchWorkModes"`  // MatchWorkModeOptions; empty = no preference
+	MatchLocations  string   `json:"matchLocations"`
+	MatchSeniority  string   `json:"matchSeniority"` // a MatchSeniorityOptions value; "" = no target
+	MatchGoals      string   `json:"matchGoals"`     // free text: wants, must-haves, deal-breakers
 }
 
 // anthropicEfforts are the effort levels the Anthropic API accepts.
 var anthropicEfforts = []string{"low", "medium", "high", "xhigh", "max"}
+
+// MatchWorkModeOptions and MatchSeniorityOptions are the values the job-match
+// preferences accept.
+var (
+	MatchWorkModeOptions  = []string{"remote", "hybrid", "onsite"}
+	MatchSeniorityOptions = []string{"entry", "mid", "senior", "staff", "principal", "manager"}
+)
 
 // AnswerMode is how a request asks for a structured answer (response_format).
 type AnswerMode string
@@ -171,6 +190,15 @@ func ApplyDefaults(s *Settings) {
 	s.CustomAIBaseURL = strings.TrimSpace(s.CustomAIBaseURL)
 	s.CustomAIModel = strings.TrimSpace(s.CustomAIModel)
 	s.CustomAIMode = cmp.Or(s.CustomAIMode, string(ModePlain))
+	s.MatchProvider = cmp.Or(s.MatchProvider, ProviderGeminiLive)
+	if s.MatchPerRequest <= 0 {
+		s.MatchPerRequest = DefaultMatchPerRequest
+	}
+	if s.MatchWorkModes == nil {
+		s.MatchWorkModes = []string{}
+	}
+	s.MatchLocations = strings.TrimSpace(s.MatchLocations)
+	s.MatchGoals = strings.TrimSpace(s.MatchGoals)
 }
 
 func NewSettingsStore(dir string) *SettingsStore {
@@ -210,7 +238,7 @@ func (s *SettingsStore) Save(settings Settings) error {
 	if settings.FollowUpDays > 365 {
 		return errors.New("follow-up threshold must be between 1 and 365 days")
 	}
-	for _, id := range []string{settings.GradingProvider, settings.TipsProvider, settings.PlanProvider} {
+	for _, id := range []string{settings.GradingProvider, settings.TipsProvider, settings.PlanProvider, settings.MatchProvider} {
 		if !slices.Contains(AIProviderIDs, id) {
 			return fmt.Errorf("unknown AI provider %q", id)
 		}
@@ -222,6 +250,20 @@ func (s *SettingsStore) Save(settings Settings) error {
 	}
 	if !slices.Contains(answerModes, AnswerMode(settings.CustomAIMode)) {
 		return fmt.Errorf("answer mode must be one of %s", strings.Join(answerModeNames(), ", "))
+	}
+	if settings.MatchPerRequest < minMatchPerRequest || settings.MatchPerRequest > maxMatchPerRequest {
+		return fmt.Errorf("postings per request must be between %d and %d", minMatchPerRequest, maxMatchPerRequest)
+	}
+	for _, m := range settings.MatchWorkModes {
+		if !slices.Contains(MatchWorkModeOptions, m) {
+			return fmt.Errorf("work mode must be one of %s", strings.Join(MatchWorkModeOptions, ", "))
+		}
+	}
+	if settings.MatchSeniority != "" && !slices.Contains(MatchSeniorityOptions, settings.MatchSeniority) {
+		return fmt.Errorf("seniority must be one of %s", strings.Join(MatchSeniorityOptions, ", "))
+	}
+	if settings.MatchMinSalary < 0 {
+		return errors.New("the salary floor can't be negative")
 	}
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {

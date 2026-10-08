@@ -24,7 +24,9 @@ func TestSettingsRoundTrip(t *testing.T) {
 	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: ProviderGeminiLive, TipsProvider: ProviderGeminiLive, PlanProvider: ProviderAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet",
 		OpenAIKey: "ok", OpenAIModel: "om", DeepSeekKey: "dk", DeepSeekModel: "dm", OllamaURL: "http://box:11434/v1", OllamaModel: "lm",
 		LMStudioURL: "http://box:1234/v1", LMStudioKey: "lk", LMStudioModel: "sm",
-		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object"}
+		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object",
+		MatchEnabled: true, MatchProvider: ProviderAnthropic, MatchPerRequest: 10, MatchMinSalary: 100000,
+		MatchWorkModes: []string{"remote"}, MatchLocations: "Denver, CO", MatchSeniority: "staff", MatchGoals: "climate"}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
 	}
@@ -134,5 +136,39 @@ func TestSettingsTrimsOpenAIFields(t *testing.T) {
 	s, _ := store.Load()
 	if s.DeepSeekModel != "deepseek-chat" || s.CustomAIBaseURL != "http://c/v1" {
 		t.Fatalf("s = %+v", s)
+	}
+}
+
+func TestMatchDefaults(t *testing.T) {
+	s, err := NewSettingsStore(t.TempDir()).Load()
+	if err != nil || s.MatchEnabled || s.MatchProvider != ProviderGeminiLive || s.MatchPerRequest != DefaultMatchPerRequest ||
+		s.MatchWorkModes == nil || len(s.MatchWorkModes) != 0 || s.MatchSeniority != "" || s.MatchMinSalary != 0 {
+		t.Fatalf("s = %+v, %v", s, err)
+	}
+}
+
+func TestMatchSettingsValidation(t *testing.T) {
+	store := NewSettingsStore(t.TempDir())
+	bad := map[string]Settings{
+		"too few per request":  {MatchPerRequest: 4},
+		"too many per request": {MatchPerRequest: 51},
+		"unknown work mode":    {MatchWorkModes: []string{"remote", "moon"}},
+		"unknown seniority":    {MatchSeniority: "wizard"},
+		"negative salary":      {MatchMinSalary: -1},
+		"unknown provider":     {MatchProvider: "nope"},
+	}
+	for name, s := range bad {
+		if err := store.Save(s); err == nil {
+			t.Errorf("%s: expected an error", name)
+		}
+	}
+	ok := Settings{MatchEnabled: true, MatchProvider: ProviderAnthropic, MatchPerRequest: 5, MatchMinSalary: 120000,
+		MatchWorkModes: []string{"onsite", "remote"}, MatchLocations: "  Denver, CO ", MatchSeniority: "senior", MatchGoals: " no on-call "}
+	if err := store.Save(ok); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := store.Load()
+	if got.MatchLocations != "Denver, CO" || got.MatchGoals != "no on-call" || got.MatchPerRequest != 5 || !got.MatchEnabled {
+		t.Fatalf("got %+v", got)
 	}
 }
