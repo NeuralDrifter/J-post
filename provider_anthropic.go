@@ -21,10 +21,10 @@ type anthropicProvider struct{}
 var (
 	anthropicBaseURL    = "" // "" = the SDK default; tests point it at a fake server
 	anthropicMaxRetries = 1  // one retry for transient errors; a long rate-limit wait is reported instead
-	anthropicMaxTokens  = map[aiRole]int64{roleGrading: 16000, roleTips: 1024}
+	anthropicMaxTokens  = map[aiRole]int64{roleGrading: 16000, roleTips: 1024, rolePlanning: 16000}
 	// anthropicTimeout bounds a whole run (retries included); the SDK's own
 	// per-attempt limit for large max_tokens is 10 minutes.
-	anthropicTimeout = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second}
+	anthropicTimeout = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second, rolePlanning: 2 * time.Minute}
 )
 
 func (anthropicProvider) id() string    { return providerAnthropic }

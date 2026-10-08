@@ -11,7 +11,7 @@ import { toast } from './lib/toast'
 import DiscoverPage from './pages/Discover/DiscoverPage'
 import JobDetailPage from './pages/JobDetail/JobDetailPage'
 import OffersPage from './pages/Offers/OffersPage'
-import InterviewReviewPage from './pages/Interview/InterviewReviewPage'
+import { InterviewReviewRoute } from './pages/Interview/InterviewReviewPage'
 import InterviewsPage from './pages/Interviews/InterviewsPage'
 import LiveInterviewPage from './pages/Interview/LiveInterviewPage'
 import PipelinePage from './pages/Pipeline/PipelinePage'
@@ -48,7 +48,7 @@ export default function App() {
           <Route path="offers" element={<OffersPage />} />
           <Route path="interviews" element={<InterviewsPage />} />
           <Route path="interviews/:id/live" element={<LiveInterviewPage />} />
-          <Route path="interviews/:id" element={<InterviewReviewPage />} />
+          <Route path="interviews/:id" element={<InterviewReviewRoute />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

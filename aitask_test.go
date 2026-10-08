@@ -35,6 +35,7 @@ func checkStandardSchema(t *testing.T, path string, s map[string]any) {
 func TestTaskSchemasAreStandardJSONSchema(t *testing.T) {
 	checkStandardSchema(t, "scorecard", scorecardTask(Job{}, MockInterview{}, "").schema)
 	checkStandardSchema(t, "nudge", nudgeTask("q", "a").schema)
+	checkStandardSchema(t, "interviewPlan", planSchema)
 }
 
 func TestGeminiSchemaConversion(t *testing.T) {

@@ -1,6 +1,7 @@
 // fakeclaude stands in for the Claude Code CLI in provider tests. FAKE_MODE:
 //   - ok: read the MCP config, find the task file, write a canned result to its
 //     output path (as the real run does through submit_result), report success
+//   - plan: like ok, but the canned result is a valid 5-question interview plan
 //   - error: report an error result and exit 1 (e.g. not logged in)
 //   - nosubmit: report success without writing a result
 //   - sleep: hang past the provider's timeout
@@ -86,5 +87,21 @@ func submitCannedResult() error {
 	if err := json.Unmarshal(raw, &task); err != nil {
 		return err
 	}
-	return os.WriteFile(task.OutputPath, []byte(`{"nudge":"From the fake","kind":"tip"}`), 0o600)
+	result := `{"nudge":"From the fake","kind":"tip"}`
+	if os.Getenv("FAKE_MODE") == "plan" {
+		result = cannedPlan()
+	}
+	return os.WriteFile(task.OutputPath, []byte(result), 0o600)
+}
+
+func cannedPlan() string {
+	questions := []map[string]any{}
+	for i := range 5 {
+		questions = append(questions, map[string]any{
+			"question": fmt.Sprintf("Question %d?", i+1), "tests": "a skill", "minutes": 4,
+			"probes": []string{"Why?", "What did you do?"}, "strongAnswer": []string{"Specifics", "Results"},
+		})
+	}
+	raw, _ := json.Marshal(map[string]any{"questions": questions, "resumeClaims": []any{}})
+	return string(raw)
 }

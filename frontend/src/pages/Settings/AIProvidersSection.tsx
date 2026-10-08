@@ -11,7 +11,7 @@ const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 
 type Props = { s: main.Settings; setS: (s: main.Settings) => void }
 
-/** Who grades interviews and gives coaching tips, and how each provider is set up. */
+/** Who grades interviews, gives coaching tips and plans the questions, and how each provider is set up. */
 export function AIProvidersSection({ s, setS }: Props) {
   // Readiness reflects saved settings; it refreshes after Save.
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
@@ -36,14 +36,18 @@ export function AIProvidersSection({ s, setS }: Props) {
   )
 
   return (
-    <Section title="AI providers" hint="Choose who grades your mock interviews and who gives coaching tips during them. Set each provider up below.">
+    <Section title="AI providers" hint="Choose who grades your mock interviews, who gives coaching tips during them and who plans the questions. Set each provider up below.">
       <div className="grid grid-cols-2 gap-4">
         <Field label="Grading">{providerSelect(s.gradingProvider, (id) => setS({ ...s, gradingProvider: id }), 'Grading provider')}</Field>
         <Field label="Coaching tips">{providerSelect(s.tipsProvider, (id) => setS({ ...s, tipsProvider: id }), 'Coaching tips provider')}</Field>
+        <Field label="Question plan">{providerSelect(s.planProvider, (id) => setS({ ...s, planProvider: id }), 'Question plan provider')}</Field>
       </div>
       <p className="mt-2 text-[11px] text-ink-3">
         Recommended for tips: Gemini Live — it answers in about a second. Claude Code takes several seconds just to start. Any interview can also be
         re-graded with another provider from its review page.
+      </p>
+      <p className="mt-1 text-[11px] text-ink-3">
+        Question plan: Gemini Live is fastest; Claude Code and the Anthropic API usually write deeper questions but take up to a minute.
       </p>
 
       <ProviderBlock title="Gemini Live" note="Runs the interview itself, so it's always needed for the voice.">

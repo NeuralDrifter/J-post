@@ -23,7 +23,7 @@ func interviewJob(t *testing.T, r *Repo) Job {
 
 func TestBriefContents(t *testing.T) {
 	job := Job{Company: "Acme", Position: "Staff Engineer", Description: "Lead payments.", Notes: "Values ownership."}
-	brief := buildInterviewBrief(job, []Contact{{Name: "Maya", Role: "Hiring manager"}}, "# Jane\n- Built billing at Brex", testSetup)
+	brief := buildInterviewBrief(job, []Contact{{Name: "Maya", Role: "Hiring manager"}}, "# Jane\n- Built billing at Brex", testSetup, nil)
 	for _, want := range []string{"Acme", "Staff Engineer", "behavioral", "25 minutes", "tough", "conflict stories",
 		"Lead payments.", "Values ownership.", "Built billing at Brex", "Hiring manager", "one question at a time", "Dana Reyes"} {
 		if !strings.Contains(brief, want) {
@@ -36,7 +36,7 @@ func TestBriefContents(t *testing.T) {
 }
 
 func TestBriefWithoutResume(t *testing.T) {
-	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "  ", testSetup)
+	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "  ", testSetup, nil)
 	if !strings.Contains(brief, "No resume was provided") {
 		t.Fatal("the brief should say there's no resume")
 	}
@@ -80,11 +80,14 @@ func TestPrepareInterview(t *testing.T) {
 		w.Write([]byte(`{"name":"auth_tokens/t1"}`))
 	})
 	s := Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
-	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
+	setup := testSetup
+	setup.PlanProvider = planNone // planning has its own tests (interview_plan_test.go)
+	live, err := prepareInterview(context.Background(), r, s, j.ID, setup)
+
 	if err != nil {
 		t.Fatal(err)
 	}
-	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" || live.Company != "Acme" || live.Kind != "behavioral" || live.Cues != liveCues(25) {
+	if live.Token != "auth_tokens/t1" || !strings.HasPrefix(live.WSURL, "wss://") || live.SessionID == "" || live.Company != "Acme" || live.Kind != "behavioral" || live.Cues != liveCues(25, false) {
 		t.Fatalf("live = %+v", live)
 	}
 	if sentSetup["model"] != "models/gemini-3.8-live" {
@@ -121,7 +124,7 @@ var sampleTranscript = []TranscriptLine{
 func TestScoreInterview(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	mi, _ := r.CreateMockInterview(j.ID, testSetup)
+	mi, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	if err := r.SaveInterviewTranscript(mi.ID, sampleTranscript); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +152,7 @@ func TestScoreInterview(t *testing.T) {
 func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	mi, _ := r.CreateMockInterview(j.ID, testSetup)
+	mi, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	r.SaveInterviewTranscript(mi.ID, sampleTranscript)
 	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
 		c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1011, "model overloaded"))
@@ -158,7 +161,7 @@ func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 	if err == nil || failed.Status != "failed" || failed.Error == "" || len(failed.Transcript) != 2 {
 		t.Fatalf("failed = %+v, %v", failed, err)
 	}
-	empty, _ := r.CreateMockInterview(j.ID, testSetup)
+	empty, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	if res, err := scoreInterview(context.Background(), r, Settings{GeminiKey: "k", GeminiLiveModel: "m"}, empty.ID); err == nil || res.Status != "failed" {
 		t.Fatalf("an empty transcript can't be scored: %+v %v", res, err)
 	}
@@ -167,7 +170,7 @@ func TestScoreInterviewFailureKeepsTranscript(t *testing.T) {
 func TestInterviewStorage(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	mi, err := r.CreateMockInterview(j.ID, testSetup)
+	mi, err := r.CreateMockInterview(j.ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +190,7 @@ func TestInterviewStorage(t *testing.T) {
 	if _, err := os.Stat(rec); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("deleting the session should remove its recording")
 	}
-	other, _ := r.CreateMockInterview(j.ID, testSetup)
+	other, _ := r.CreateMockInterview(j.ID, testSetup, "")
 	r.DeleteJob(j.ID)
 	if _, err := r.GetMockInterview(other.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("job delete should cascade: %v", err)
@@ -196,7 +199,7 @@ func TestInterviewStorage(t *testing.T) {
 
 func TestMockInterviewStatusTransitions(t *testing.T) {
 	r := newTestRepo(t)
-	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +246,7 @@ func TestMockInterviewStatusTransitions(t *testing.T) {
 
 func TestUnreadableTranscriptIsReported(t *testing.T) {
 	r := newTestRepo(t)
-	mi, _ := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	mi, _ := r.CreateMockInterview(interviewJob(t, r).ID, testSetup, "")
 	r.db.Exec(`UPDATE mock_interviews SET transcript = 'not json' WHERE id = ?`, mi.ID)
 	if _, err := r.GetMockInterview(mi.ID); err == nil || !strings.Contains(err.Error(), "transcript") {
 		t.Fatalf("err = %v", err)
@@ -258,11 +261,11 @@ func TestInterviewLengthErrorListsChoices(t *testing.T) {
 }
 
 func TestLiveCuesTiming(t *testing.T) {
-	short := liveCues(10)
+	short := liveCues(10, false)
 	if short.WrapUpAtMs != 8*60_000 || short.TimeUpAtMs != 10*60_000 || !strings.Contains(short.WrapUp, "about 2 minutes") {
 		t.Fatalf("10-minute cues = %+v", short)
 	}
-	long := liveCues(45)
+	long := liveCues(45, false)
 	if long.WrapUpAtMs != 41*60_000 || !strings.Contains(long.WrapUp, "about 4 minutes") {
 		t.Fatalf("45-minute cues = %+v", long)
 	}
@@ -288,7 +291,7 @@ func TestLiveSetupWaitsThroughThinkingPauses(t *testing.T) {
 }
 
 func TestBriefAndScoringAllowForPauses(t *testing.T) {
-	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "", testSetup)
+	brief := buildInterviewBrief(Job{Company: "Acme", Position: "Dev"}, nil, "", testSetup, nil)
 	if !strings.Contains(brief, "pausing to think") {
 		t.Error("brief should tell the interviewer to wait through pauses")
 	}
@@ -335,7 +338,7 @@ func TestTranscriptTextLabelsCutOffs(t *testing.T) {
 }
 
 func TestLiveCuesRejoinNote(t *testing.T) {
-	rejoin := liveCues(25).Rejoin
+	rejoin := liveCues(25, false).Rejoin
 	if !strings.HasPrefix(rejoin, "(") || !strings.Contains(rejoin, "without greeting") {
 		t.Fatalf("rejoin = %q", rejoin)
 	}
@@ -344,7 +347,7 @@ func TestLiveCuesRejoinNote(t *testing.T) {
 // scoredInterview returns an interview with a transcript, ready to grade.
 func scoredInterviewSetup(t *testing.T, r *Repo) MockInterview {
 	t.Helper()
-	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup)
+	mi, err := r.CreateMockInterview(interviewJob(t, r).ID, testSetup, "")
 	if err != nil {
 		t.Fatal(err)
 	}

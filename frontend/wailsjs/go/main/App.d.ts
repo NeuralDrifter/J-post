@@ -76,6 +76,8 @@ export function ListJobSummaries():Promise<Array<main.JobSummary>>;
 
 export function ListMockInterviews(arg1:string):Promise<Array<main.MockInterview>>;
 
+export function ListPlanAttempts(arg1:string):Promise<Array<main.MockInterview>>;
+
 export function ListPostings(arg1:main.PostingFilter):Promise<Array<main.Posting>>;
 
 export function ListRecentSearches():Promise<Array<main.SavedSearch>>;

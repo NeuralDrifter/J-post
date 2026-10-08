@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { AudioLines, FolderOpen, Mic, Sparkles, Trash2 } from 'lucide-react'
+import { AudioLines, FolderOpen, ListChecks, Mic, Repeat, Sparkles, Trash2 } from 'lucide-react'
 import { Chip } from '../../components/Chip'
 import { confirmDialog } from '../../components/ConfirmDialog'
+import { InterviewSetupModal } from '../../components/interview/InterviewSetupModal'
+import type { RetryInfo } from '../../components/interview/setupState'
 import { PageTitle } from '../../components/PageTitle'
 import { api, apiOk } from '../../lib/api'
-import { DeleteMockInterview, ListAIProviders, ListAllMockInterviews, type main } from '../../lib/backend'
+import { DeleteMockInterview, GetJob, ListAIProviders, ListAllMockInterviews, type main } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
 import { averageScore, filterByJob } from '../../lib/interview'
@@ -27,6 +29,7 @@ export default function InterviewsPage() {
   const { data: interviews } = useLoad(() => api(ListAllMockInterviews()), [])
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
   const [jobFilter, setJobFilter] = useState('')
+  const [retrying, setRetrying] = useState<{ job: main.Job; retry: RetryInfo }>()
 
   const jobs = useMemo(() => {
     const seen = new Map<string, string>()
@@ -39,6 +42,11 @@ export default function InterviewsPage() {
   const remove = async (m: main.MockInterviewSummary) => {
     const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, tips, scorecards and recording will be deleted.', confirmLabel: 'Delete', danger: true })
     if (ok && (await apiOk(DeleteMockInterview(m.id)))) notifyDataChanged()
+  }
+
+  const retry = async (m: main.MockInterviewSummary) => {
+    const job = await api(GetJob(m.jobId))
+    if (job) setRetrying({ job, retry: { id: m.id, kind: m.kind, minutes: m.minutes, startedAt: m.startedAt } })
   }
 
   return (
@@ -73,6 +81,7 @@ export default function InterviewsPage() {
                 onContextMenu={(e) =>
                   openMenu(e, [
                     { label: 'Open review', icon: FolderOpen, onSelect: () => navigate(`/interviews/${m.id}`) },
+                    ...(m.hasPlan ? [{ label: 'Retry these questions', icon: Repeat, onSelect: () => void retry(m) }] : []),
                     'separator',
                     { label: 'Delete interview', icon: Trash2, danger: true, onSelect: () => void remove(m) },
                   ])
@@ -92,6 +101,7 @@ export default function InterviewsPage() {
                     </span>
                   </span>
                   <span className="flex items-center gap-1.5">
+                    {m.attempt > 1 && <Chip tone="info">Attempt {m.attempt}</Chip>}
                     {m.graders.map((g) => (
                       <Chip key={g} tone="accent">
                         {providerLabel(g)}
@@ -100,6 +110,7 @@ export default function InterviewsPage() {
                     {status && <Chip tone={status.tone}>{status.label}</Chip>}
                   </span>
                   <span className="flex items-center gap-2 text-ink-3">
+                    {m.hasPlan && <ListChecks size={14} aria-label="Has a question plan" />}
                     {m.hasRecording && <AudioLines size={14} aria-label="Has a recording" />}
                     {m.hasTips && <Sparkles size={14} aria-label="Has coaching tips" />}
                   </span>
@@ -110,6 +121,7 @@ export default function InterviewsPage() {
           })}
         </ul>
       )}
+      {retrying && <InterviewSetupModal job={retrying.job} retry={retrying.retry} onClose={() => setRetrying(undefined)} />}
     </div>
   )
 }

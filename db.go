@@ -331,6 +331,19 @@ var migrations = []string{
 			CASE WHEN ended_at != '' THEN ended_at ELSE started_at END
 		FROM mock_interviews WHERE scorecard != '';
 	ALTER TABLE mock_interviews DROP COLUMN scorecard;`,
+	// 9: question plans written before an interview; retries share their plan.
+	`CREATE TABLE interview_plans (
+		id TEXT PRIMARY KEY,
+		job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+		kind TEXT NOT NULL,
+		minutes INTEGER NOT NULL,
+		provider TEXT NOT NULL,
+		model TEXT NOT NULL DEFAULT '',
+		plan TEXT NOT NULL,
+		created_at TEXT NOT NULL
+	);
+	ALTER TABLE mock_interviews ADD COLUMN plan_id TEXT NOT NULL DEFAULT '';
+	CREATE INDEX idx_mock_interviews_plan ON mock_interviews(plan_id, started_at);`,
 }
 
 func openDB(path string) (*sql.DB, error) {

@@ -141,12 +141,15 @@ type MockInterviewSummary struct {
 	Graders         []string  `json:"graders"` // providers with a scorecard, sorted
 	HasRecording    bool      `json:"hasRecording"`
 	HasTips         bool      `json:"hasTips"`
+	HasPlan         bool      `json:"hasPlan"`
+	Attempt         int       `json:"attempt"` // 1-based attempt at its plan; 0 without a plan
+	planID          string
 }
 
 func (r *Repo) ListAllMockInterviews() ([]MockInterviewSummary, error) {
 	list, err := queryAll(r.db, scanMockSummary, `SELECT m.id, m.job_id, j.company, j.position, m.kind, m.minutes, m.persona,
 		m.interviewer_name, m.status, m.started_at, m.recording_path != '',
-		EXISTS (SELECT 1 FROM interview_tips t WHERE t.mock_interview_id = m.id)
+		EXISTS (SELECT 1 FROM interview_tips t WHERE t.mock_interview_id = m.id), m.plan_id
 		FROM mock_interviews m JOIN jobs j ON j.id = m.job_id ORDER BY m.started_at DESC, m.rowid DESC`)
 	if err != nil {
 		return nil, err
@@ -173,14 +176,28 @@ func (r *Repo) ListAllMockInterviews() ([]MockInterviewSummary, error) {
 	for i := range list {
 		slices.Sort(list[i].Graders)
 	}
+	numberAttempts(list)
 	return list, nil
 }
 
 func scanMockSummary(s rowScanner) (MockInterviewSummary, error) {
 	m := MockInterviewSummary{Graders: []string{}}
 	err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona,
-		&m.InterviewerName, &m.Status, &m.StartedAt, &m.HasRecording, &m.HasTips)
+		&m.InterviewerName, &m.Status, &m.StartedAt, &m.HasRecording, &m.HasTips, &m.planID)
+	m.HasPlan = m.planID != ""
 	return m, err
+}
+
+// numberAttempts sets each planned interview's attempt number. list is newest
+// first, so attempts are counted from the end.
+func numberAttempts(list []MockInterviewSummary) {
+	seen := map[string]int{}
+	for i := len(list) - 1; i >= 0; i-- {
+		if id := list[i].planID; id != "" {
+			seen[id]++
+			list[i].Attempt = seen[id]
+		}
+	}
 }
 
 type summaryCard struct {

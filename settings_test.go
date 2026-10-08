@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -17,7 +18,7 @@ func TestSettingsDefaults(t *testing.T) {
 func TestSettingsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := NewSettingsStore(dir)
-	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: providerGeminiLive, TipsProvider: providerGeminiLive, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet"}
+	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: providerGeminiLive, TipsProvider: providerGeminiLive, PlanProvider: providerAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet"}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
 	}
@@ -77,5 +78,21 @@ func TestSettingsRejectsBadAIValues(t *testing.T) {
 		if err := store.Save(s); err == nil {
 			t.Errorf("%s should be rejected", name)
 		}
+	}
+}
+
+func TestPlanProviderDefaultsToGeminiLive(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"followUpDays": 7}`), 0o600)
+	s, err := NewSettingsStore(dir).Load()
+	if err != nil || s.PlanProvider != providerGeminiLive {
+		t.Fatalf("PlanProvider = %q, %v", s.PlanProvider, err)
+	}
+}
+
+func TestPlanProviderMustBeKnown(t *testing.T) {
+	err := NewSettingsStore(t.TempDir()).Save(Settings{PlanProvider: "nope"})
+	if err == nil || !strings.Contains(err.Error(), `unknown AI provider "nope"`) {
+		t.Fatalf("err = %v", err)
 	}
 }

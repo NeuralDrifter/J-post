@@ -595,7 +595,13 @@ func (a *App) GetMockInterview(id string) (MockInterview, error) {
 	return a.repo.GetMockInterview(id)
 }
 
+// ListPlanAttempts returns every attempt at the interview's question plan, oldest first.
+func (a *App) ListPlanAttempts(id string) ([]MockInterview, error) {
+	return a.repo.ListPlanAttempts(id)
+}
+
 func (a *App) DeleteMockInterview(id string) error {
+
 	return a.repo.DeleteMockInterview(id)
 }
 

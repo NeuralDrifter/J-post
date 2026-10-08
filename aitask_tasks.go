@@ -53,6 +53,7 @@ var scorecardSchema = func() map[string]any {
 	for _, f := range questionFields {
 		question[f] = str
 	}
+	question["planIndex"] = map[string]any{"type": "integer"} // optional: only for planned questions
 	return map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -80,7 +81,12 @@ const scoringInstruction = "You are an expert interview coach reviewing a mock i
 	"[cut in while the candidate paused] means the interviewer started talking during a pause mid-answer and the " +
 	"candidate carried on: treat the candidate's words before and after it as one answer, and don't count it as " +
 	"interrupting or as speaking in fragments. A line marked [interrupted by the candidate] is a real interruption " +
-	"and fair to critique. Fragmented or rambling speech within an answer is the candidate's own and also fair to critique."
+	"and fair to critique. Fragmented or rambling speech within an answer is the candidate's own and also fair to critique. " +
+	"When a question plan is given: judge each planned question's answer against the points its strong answer covers, " +
+	"and say in improve which of those points were missed; note which resume claims were backed up with specifics and " +
+	"which weren't; set planIndex on each question to the number of the planned question it answers (leave it out for " +
+	"questions that weren't in the plan). If the interviewer never asked some core questions, say so in the summary: " +
+	"that's not the candidate's fault, so it must not lower their scores."
 
 // kindBriefName falls back to the raw id for sessions saved under a retired kind.
 func kindBriefName(id string) string {
@@ -91,9 +97,13 @@ func kindBriefName(id string) string {
 }
 
 func scoringPrompt(job Job, mi MockInterview, resume string) string {
-	return fmt.Sprintf("Role: %s at %s (%s interview, %s interviewer).\n\nJob description:\n%s\n\nCandidate's resume:\n%s\n\nTranscript:\n%s",
+	plan := ""
+	if mi.Plan != nil {
+		plan = mi.Plan.Plan.gradingSection() + "\n"
+	}
+	return fmt.Sprintf("Role: %s at %s (%s interview, %s interviewer).\n\nJob description:\n%s\n\nCandidate's resume:\n%s\n\n%sTranscript:\n%s",
 		job.Position, job.Company, kindBriefName(mi.Kind), mi.Persona, orDefault(job.Description, "(not provided)"),
-		orDefault(resume, "(not provided)"), transcriptText(mi.Transcript))
+		orDefault(resume, "(not provided)"), plan, transcriptText(mi.Transcript))
 }
 
 // transcriptText renders the transcript as "Interviewer: …" / "Candidate: …"

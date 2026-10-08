@@ -21,6 +21,11 @@ type InterviewSetup struct {
 	Voice           string `json:"voice"`           // "" = surprise me (random)
 	InterviewerName string `json:"interviewerName"` // "" = random name matching the voice
 	Focus           string `json:"focus"`
+	// PlanProvider overrides the plan provider setting for this interview: an
+	// aiProvider id, planNone, or "" for the setting.
+	PlanProvider string `json:"planProvider"`
+	// RetryOf reuses that interview's question plan, type and length.
+	RetryOf string `json:"retryOf"`
 }
 
 // Transcript speakers.
@@ -78,6 +83,9 @@ type QuestionReview struct {
 	Worked         string `json:"worked"`
 	Improve        string `json:"improve"`
 	StrongerAnswer string `json:"strongerAnswer"`
+	// PlanIndex is the planned question this answers (0-based); nil for an
+	// off-plan question or an interview without a plan.
+	PlanIndex *int `json:"planIndex,omitempty"`
 }
 
 type Scorecard struct {
@@ -117,6 +125,13 @@ type MockInterview struct {
 	Tips            []InterviewTip    `json:"tips"`                // coaching tips, in answer order
 	HasRecording    bool              `json:"hasRecording"`
 	Error           string            `json:"error"`
+	// The question plan ("" / nil when the interview had none) and the attempts
+	// sharing it, oldest first. Attempt is 1-based; 0 without a plan.
+	PlanID    string               `json:"planId"`
+	Plan      *InterviewPlanRecord `json:"plan,omitempty"`
+	PlanError string               `json:"planError"` // set when the stored plan can't be read
+	Attempt   int                  `json:"attempt"`
+	Attempts  []AttemptSummary     `json:"attempts"`
 }
 
 // LiveSession is what the page needs to open the voice connection.
@@ -163,8 +178,9 @@ func validateInterviewSetup(s *InterviewSetup) error {
 	return nil
 }
 
-// buildInterviewBrief is the interviewer's system instruction. s must already be validated.
-func buildInterviewBrief(job Job, contacts []Contact, resume string, s InterviewSetup) string {
+// buildInterviewBrief is the interviewer's system instruction. s must already be
+// validated; plan is nil when the interview has no question plan.
+func buildInterviewBrief(job Job, contacts []Contact, resume string, s InterviewSetup, plan *InterviewPlan) string {
 	kind, _ := findInterviewKind(s.Kind)
 	persona, _ := findInterviewPersona(s.Persona)
 	var b strings.Builder
@@ -174,6 +190,11 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 - Greet the candidate briefly and introduce yourself by name and role.
 - Ask one question at a time, then listen. Ask realistic follow-ups based on what they actually said.
 - Ground questions in the job description and in the candidate's real experience from their resume.
+- Go deep before moving on. After each answer, ask at least one follow-up that digs into their own part: what they personally did, why they chose that approach over the alternatives, what they'd do differently.
+- Ask for specifics. If an answer is vague or says "we" throughout, ask for the concrete situation, the numbers, the result, or exactly what they contributed.
+- Test claims. When the candidate states an achievement, ask how it was measured and what the baseline was.
+- Don't accept a polished summary as the whole answer. If an answer sounds rehearsed, probe for one detail that couldn't have been rehearsed.
+- One topic at a time. Finish a thread before starting a new one, and keep your own turns short.
 - Never coach, grade or give feedback during the interview. Stay in character the whole time.
 - You'll receive silent timekeeper notes in [square brackets]. Never mention or read them out; when told time is nearly up, wrap up and invite the candidate's questions, then answer them in character. When told time is up, thank the candidate and close the interview.
 - If the candidate stops mid-sentence or trails off, they're probably pausing to think. Don't move on: wait, or briefly invite them to continue ("Take your time" / "Go on").
@@ -181,6 +202,9 @@ func buildInterviewBrief(job Job, contacts []Contact, resume string, s Interview
 `)
 	if s.Focus != "" {
 		fmt.Fprintf(&b, "- The candidate asked to practice: %s. Make sure this comes up.\n", s.Focus)
+	}
+	if plan != nil {
+		b.WriteString("\n" + plan.briefSection())
 	}
 	fmt.Fprintf(&b, "\nJob description:\n%s\n", orDefault(job.Description, "(not provided)"))
 	if strings.TrimSpace(job.Notes) != "" {
@@ -239,15 +263,21 @@ type LiveCues struct {
 	Rejoin string `json:"rejoin"`
 }
 
-func liveCues(minutes int) LiveCues {
+// liveCues builds the session's notes; with a plan, the wrap-up note also asks
+// for any core question still unasked.
+func liveCues(minutes int, hasPlan bool) LiveCues {
 	warnMinutes := 4
 	if minutes <= 10 {
 		warnMinutes = 2
 	}
+	wrapUp := fmt.Sprintf("Timekeeper: about %d minutes remain. Start wrapping up after the current answer.", warnMinutes)
+	if hasPlan {
+		wrapUp += " If a core question from your plan hasn't been asked yet, ask the most important one before wrapping up."
+	}
 	const msPerMinute = 60_000
 	return LiveCues{
 		Start:      "(The candidate has joined the call. Begin the interview.)",
-		WrapUp:     fmt.Sprintf("[Timekeeper: about %d minutes remain. Start wrapping up after the current answer.]", warnMinutes),
+		WrapUp:     "[" + wrapUp + "]",
 		WrapUpAtMs: int64(minutes-warnMinutes) * msPerMinute,
 		TimeUp:     "[Timekeeper: time is up. Thank the candidate and close the interview now.]",
 		TimeUpAtMs: int64(minutes) * msPerMinute,
@@ -259,13 +289,13 @@ func liveCues(minutes int) LiveCues {
 // ---- storage ----
 
 const mockColumns = `m.id, m.job_id, j.company, j.position, m.kind, m.minutes, m.persona, m.voice, m.interviewer_name, m.focus, m.status,
-	m.started_at, m.ended_at, m.transcript, m.recording_path, m.error`
+	m.started_at, m.ended_at, m.transcript, m.recording_path, m.error, m.plan_id`
 
 func scanMock(s rowScanner) (MockInterview, error) {
 	var m MockInterview
 	var transcript, recording string
 	err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona, &m.Voice, &m.InterviewerName, &m.Focus, &m.Status,
-		&m.StartedAt, &m.EndedAt, &transcript, &recording, &m.Error)
+		&m.StartedAt, &m.EndedAt, &transcript, &recording, &m.Error, &m.PlanID)
 	if err != nil {
 		return m, err
 	}
@@ -277,7 +307,8 @@ func scanMock(s rowScanner) (MockInterview, error) {
 	return m, nil
 }
 
-func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup) (MockInterview, error) {
+// CreateMockInterview starts a session record; planID is "" when there is no question plan.
+func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup, planID string) (MockInterview, error) {
 	if err := validateInterviewSetup(&s); err != nil {
 		return MockInterview{}, err
 	}
@@ -285,8 +316,8 @@ func (r *Repo) CreateMockInterview(jobID string, s InterviewSetup) (MockIntervie
 		return MockInterview{}, err
 	}
 	id := newID()
-	_, err := r.db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, voice, interviewer_name, focus, status, started_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.InterviewerName, s.Focus, MockLive, ts(r.now()))
+	_, err := r.db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, voice, interviewer_name, focus, status, started_at, plan_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, jobID, s.Kind, s.Minutes, s.Persona, s.Voice, s.InterviewerName, s.Focus, MockLive, ts(r.now()), planID)
 	if err != nil {
 		return MockInterview{}, err
 	}
@@ -301,7 +332,10 @@ func (r *Repo) GetMockInterview(id string) (MockInterview, error) {
 	if err != nil {
 		return m, err
 	}
-	return m, r.loadReviewData(&m)
+	if err := r.loadReviewData(&m); err != nil {
+		return m, err
+	}
+	return m, r.loadPlanData(&m)
 }
 
 func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
@@ -312,6 +346,9 @@ func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
 	}
 	for i := range list {
 		if err := r.loadReviewData(&list[i]); err != nil {
+			return nil, err
+		}
+		if err := r.loadPlanData(&list[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -377,8 +414,7 @@ func (r *Repo) DeleteMockInterview(id string) error {
 	if err != nil {
 		return err
 	}
-	res, err := r.db.Exec(`DELETE FROM mock_interviews WHERE id = ?`, id)
-	if err := expectOneRow(res, err, "mock interview", id); err != nil {
+	if err := r.deleteMockAndOrphanPlan(id); err != nil {
 		return err
 	}
 	if path != "" {
@@ -391,9 +427,26 @@ func (r *Repo) DeleteMockInterview(id string) error {
 
 // ---- AI calls ----
 
+// prepareInterview gets everything ready for a live session: the question plan
+// (made by the plan provider, reused for a retry, or none), the brief and the
+// Live token. Nothing is stored until the token succeeds, so a failure at any
+// step leaves no interview or plan behind.
 func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, setup InterviewSetup) (LiveSession, error) {
+	applySettingsDefaults(&s)
 	if s.GeminiKey == "" {
 		return LiveSession{}, errNoGeminiKey
+	}
+	var reused *InterviewPlanRecord
+	if setup.RetryOf != "" {
+		original, err := r.GetMockInterview(setup.RetryOf)
+		if err != nil {
+			return LiveSession{}, err
+		}
+		if original.Plan == nil || original.JobID != jobID {
+			return LiveSession{}, errNoPlanToRetry
+		}
+		setup.Kind, setup.Minutes = original.Kind, original.Minutes
+		reused = original.Plan
 	}
 	if err := validateInterviewSetup(&setup); err != nil {
 		return LiveSession{}, err
@@ -410,21 +463,26 @@ func prepareInterview(ctx context.Context, r *Repo, s Settings, jobID string, se
 	if err != nil {
 		return LiveSession{}, err
 	}
-	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup))
-	mi, err := r.CreateMockInterview(jobID, setup)
+	plan, err := interviewPlanFor(ctx, s, job, profile.ResumeText, setup, reused)
 	if err != nil {
 		return LiveSession{}, err
 	}
+	var brief *InterviewPlan
+	if plan != nil {
+		brief = &plan.Plan
+	}
+	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup, brief))
 	token, err := createLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
-		if markErr := r.markFailed(mi.ID, err); markErr != nil {
-			return LiveSession{}, errors.Join(err, markErr)
-		}
+		return LiveSession{}, err
+	}
+	mi, err := r.createPlannedInterview(jobID, setup, plan)
+	if err != nil {
 		return LiveSession{}, err
 	}
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: geminiLiveURL, Setup: setupMsg, Minutes: setup.Minutes,
 		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName,
-		Cues: liveCues(setup.Minutes)}, nil
+		Cues: liveCues(setup.Minutes, plan != nil)}, nil
 }
 
 // nudgeAnswer asks the tips provider for one coaching cue about the answer that

@@ -38,6 +38,60 @@ export namespace main {
 	        this.addedAt = source["addedAt"];
 	    }
 	}
+	export class ScoreSet {
+	    communication: number;
+	    structure: number;
+	    relevance: number;
+	    depth: number;
+	    confidence: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ScoreSet(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.communication = source["communication"];
+	        this.structure = source["structure"];
+	        this.relevance = source["relevance"];
+	        this.depth = source["depth"];
+	        this.confidence = source["confidence"];
+	    }
+	}
+	export class AttemptSummary {
+	    id: string;
+	    startedAt: string;
+	    overall?: ScoreSet;
+	
+	    static createFrom(source: any = {}) {
+	        return new AttemptSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.startedAt = source["startedAt"];
+	        this.overall = this.convertValues(source["overall"], ScoreSet);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class CompPackage {
 	    id: string;
 	    jobId: string;
@@ -552,6 +606,110 @@ export namespace main {
 		}
 	}
 	
+	export class ResumeClaim {
+	    claim: string;
+	    probe: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ResumeClaim(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.claim = source["claim"];
+	        this.probe = source["probe"];
+	    }
+	}
+	export class PlannedQuestion {
+	    question: string;
+	    tests: string;
+	    minutes: number;
+	    probes: string[];
+	    strongAnswer: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PlannedQuestion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.question = source["question"];
+	        this.tests = source["tests"];
+	        this.minutes = source["minutes"];
+	        this.probes = source["probes"];
+	        this.strongAnswer = source["strongAnswer"];
+	    }
+	}
+	export class InterviewPlan {
+	    questions: PlannedQuestion[];
+	    resumeClaims: ResumeClaim[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewPlan(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.questions = this.convertValues(source["questions"], PlannedQuestion);
+	        this.resumeClaims = this.convertValues(source["resumeClaims"], ResumeClaim);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class InterviewPlanRecord {
+	    id: string;
+	    provider: string;
+	    model: string;
+	    createdAt: string;
+	    plan: InterviewPlan;
+	
+	    static createFrom(source: any = {}) {
+	        return new InterviewPlanRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	        this.createdAt = source["createdAt"];
+	        this.plan = this.convertValues(source["plan"], InterviewPlan);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class InterviewSetup {
 	    kind: string;
 	    minutes: number;
@@ -559,6 +717,8 @@ export namespace main {
 	    voice: string;
 	    interviewerName: string;
 	    focus: string;
+	    planProvider: string;
+	    retryOf: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new InterviewSetup(source);
@@ -572,6 +732,8 @@ export namespace main {
 	        this.voice = source["voice"];
 	        this.interviewerName = source["interviewerName"];
 	        this.focus = source["focus"];
+	        this.planProvider = source["planProvider"];
+	        this.retryOf = source["retryOf"];
 	    }
 	}
 	export class InterviewTip {
@@ -864,6 +1026,7 @@ export namespace main {
 	    worked: string;
 	    improve: string;
 	    strongerAnswer: string;
+	    planIndex?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new QuestionReview(source);
@@ -876,26 +1039,7 @@ export namespace main {
 	        this.worked = source["worked"];
 	        this.improve = source["improve"];
 	        this.strongerAnswer = source["strongerAnswer"];
-	    }
-	}
-	export class ScoreSet {
-	    communication: number;
-	    structure: number;
-	    relevance: number;
-	    depth: number;
-	    confidence: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new ScoreSet(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.communication = source["communication"];
-	        this.structure = source["structure"];
-	        this.relevance = source["relevance"];
-	        this.depth = source["depth"];
-	        this.confidence = source["confidence"];
+	        this.planIndex = source["planIndex"];
 	    }
 	}
 	export class Scorecard {
@@ -1026,6 +1170,11 @@ export namespace main {
 	    tips: InterviewTip[];
 	    hasRecording: boolean;
 	    error: string;
+	    planId: string;
+	    plan?: InterviewPlanRecord;
+	    planError: string;
+	    attempt: number;
+	    attempts: AttemptSummary[];
 	
 	    static createFrom(source: any = {}) {
 	        return new MockInterview(source);
@@ -1052,6 +1201,11 @@ export namespace main {
 	        this.tips = this.convertValues(source["tips"], InterviewTip);
 	        this.hasRecording = source["hasRecording"];
 	        this.error = source["error"];
+	        this.planId = source["planId"];
+	        this.plan = this.convertValues(source["plan"], InterviewPlanRecord);
+	        this.planError = source["planError"];
+	        this.attempt = source["attempt"];
+	        this.attempts = this.convertValues(source["attempts"], AttemptSummary);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1087,6 +1241,8 @@ export namespace main {
 	    graders: string[];
 	    hasRecording: boolean;
 	    hasTips: boolean;
+	    hasPlan: boolean;
+	    attempt: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new MockInterviewSummary(source);
@@ -1108,6 +1264,8 @@ export namespace main {
 	        this.graders = source["graders"];
 	        this.hasRecording = source["hasRecording"];
 	        this.hasTips = source["hasTips"];
+	        this.hasPlan = source["hasPlan"];
+	        this.attempt = source["attempt"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1161,6 +1319,7 @@ export namespace main {
 	        this.type = source["type"];
 	    }
 	}
+	
 	
 	export class Posting {
 	    id: string;
@@ -1251,6 +1410,7 @@ export namespace main {
 	    }
 	}
 	
+	
 	export class SavedSearch {
 	    id: string;
 	    term: string;
@@ -1338,6 +1498,7 @@ export namespace main {
 	    geminiLiveModel: string;
 	    gradingProvider: string;
 	    tipsProvider: string;
+	    planProvider: string;
 	    anthropicKey: string;
 	    anthropicModel: string;
 	    anthropicGradingEffort: string;
@@ -1366,6 +1527,7 @@ export namespace main {
 	        this.geminiLiveModel = source["geminiLiveModel"];
 	        this.gradingProvider = source["gradingProvider"];
 	        this.tipsProvider = source["tipsProvider"];
+	        this.planProvider = source["planProvider"];
 	        this.anthropicKey = source["anthropicKey"];
 	        this.anthropicModel = source["anthropicModel"];
 	        this.anthropicGradingEffort = source["anthropicGradingEffort"];
