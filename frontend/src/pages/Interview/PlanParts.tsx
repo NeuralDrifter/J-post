@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { Panel } from '../../components/Panel'
-import type { main } from '../../lib/backend'
+import type { main, ai } from '../../lib/backend'
 import { formatDate } from '../../lib/format'
 import { averageScore, SCORE_DIMENSIONS } from '../../lib/interview'
 import { attemptLabel, compareAttempts } from '../../lib/plans'
 
 /** The question plan the interviewer was given, shown only after the interview. */
-export function PlanView({ record, providers }: { record: main.InterviewPlanRecord; providers?: main.AIProvider[] }) {
+export function PlanView({ record, providers }: { record: main.InterviewPlanRecord; providers?: ai.AIProvider[] }) {
   const name = providers?.find((p) => p.id === record.provider)?.label ?? record.provider
   return (
     <>

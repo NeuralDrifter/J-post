@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
@@ -12,24 +12,24 @@ import (
 )
 
 // The AI task layer: every AI job in the app (interview grading, coaching tips,
-// later job ranking) is an aiTask, and any aiProvider can run it.
+// later job ranking) is a Task, and any aiProvider can run it.
 
-// aiRole picks per-role settings such as effort and timeouts.
-type aiRole int
+// Role picks per-role settings such as effort and timeouts.
+type Role int
 
 const (
-	roleGrading aiRole = iota
-	roleTips
-	rolePlanning
+	RoleGrading Role = iota
+	RoleTips
+	RolePlanning
 )
 
-// aiTask is one AI job with a structured answer.
-type aiTask struct {
-	name        string
-	instruction string         // the system prompt
-	input       string         // the material to work on
-	schema      map[string]any // the result's shape, standard JSON Schema
-	role        aiRole
+// Task is one AI job with a structured answer.
+type Task struct {
+	Name        string
+	Instruction string         // the system prompt
+	Input       string         // the material to work on
+	Schema      map[string]any // the result's shape, standard JSON Schema
+	Role        Role
 }
 
 // aiResult is a provider's answer: the result JSON and the model that produced it.
@@ -43,7 +43,7 @@ type aiProvider interface {
 	label() string
 	// unavailable explains what's missing before this provider can run; "" when ready.
 	unavailable(s settings.Settings) string
-	run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error)
+	run(ctx context.Context, s settings.Settings, t Task) (aiResult, error)
 }
 
 // aiProviders lists every provider in display order.
@@ -79,9 +79,9 @@ func providerByID(id string) (aiProvider, bool) {
 	return nil, false
 }
 
-// runAITask runs t on the named provider and decodes the result into out. An
+// RunTask runs t on the named provider and decodes the result into out. An
 // unconfigured provider fails with its setup reason before any call is made.
-func runAITask(ctx context.Context, s settings.Settings, providerID string, t aiTask, out any) (string, error) {
+func RunTask(ctx context.Context, s settings.Settings, providerID string, t Task, out any) (string, error) {
 	p, ok := providerByID(providerID)
 	if !ok {
 		return "", fmt.Errorf("unknown AI provider %q", providerID)

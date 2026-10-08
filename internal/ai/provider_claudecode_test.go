@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
@@ -78,7 +78,7 @@ func TestClaudeCodeArgs(t *testing.T) {
 	joined := strings.Join(args, "\x00")
 	for _, want := range [][]string{
 		{"-p"},
-		{"--system-prompt", task.instruction},
+		{"--system-prompt", task.Instruction},
 		{"--setting-sources", ""},
 		{"--strict-mcp-config"},
 		{"--mcp-config", `C:\tmp\mcp.json`},
@@ -109,7 +109,7 @@ func TestClaudeCodeRunsAndReadsResult(t *testing.T) {
 	argsFile := filepath.Join(t.TempDir(), "args.json")
 	t.Setenv("FAKE_ARGS", argsFile)
 	var n testNudge
-	model, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	model, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "From the fake" || model != "claude-opus-5-5" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -126,7 +126,7 @@ func TestClaudeCodeMCPConfigPointsAtThisExecutable(t *testing.T) {
 	exe, _ := os.Executable()
 	cfg := claudeCodeMCPConfig(`C:\tmp\task.json`)
 	server := cfg["mcpServers"].(map[string]any)["jobtrack"].(map[string]any)
-	if server["command"] != exe || !slices.Equal(server["args"].([]string), []string{aiTaskMCPFlag, `C:\tmp\task.json`}) {
+	if server["command"] != exe || !slices.Equal(server["args"].([]string), []string{TaskMCPFlag, `C:\tmp\task.json`}) {
 		t.Fatalf("server = %v", server)
 	}
 }
@@ -134,7 +134,7 @@ func TestClaudeCodeMCPConfigPointsAtThisExecutable(t *testing.T) {
 func TestClaudeCodeSurfacesErrorResult(t *testing.T) {
 	s, root := useFakeClaude(t, "error")
 	var n testNudge
-	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Please run /login") {
 		t.Fatalf("err = %v", err)
 	}
@@ -144,7 +144,7 @@ func TestClaudeCodeSurfacesErrorResult(t *testing.T) {
 func TestClaudeCodeWithoutSubmitFails(t *testing.T) {
 	s, root := useFakeClaude(t, "nosubmit")
 	var n testNudge
-	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "without") {
 		t.Fatalf("err = %v", err)
 	}
@@ -153,12 +153,12 @@ func TestClaudeCodeWithoutSubmitFails(t *testing.T) {
 
 func TestClaudeCodeTimesOutAndCleansUp(t *testing.T) {
 	s, root := useFakeClaude(t, "sleep")
-	old := claudeCodeTimeout[roleTips]
-	claudeCodeTimeout[roleTips] = 300 * time.Millisecond
-	t.Cleanup(func() { claudeCodeTimeout[roleTips] = old })
+	old := claudeCodeTimeout[RoleTips]
+	claudeCodeTimeout[RoleTips] = 300 * time.Millisecond
+	t.Cleanup(func() { claudeCodeTimeout[RoleTips] = old })
 	start := time.Now()
 	var n testNudge
-	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 5*time.Second {
 		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
@@ -187,19 +187,19 @@ func TestFindClaudeCode(t *testing.T) {
 
 func TestClaudeCodeVersion(t *testing.T) {
 	s, _ := useFakeClaude(t, "version")
-	if v, err := claudeCodeVersion(context.Background(), s); err != nil || !strings.Contains(v, "Claude Code") {
+	if v, err := ClaudeCodeVersion(context.Background(), s); err != nil || !strings.Contains(v, "Claude Code") {
 		t.Fatalf("v = %q, err = %v", v, err)
 	}
 }
 
 func TestClaudeCodeTimeoutKillsTheWholeProcessTree(t *testing.T) {
 	s, root := useFakeClaude(t, "grandchild")
-	old := claudeCodeTimeout[roleTips]
-	claudeCodeTimeout[roleTips] = 500 * time.Millisecond
-	t.Cleanup(func() { claudeCodeTimeout[roleTips] = old })
+	old := claudeCodeTimeout[RoleTips]
+	claudeCodeTimeout[RoleTips] = 500 * time.Millisecond
+	t.Cleanup(func() { claudeCodeTimeout[RoleTips] = old })
 	start := time.Now()
 	var n testNudge
-	_, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 6*time.Second {
 		t.Fatalf("a grandchild holding the output pipe must not keep the run alive: err = %v after %s", err, time.Since(start))
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"jobtrack/internal/ai"
 	"jobtrack/internal/textproc"
 )
 
@@ -14,24 +15,24 @@ import (
 // providers that need another dialect convert it (see geminiSchema).
 
 // nudgeTask asks for one short coaching cue about the answer just given.
-func nudgeTask(question, answer string) aiTask {
-	return aiTask{
-		name:        "nudge",
-		instruction: nudgeInstruction,
-		input:       "Interviewer asked: " + question + "\nCandidate answered: " + answer,
-		schema:      nudgeSchema,
-		role:        roleTips,
+func nudgeTask(question, answer string) ai.Task {
+	return ai.Task{
+		Name:        "nudge",
+		Instruction: nudgeInstruction,
+		Input:       "Interviewer asked: " + question + "\nCandidate answered: " + answer,
+		Schema:      nudgeSchema,
+		Role:        ai.RoleTips,
 	}
 }
 
 // scorecardTask asks for the full review of a finished mock interview.
-func scorecardTask(job Job, mi MockInterview, resume string) aiTask {
-	return aiTask{
-		name:        "scorecard",
-		instruction: scoringInstruction,
-		input:       scoringPrompt(job, mi, resume),
-		schema:      scorecardSchema,
-		role:        roleGrading,
+func scorecardTask(job Job, mi MockInterview, resume string) ai.Task {
+	return ai.Task{
+		Name:        "scorecard",
+		Instruction: scoringInstruction,
+		Input:       scoringPrompt(job, mi, resume),
+		Schema:      scorecardSchema,
+		Role:        ai.RoleGrading,
 	}
 }
 

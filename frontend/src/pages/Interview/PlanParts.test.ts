@@ -4,7 +4,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import type { main } from '../../lib/backend'
+import type { main, ai } from '../../lib/backend'
 import { AttemptsStrip, CompareAttempts, PlanView } from './PlanParts'
 
 const plan = {
@@ -15,7 +15,7 @@ const plan = {
   resumeClaims: [{ claim: 'Cut deploy time 60%', probe: 'From what?' }],
 } as unknown as main.InterviewPlan
 
-const providers = [{ id: 'claude-code', label: 'Claude Code', unavailable: '' }] as main.AIProvider[]
+const providers = [{ id: 'claude-code', label: 'Claude Code', unavailable: '' }] as ai.AIProvider[]
 
 const overall = (n: number) => ({ communication: n, structure: n, relevance: n, depth: n, confidence: n })
 

@@ -15,6 +15,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"jobtrack/internal/ai"
+	"jobtrack/internal/ai/aitest"
 	"jobtrack/internal/gemini/geminitest"
 	"jobtrack/internal/settings"
 )
@@ -56,16 +58,16 @@ func TestPlanQuestionCount(t *testing.T) {
 func TestPlanTaskInput(t *testing.T) {
 	job := Job{Company: "Acme", Position: "Staff Engineer", Description: "Build APIs"}
 	task := planTask(job, "Jane, Go", InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough", Focus: "conflict"})
-	if task.name != "interviewPlan" || task.role != rolePlanning {
-		t.Fatalf("task = %q / %v", task.name, task.role)
+	if task.Name != "interviewPlan" || task.Role != ai.RolePlanning {
+		t.Fatalf("task = %q / %v", task.Name, task.Role)
 	}
 	persona, _ := findInterviewPersona("tough")
 	for _, want := range []string{"Build APIs", "Jane, Go", kindBriefName("behavioral"), "25 minutes", "conflict", "5 core questions", persona.briefStyle, "Acme", "Staff Engineer"} {
-		if !strings.Contains(task.input, want) {
-			t.Errorf("input missing %q:\n%s", want, task.input)
+		if !strings.Contains(task.Input, want) {
+			t.Errorf("input missing %q:\n%s", want, task.Input)
 		}
 	}
-	if !strings.Contains(planTask(job, "", InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough"}).input, "no resume provided") {
+	if !strings.Contains(planTask(job, "", InterviewSetup{Kind: "behavioral", Minutes: 25, Persona: "tough"}).Input, "no resume provided") {
 		t.Error("an empty resume should be called out")
 	}
 }
@@ -110,34 +112,34 @@ func TestPlanThroughGeminiLive(t *testing.T) {
 	})
 	var p InterviewPlan
 	s := settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
-	if _, err := runAITask(context.Background(), s, settings.ProviderGeminiLive, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := ai.RunTask(context.Background(), s, settings.ProviderGeminiLive, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
 }
 
 func TestPlanThroughAnthropic(t *testing.T) {
 	var body map[string]any
-	fakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
+	aitest.FakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&body)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(anthropicReply("claude-opus-5-5", samplePlanJSON(5), "end_turn"))
+		w.Write(aitest.AnthropicReply("claude-opus-5-5", samplePlanJSON(5), "end_turn"))
 	})
 	var p InterviewPlan
-	if _, err := runAITask(context.Background(), anthropicSettings, settings.ProviderAnthropic, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := ai.RunTask(context.Background(), aitest.AnthropicSettings, settings.ProviderAnthropic, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
-	if body["output_config"].(map[string]any)["effort"] != anthropicSettings.AnthropicGradingEffort || body["max_tokens"] != float64(16000) {
+	if body["output_config"].(map[string]any)["effort"] != aitest.AnthropicSettings.AnthropicGradingEffort || body["max_tokens"] != float64(16000) {
 		t.Fatalf("planning should use grading effort and budget: %v", body)
 	}
 }
 
 func TestPlanThroughClaudeCode(t *testing.T) {
-	s, root := useFakeClaude(t, "plan")
+	s, root := aitest.UseFakeClaude(t, "plan")
 	var p InterviewPlan
-	if _, err := runAITask(context.Background(), s, settings.ProviderClaudeCode, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := ai.RunTask(context.Background(), s, settings.ProviderClaudeCode, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
-	assertEmptyDir(t, root)
+	aitest.AssertEmptyDir(t, root)
 }
 
 func TestBriefHasDepthRules(t *testing.T) {
@@ -213,7 +215,7 @@ func noLivePlanning(t *testing.T) {
 // anthropicPlanner fakes the Anthropic API answering with body (status 200) or failing with status.
 func anthropicPlanner(t *testing.T, status int, body string) *int {
 	calls := new(int)
-	fakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
+	aitest.FakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
 		*calls++
 		w.Header().Set("Content-Type", "application/json")
 		if status != http.StatusOK {
@@ -221,13 +223,13 @@ func anthropicPlanner(t *testing.T, status int, body string) *int {
 			w.Write([]byte(`{"type":"error","error":{"type":"api_error","message":"boom"}}`))
 			return
 		}
-		w.Write(anthropicReply("claude-opus-5-5", body, "end_turn"))
+		w.Write(aitest.AnthropicReply("claude-opus-5-5", body, "end_turn"))
 	})
 	return calls
 }
 
 func planSettings() settings.Settings {
-	s := anthropicSettings
+	s := aitest.AnthropicSettings
 	s.GeminiKey, s.GeminiLiveModel = "k", "gemini-3.8-live"
 	return s
 }
@@ -457,7 +459,7 @@ func TestScorecardSchemaPlanIndexIsOptionalInteger(t *testing.T) {
 			t.Fatal("planIndex must stay optional so older scorecards stay valid")
 		}
 	}
-	g := geminiSchema(scorecardSchema)["properties"].(map[string]any)["questions"].(map[string]any)["items"].(map[string]any)
+	g := ai.GeminiSchema(scorecardSchema)["properties"].(map[string]any)["questions"].(map[string]any)["items"].(map[string]any)
 	if g["properties"].(map[string]any)["planIndex"].(map[string]any)["type"] != "INTEGER" {
 		t.Fatal("Gemini's dialect needs INTEGER")
 	}
@@ -466,10 +468,10 @@ func TestScorecardSchemaPlanIndexIsOptionalInteger(t *testing.T) {
 func TestPlanTaskNamesTheInterviewer(t *testing.T) {
 	screen, _ := findInterviewKind("phone_screen")
 	task := planTask(planJob, "cv", InterviewSetup{Kind: "phone_screen", Minutes: 10, Persona: "neutral"})
-	if !strings.Contains(task.input, screen.interviewer) {
-		t.Errorf("the planner should know who runs the interview (%q):\n%s", screen.interviewer, task.input)
+	if !strings.Contains(task.Input, screen.interviewer) {
+		t.Errorf("the planner should know who runs the interview (%q):\n%s", screen.interviewer, task.Input)
 	}
-	if strings.Contains(task.instruction, "hiring manager") {
+	if strings.Contains(task.Instruction, "hiring manager") {
 		t.Error("the instruction should not fix the role; a phone screen is run by a recruiter")
 	}
 }

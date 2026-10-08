@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"jobtrack/internal/ai"
 	"jobtrack/internal/settings"
 )
 
@@ -25,7 +26,7 @@ import (
 // model DeepSeek lists). Each run prints model, time and the cache hit/miss
 // log lines, which go in the spec's results.
 
-func liveTasks() []aiTask {
+func liveTasks() []ai.Task {
 	job := Job{Company: "Acme", Position: "Backend Engineer", Description: "Build and run Go APIs; on-call; mentor two juniors."}
 	mi := MockInterview{Company: "Acme", Position: "Backend Engineer", Kind: "behavioral", Minutes: 10, Persona: "friendly", Transcript: []TranscriptLine{
 		{Speaker: SpeakerInterviewer, Text: "Tell me about a time you handled a production outage.", AtMs: 0},
@@ -33,7 +34,7 @@ func liveTasks() []aiTask {
 		{Speaker: SpeakerInterviewer, Text: "What did you change afterwards?", AtMs: 30000},
 		{Speaker: SpeakerCandidate, Text: "We added a migration check to CI and an alert on p99 latency.", AtMs: 33000},
 	}}
-	return []aiTask{
+	return []ai.Task{
 		nudgeTask("Tell me about a time you handled a production outage.", "We rolled back and added an index. Downtime was 18 minutes."),
 		scorecardTask(job, mi, "Jane Doe. 5 years Go, Postgres, Kubernetes."),
 		planTask(job, "Jane Doe. 5 years Go, Postgres, Kubernetes.", InterviewSetup{Kind: "behavioral", Minutes: 10, Persona: "friendly"}),
@@ -45,22 +46,22 @@ func runLive(t *testing.T, providerID string, s settings.Settings) {
 	ctx := context.Background()
 	for _, task := range liveTasks() {
 		for run := 1; run <= 2; run++ { // the second run should hit DeepSeek's prefix cache
-			if task.name != "nudge" && run == 2 {
+			if task.Name != "nudge" && run == 2 {
 				continue
 			}
 			start := time.Now()
 			var plan InterviewPlan
 			var out any = &map[string]any{}
-			if task.name == "interviewPlan" {
+			if task.Name == "interviewPlan" {
 				out = &plan
 			}
-			model, err := runAITask(ctx, s, providerID, task, out)
+			model, err := ai.RunTask(ctx, s, providerID, task, out)
 			if err != nil {
-				t.Errorf("%s run %d: %v", task.name, run, err)
+				t.Errorf("%s run %d: %v", task.Name, run, err)
 				continue
 			}
-			t.Logf("%s run %d: %s in %s", task.name, run, model, time.Since(start).Round(time.Millisecond))
-			if task.name == "interviewPlan" {
+			t.Logf("%s run %d: %s in %s", task.Name, run, model, time.Since(start).Round(time.Millisecond))
+			if task.Name == "interviewPlan" {
 				if err := plan.validate(10); err != nil {
 					t.Errorf("plan fails the app's own checks: %v", err)
 				}
@@ -75,7 +76,7 @@ func TestLiveDeepSeek(t *testing.T) {
 		t.Skip("set JOBTRACK_LIVE_DEEPSEEK_KEY to run")
 	}
 	s := settings.Settings{DeepSeekKey: key, DeepSeekModel: os.Getenv("JOBTRACK_LIVE_DEEPSEEK_MODEL")}
-	models, err := listAIModels(context.Background(), settings.ProviderDeepSeek, s)
+	models, err := ai.ListAIModels(context.Background(), settings.ProviderDeepSeek, s)
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
@@ -104,7 +105,7 @@ func TestLiveLMStudio(t *testing.T) {
 		t.Skip("set JOBTRACK_LIVE_LMSTUDIO_MODEL to run (LM Studio's server must be running)")
 	}
 	s := settings.Settings{LMStudioURL: settings.DefaultLMStudioURL, LMStudioKey: os.Getenv("JOBTRACK_LIVE_LMSTUDIO_KEY"), LMStudioModel: model}
-	models, err := listAIModels(context.Background(), settings.ProviderLMStudio, s)
+	models, err := ai.ListAIModels(context.Background(), settings.ProviderLMStudio, s)
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}

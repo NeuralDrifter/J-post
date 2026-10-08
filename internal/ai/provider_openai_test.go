@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
@@ -240,7 +240,7 @@ func TestOpenAIIgnoresOpenAIEnvironment(t *testing.T) {
 
 func TestListModelsSorted(t *testing.T) {
 	f, srv := newFakeOpenAI(t, fakeReply{body: `{"object":"list","data":[{"id":"zeta","object":"model","created":1,"owned_by":"x"},{"id":"alpha","object":"model","created":1,"owned_by":"x"},{"id":"mid","object":"model","created":1,"owned_by":"x"}]}`})
-	models, err := listAIModels(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
+	models, err := ListAIModels(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +251,7 @@ func TestListModelsSorted(t *testing.T) {
 
 func TestListModelsBadKey(t *testing.T) {
 	_, srv := newFakeOpenAI(t, errorReply(401, "bad key"))
-	_, err := listAIModels(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
+	_, err := ListAIModels(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err == nil || !strings.Contains(err.Error(), "rejected the API key") {
 		t.Fatalf("err = %v", err)
 	}
@@ -262,20 +262,20 @@ func TestListModelsWithoutModelChosen(t *testing.T) {
 	_, srv := newFakeOpenAI(t, fakeReply{body: `{"object":"list","data":[{"id":"a","object":"model","created":1,"owned_by":"x"}]}`})
 	s := customSettings(srv, settings.ModePlain)
 	s.CustomAIModel = ""
-	if _, err := listAIModels(context.Background(), settings.ProviderOpenAICompatible, s); err != nil {
+	if _, err := ListAIModels(context.Background(), settings.ProviderOpenAICompatible, s); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestListModelsRejectsOtherProviders(t *testing.T) {
-	if _, err := listAIModels(context.Background(), settings.ProviderAnthropic, settings.Settings{}); err == nil {
+	if _, err := ListAIModels(context.Background(), settings.ProviderAnthropic, settings.Settings{}); err == nil {
 		t.Fatal("Anthropic isn't an OpenAI-style provider")
 	}
 }
 
 func TestTestAIProviderReportsModelAndTime(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m1-real", `{"ok": true}`))
-	res, err := testAIProvider(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
+	res, err := TestAIProvider(context.Background(), settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +288,7 @@ func TestTestAIProviderUnavailable(t *testing.T) {
 	f, srv := newFakeOpenAI(t, chatReply("m", `{"ok": true}`))
 	s := customSettings(srv, settings.ModePlain)
 	s.CustomAIModel = ""
-	_, err := testAIProvider(context.Background(), settings.ProviderOpenAICompatible, s)
+	_, err := TestAIProvider(context.Background(), settings.ProviderOpenAICompatible, s)
 	if err == nil || !strings.Contains(err.Error(), "Choose a model") || f.requests() != 0 {
 		t.Fatalf("err = %v, requests = %d", err, f.requests())
 	}

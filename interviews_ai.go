@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	"jobtrack/internal/ai"
 	"jobtrack/internal/gemini"
 	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
@@ -506,7 +507,7 @@ func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID s
 func nudgeAnswer(ctx context.Context, r *Repo, s settings.Settings, sessionID, question, answer string, answerAtMs int64) (Nudge, error) {
 	settings.ApplyDefaults(&s)
 	var n Nudge
-	model, err := runAITask(ctx, s, s.TipsProvider, nudgeTask(question, answer), &n)
+	model, err := ai.RunTask(ctx, s, s.TipsProvider, nudgeTask(question, answer), &n)
 	if err != nil {
 		return n, err
 	}
@@ -586,7 +587,7 @@ func requestScorecard(ctx context.Context, r *Repo, s settings.Settings, provide
 	if err != nil {
 		return card, "", err
 	}
-	model, err := runAITask(ctx, s, provider, scorecardTask(job, mi, profile.ResumeText), &card)
+	model, err := ai.RunTask(ctx, s, provider, scorecardTask(job, mi, profile.ResumeText), &card)
 	if err != nil {
 		return card, "", err
 	}

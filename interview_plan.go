@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"jobtrack/internal/ai"
 	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
@@ -79,7 +80,7 @@ const planInstruction = "You are the interviewer described below, preparing your
 	"Ask questions a sharp interviewer at this company would really ask, not generic ones."
 
 // planTask asks for the question plan of a mock interview. s must already be validated.
-func planTask(job Job, resume string, s InterviewSetup) aiTask {
+func planTask(job Job, resume string, s InterviewSetup) ai.Task {
 	persona, _ := findInterviewPersona(s.Persona)
 	kind, _ := findInterviewKind(s.Kind)
 	var b strings.Builder
@@ -93,12 +94,12 @@ func planTask(job Job, resume string, s InterviewSetup) aiTask {
 	}
 	fmt.Fprintf(&b, "\nJob description:\n%s\n", textproc.OrDefault(job.Description, "(not provided)"))
 	fmt.Fprintf(&b, "\nCandidate's resume:\n%s\n", textproc.OrDefault(resume, "(no resume provided)"))
-	return aiTask{
-		name:        "interviewPlan",
-		instruction: planInstruction,
-		input:       b.String(),
-		schema:      planSchema,
-		role:        rolePlanning,
+	return ai.Task{
+		Name:        "interviewPlan",
+		Instruction: planInstruction,
+		Input:       b.String(),
+		Schema:      planSchema,
+		Role:        ai.RolePlanning,
 	}
 }
 
@@ -164,7 +165,7 @@ func interviewPlanFor(ctx context.Context, s settings.Settings, job Job, resume 
 		return nil, nil
 	}
 	var p InterviewPlan
-	model, err := runAITask(ctx, s, provider, planTask(job, resume, setup), &p)
+	model, err := ai.RunTask(ctx, s, provider, planTask(job, resume, setup), &p)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't prepare the questions: %w", err)
 	}

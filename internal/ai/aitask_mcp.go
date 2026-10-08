@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 // only; it is never installed into the user's Claude Code configuration. It
 // reads nothing but the task file and writes nothing but the output file.
 
-const aiTaskMCPFlag = "--ai-task-mcp"
+const TaskMCPFlag = "--ai-task-mcp"
 
 // mcpTaskFile is what the app hands the MCP server for one run.
 type mcpTaskFile struct {
@@ -29,8 +29,8 @@ type mcpTaskFile struct {
 	OutputPath  string         `json:"outputPath"` // where submit_result writes the result
 }
 
-// runAITaskMCP serves the task over in/out until the client closes the stream.
-func runAITaskMCP(ctx context.Context, taskPath string, in io.Reader, out io.Writer) error {
+// RunTaskMCP serves the task over in/out until the client closes the stream.
+func RunTaskMCP(ctx context.Context, taskPath string, in io.Reader, out io.Writer) error {
 	raw, err := os.ReadFile(taskPath)
 	if err != nil {
 		return err

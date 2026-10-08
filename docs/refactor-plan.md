@@ -55,6 +55,7 @@ internal/
   gemini/      Gemini REST calls, Live sessions and voice samples
     geminitest/  fake Gemini servers for other packages' tests
   ai/          AI task runner and its providers
+    aitest/      fake Anthropic API and fake Claude Code CLI for other packages' tests
   comp/        the offer package type and its pure evaluation
   discover/    job-site fetchers (JobSpy, Adzuna, Muse, USAJobs, Himalayas, Jobicy)
   app/         Wails bindings, the SQLite Repo and the interview flow
@@ -79,7 +80,7 @@ Each line is one commit, green before the next.
 - [x] prep: voice sampling (voice_sample.go) splits from the voice catalog; interview-typed Live tests move to interviews_ai_test.go
 - [x] extract-leaf-module: Gemini REST, Live sessions, voice sampling -> internal/gemini (+ geminitest helpers)
 - [x] prep: AI tests use neutral fixtures (ai_fixtures_test.go); real-task schema checks move to aitask_tasks_test.go; TestPlanningRoleLimits moves to aitask_test.go
-- [ ] extract-leaf-module: AI task runner and providers -> internal/ai (+ aitest helpers, testdata/fakeclaude)
+- [x] extract-leaf-module: AI task runner and providers -> internal/ai (+ aitest helpers, testdata/fakeclaude)
 - [ ] prep: split the CompPackage type from its Repo persistence in comp.go
 - [ ] extract-pure-core: CompPackage + Evaluate -> internal/comp
 - [ ] prep: split fetchers from merge/Repo code in discover.go and sources.go
@@ -124,3 +125,5 @@ Each line is one commit, green before the next.
 - [ ] Stuttering names left by verbatim moves: `settings.SettingsStore`,
   `marketdata.MarketData`, `settings.NewSettingsStore` — rename after the
   campaign (touches the frontend models too) — clean-code
+- [ ] `ai.AIProvider`, `ai.ListAIProviders`, `ai.AIProviderTest`, `ai.ListAIModels`,
+  `ai.TestAIProvider` stutter — rename with the frontend models — clean-code

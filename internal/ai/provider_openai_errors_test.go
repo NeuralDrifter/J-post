@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"net"
@@ -106,9 +106,9 @@ func TestOpenAITimeout(t *testing.T) {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	old := openAITimeout[roleTips]
-	openAITimeout[roleTips] = 100 * time.Millisecond
-	t.Cleanup(func() { openAITimeout[roleTips] = old })
+	old := openAITimeout[RoleTips]
+	openAITimeout[RoleTips] = 100 * time.Millisecond
+	t.Cleanup(func() { openAITimeout[RoleTips] = old })
 	_, err := runProvider(t, settings.ProviderOpenAICompatible, customSettings(srv, settings.ModePlain))
 	if err == nil {
 		t.Fatal("want a timeout")

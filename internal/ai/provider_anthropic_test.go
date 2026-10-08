@@ -1,12 +1,13 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
@@ -52,7 +53,7 @@ func TestAnthropicRequestShape(t *testing.T) {
 	cfg, _ := body["output_config"].(map[string]any)
 	format, _ := cfg["format"].(map[string]any)
 	var wantSchema any
-	b, _ := json.Marshal(task.schema)
+	b, _ := json.Marshal(task.Schema)
 	json.Unmarshal(b, &wantSchema)
 	if body["model"] != "claude-opus-5-5" || body["max_tokens"] != float64(16000) || cfg["effort"] != "high" ||
 		format["type"] != "json_schema" || !reflect.DeepEqual(format["schema"], wantSchema) || body["fallbacks"] != "default" {
@@ -87,7 +88,7 @@ func TestAnthropicReturnsResultAndModel(t *testing.T) {
 		w.Write(anthropicReply("claude-opus-5-5", `{"nudge":"Lead with the result","kind":"tip"}`, "end_turn"))
 	})
 	var n testNudge
-	model, err := runAITask(context.Background(), anthropicSettings, settings.ProviderAnthropic, testNudgeTask("q", "a"), &n)
+	model, err := RunTask(context.Background(), anthropicSettings, settings.ProviderAnthropic, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "claude-opus-5-5" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -159,12 +160,18 @@ func TestAnthropicStopsAtTheRoleTimeout(t *testing.T) {
 		case <-time.After(2 * time.Second):
 		}
 	})
-	old := anthropicTimeout[roleTips]
-	anthropicTimeout[roleTips] = 300 * time.Millisecond
-	t.Cleanup(func() { anthropicTimeout[roleTips] = old })
+	old := anthropicTimeout[RoleTips]
+	anthropicTimeout[RoleTips] = 300 * time.Millisecond
+	t.Cleanup(func() { anthropicTimeout[RoleTips] = old })
 	start := time.Now()
 	_, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, testNudgeTask("q", "a"))
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 5*time.Second {
 		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
+}
+
+func fakeServer(t *testing.T, handler http.HandlerFunc) string {
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	return srv.URL
 }

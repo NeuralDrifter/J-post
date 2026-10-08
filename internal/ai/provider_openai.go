@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"cmp"
@@ -81,8 +81,8 @@ func (o openAIProvider) unavailable(s settings.Settings) string {
 var (
 	openAIBaseURLOverride = "" // tests point every preset at a fake server
 	openAIMaxRetries      = 1  // one SDK retry for transient errors
-	openAIMaxTokens       = map[aiRole]int64{roleGrading: 16000, roleTips: 1024, rolePlanning: 16000}
-	openAITimeout         = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second, rolePlanning: 2 * time.Minute}
+	openAIMaxTokens       = map[Role]int64{RoleGrading: 16000, RoleTips: 1024, RolePlanning: 16000}
+	openAITimeout         = map[Role]time.Duration{RoleGrading: 5 * time.Minute, RoleTips: 60 * time.Second, RolePlanning: 2 * time.Minute}
 )
 
 // openAIOptions builds the request options for one connection. It never uses
@@ -104,17 +104,17 @@ func openAIOptions(c openAIConn) []option.RequestOption {
 // runs of a task so DeepSeek's prefix cache keeps hitting. Modes the server
 // doesn't enforce get the schema in the text (DeepSeek's JSON mode also
 // requires the word "json").
-func openAIInstruction(t aiTask, mode settings.AnswerMode) string {
+func openAIInstruction(t Task, mode settings.AnswerMode) string {
 	if mode == settings.ModeJSONSchema {
-		return t.instruction
+		return t.Instruction
 	}
-	schema, _ := json.Marshal(t.schema) // map keys marshal in sorted order
-	return t.instruction + "\n\nReply with only a json object matching this JSON Schema:\n" + string(schema)
+	schema, _ := json.Marshal(t.Schema) // map keys marshal in sorted order
+	return t.Instruction + "\n\nReply with only a json object matching this JSON Schema:\n" + string(schema)
 }
 
-func (o openAIProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
+func (o openAIProvider) run(ctx context.Context, s settings.Settings, t Task) (aiResult, error) {
 	c := o.p.conn(s)
-	ctx, cancel := context.WithTimeout(ctx, openAITimeout[t.role])
+	ctx, cancel := context.WithTimeout(ctx, openAITimeout[t.Role])
 	defer cancel()
 	chat := openai.NewChatCompletionService(openAIOptions(c)...)
 
@@ -122,19 +122,19 @@ func (o openAIProvider) run(ctx context.Context, s settings.Settings, t aiTask) 
 		Model: c.model,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(openAIInstruction(t, c.mode)),
-			openai.UserMessage(t.input),
+			openai.UserMessage(t.Input),
 		},
 	}
 	// OpenAI's newer models reject max_tokens; DeepSeek and Ollama document only max_tokens.
 	if o.p.id == settings.ProviderOpenAI {
-		params.MaxCompletionTokens = openai.Int(openAIMaxTokens[t.role])
+		params.MaxCompletionTokens = openai.Int(openAIMaxTokens[t.Role])
 	} else {
-		params.MaxTokens = openai.Int(openAIMaxTokens[t.role])
+		params.MaxTokens = openai.Int(openAIMaxTokens[t.Role])
 	}
 	switch c.mode {
 	case settings.ModeJSONSchema:
 		params.ResponseFormat.OfJSONSchema = &shared.ResponseFormatJSONSchemaParam{
-			JSONSchema: shared.ResponseFormatJSONSchemaJSONSchemaParam{Name: t.name, Strict: openai.Bool(strictCompatible(t.schema)), Schema: t.schema},
+			JSONSchema: shared.ResponseFormatJSONSchemaJSONSchemaParam{Name: t.Name, Strict: openai.Bool(StrictCompatible(t.Schema)), Schema: t.Schema},
 		}
 	case settings.ModeJSONObject:
 		params.ResponseFormat.OfJSONObject = &shared.ResponseFormatJSONObjectParam{}
@@ -154,7 +154,7 @@ func (o openAIProvider) run(ctx context.Context, s settings.Settings, t aiTask) 
 		}
 		raw, err := extractJSON(content)
 		if err == nil {
-			err = validateAnswer(raw, t.schema)
+			err = validateAnswer(raw, t.Schema)
 		}
 		if err == nil {
 			return aiResult{raw: raw, model: model}, nil
@@ -168,23 +168,23 @@ func (o openAIProvider) run(ctx context.Context, s settings.Settings, t aiTask) 
 	}
 }
 
-// strictCompatible reports whether OpenAI's strict mode accepts schema: every
+// StrictCompatible reports whether OpenAI's strict mode accepts schema: every
 // object property must be required. Otherwise the schema is sent as guidance
 // and validateAnswer enforces it.
-func strictCompatible(schema map[string]any) bool {
+func StrictCompatible(schema map[string]any) bool {
 	switch schema["type"] {
 	case "object":
 		props, _ := schema["properties"].(map[string]any)
 		required, _ := schema["required"].([]string)
 		for name, p := range props {
 			sub, _ := p.(map[string]any)
-			if !slices.Contains(required, name) || !strictCompatible(sub) {
+			if !slices.Contains(required, name) || !StrictCompatible(sub) {
 				return false
 			}
 		}
 	case "array":
 		items, _ := schema["items"].(map[string]any)
-		return strictCompatible(items)
+		return StrictCompatible(items)
 	}
 	return true
 }
@@ -229,9 +229,9 @@ func (o openAIProvider) listModels(ctx context.Context, s settings.Settings) ([]
 	return ids, nil
 }
 
-// listAIModels lists the models of an OpenAI-style provider, using the
+// ListAIModels lists the models of an OpenAI-style provider, using the
 // settings as currently entered (not necessarily saved).
-func listAIModels(ctx context.Context, providerID string, s settings.Settings) ([]string, error) {
+func ListAIModels(ctx context.Context, providerID string, s settings.Settings) ([]string, error) {
 	p, ok := providerByID(providerID)
 	op, isOpenAI := p.(openAIProvider)
 	if !ok || !isOpenAI {
@@ -254,14 +254,14 @@ var providerTestSchema = map[string]any{
 	"additionalProperties": false,
 }
 
-// testAIProvider runs a tiny task on any provider, with the settings as
+// TestAIProvider runs a tiny task on any provider, with the settings as
 // currently entered, and reports which model answered and how long it took.
-func testAIProvider(ctx context.Context, providerID string, s settings.Settings) (AIProviderTest, error) {
+func TestAIProvider(ctx context.Context, providerID string, s settings.Settings) (AIProviderTest, error) {
 	settings.ApplyDefaults(&s)
-	t := aiTask{name: "test", instruction: `Reply with a json object {"ok": true}.`, input: "ping", schema: providerTestSchema, role: roleTips}
+	t := Task{Name: "test", Instruction: `Reply with a json object {"ok": true}.`, Input: "ping", Schema: providerTestSchema, Role: RoleTips}
 	start := time.Now()
 	var out struct{ OK bool }
-	model, err := runAITask(ctx, s, providerID, t, &out)
+	model, err := RunTask(ctx, s, providerID, t, &out)
 	if err != nil {
 		return AIProviderTest{}, err
 	}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"jobtrack/internal/ai"
 	"jobtrack/internal/marketdata"
 	"jobtrack/internal/osproc"
 	"jobtrack/internal/settings"
@@ -614,12 +615,12 @@ func (a *App) DeleteMockInterview(id string) error {
 }
 
 // ListAIProviders returns every AI provider with why each can't run yet.
-func (a *App) ListAIProviders() ([]AIProvider, error) {
+func (a *App) ListAIProviders() ([]ai.AIProvider, error) {
 	s, err := a.settings.Load()
 	if err != nil {
 		return nil, err
 	}
-	return ListAIProviders(s), nil
+	return ai.ListAIProviders(s), nil
 }
 
 // TestClaudeCode reports the installed Claude Code version (Settings "Test" button).
@@ -629,19 +630,19 @@ func (a *App) TestClaudeCode(path string) (string, error) {
 		return "", err
 	}
 	s.ClaudeCodePath = strings.TrimSpace(path)
-	return claudeCodeVersion(a.aiContext(), s)
+	return ai.ClaudeCodeVersion(a.aiContext(), s)
 }
 
 // ListAIModels lists the models an OpenAI-style provider offers, using the
 // settings as entered on the page (Settings "Load models" button).
 func (a *App) ListAIModels(providerID string, s settings.Settings) ([]string, error) {
-	return listAIModels(a.aiContext(), providerID, s)
+	return ai.ListAIModels(a.aiContext(), providerID, s)
 }
 
 // TestAIProvider runs a tiny task on a provider with the settings as entered
 // on the page (Settings "Test" button).
-func (a *App) TestAIProvider(providerID string, s settings.Settings) (AIProviderTest, error) {
-	return testAIProvider(a.aiContext(), providerID, s)
+func (a *App) TestAIProvider(providerID string, s settings.Settings) (ai.AIProviderTest, error) {
+	return ai.TestAIProvider(a.aiContext(), providerID, s)
 }
 
 // ListInterviewOptions returns the interview types, interviewer styles and lengths.

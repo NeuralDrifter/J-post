@@ -3,6 +3,7 @@
 import {main} from '../models';
 import {marketdata} from '../models';
 import {settings} from '../models';
+import {ai} from '../models';
 
 export function ChangeStatus(arg1:string,arg2:string,arg3:string,arg4:string):Promise<main.Job>;
 
@@ -58,7 +59,7 @@ export function InboxCounts():Promise<main.InboxCounts>;
 
 export function ListAIModels(arg1:string,arg2:settings.Settings):Promise<Array<string>>;
 
-export function ListAIProviders():Promise<Array<main.AIProvider>>;
+export function ListAIProviders():Promise<Array<ai.AIProvider>>;
 
 export function ListAllMockInterviews():Promise<Array<main.MockInterviewSummary>>;
 
@@ -140,7 +141,7 @@ export function SearchOccupations(arg1:string):Promise<Array<marketdata.Option>>
 
 export function ShowAttachmentInFolder(arg1:string):Promise<void>;
 
-export function TestAIProvider(arg1:string,arg2:settings.Settings):Promise<main.AIProviderTest>;
+export function TestAIProvider(arg1:string,arg2:settings.Settings):Promise<ai.AIProviderTest>;
 
 export function TestClaudeCode(arg1:string):Promise<string>;
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ import (
 type claudeCodeProvider struct{}
 
 var (
-	claudeCodeTimeout  = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second, rolePlanning: 3 * time.Minute}
+	claudeCodeTimeout  = map[Role]time.Duration{RoleGrading: 5 * time.Minute, RoleTips: 60 * time.Second, RolePlanning: 3 * time.Minute}
 	claudeCodeTempRoot = "" // "" = the OS temp folder; tests point it somewhere they can inspect
 	// claudeCodeMCPExecutable serves the per-run MCP server; "" = this executable.
 	// (Inside `go test` this executable is the test binary, so end-to-end checks
@@ -77,10 +77,10 @@ func findClaudeCode(s settings.Settings) (string, error) {
 
 // claudeCodeArgs are the flags for one isolated headless run. Not --bare: bare
 // mode never reads the OAuth login, so the user's Claude plan wouldn't be used.
-func claudeCodeArgs(t aiTask, mcpConfigPath string, s settings.Settings) []string {
+func claudeCodeArgs(t Task, mcpConfigPath string, s settings.Settings) []string {
 	args := []string{
 		"-p", claudeCodePrompt, // the prompt must come right after -p; later variadic flags would swallow it
-		"--system-prompt", t.instruction,
+		"--system-prompt", t.Instruction,
 		"--setting-sources", "", // none of the user's settings, hooks or CLAUDE.md
 		"--strict-mcp-config", "--mcp-config", mcpConfigPath,
 		"--tools", "", // no built-in tools
@@ -102,7 +102,7 @@ func claudeCodeMCPConfig(taskPath string) map[string]any {
 		exe, _ = os.Executable()
 	}
 	return map[string]any{"mcpServers": map[string]any{
-		"jobtrack": map[string]any{"command": exe, "args": []string{aiTaskMCPFlag, taskPath}},
+		"jobtrack": map[string]any{"command": exe, "args": []string{TaskMCPFlag, taskPath}},
 	}}
 }
 
@@ -113,7 +113,7 @@ type claudeCodeOutput struct {
 	ModelUsage map[string]json.RawMessage `json:"modelUsage"`
 }
 
-func (claudeCodeProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
+func (claudeCodeProvider) run(ctx context.Context, s settings.Settings, t Task) (aiResult, error) {
 	claude, err := findClaudeCode(s)
 	if err != nil {
 		return aiResult{}, err
@@ -124,7 +124,7 @@ func (claudeCodeProvider) run(ctx context.Context, s settings.Settings, t aiTask
 	}
 	defer removeAllRetry(dir)
 
-	task := mcpTaskFile{Instruction: t.instruction, Input: t.input, Schema: t.schema, OutputPath: filepath.Join(dir, "result.json")}
+	task := mcpTaskFile{Instruction: t.Instruction, Input: t.Input, Schema: t.Schema, OutputPath: filepath.Join(dir, "result.json")}
 	taskPath, mcpPath := filepath.Join(dir, "task.json"), filepath.Join(dir, "mcp.json")
 	if err := writeJSONFile(taskPath, task); err != nil {
 		return aiResult{}, err
@@ -133,7 +133,7 @@ func (claudeCodeProvider) run(ctx context.Context, s settings.Settings, t aiTask
 		return aiResult{}, err
 	}
 
-	timeout := claudeCodeTimeout[t.role]
+	timeout := claudeCodeTimeout[t.Role]
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, claude, claudeCodeArgs(t, mcpPath, s)...)
@@ -173,8 +173,8 @@ func claudeCodeModel(out claudeCodeOutput, s settings.Settings) string {
 	return s.ClaudeCodeModel
 }
 
-// claudeCodeVersion runs `claude --version` for the Settings "Test" button.
-func claudeCodeVersion(ctx context.Context, s settings.Settings) (string, error) {
+// ClaudeCodeVersion runs `claude --version` for the Settings "Test" button.
+func ClaudeCodeVersion(ctx context.Context, s settings.Settings) (string, error) {
 	claude, err := findClaudeCode(s)
 	if err != nil {
 		return "", err

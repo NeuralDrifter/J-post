@@ -5,11 +5,11 @@ import { useState } from 'react'
 import { Sparkles, ThumbsUp, Trash2 } from 'lucide-react'
 import { Chip } from '../../components/Chip'
 import { Panel } from '../../components/Panel'
-import type { main } from '../../lib/backend'
+import type { main, ai } from '../../lib/backend'
 import { attachTips, clock, SCORE_DIMENSIONS } from '../../lib/interview'
 
 /** "Gemini Live · gemini-3.8-live" for a scorecard tab. */
-export function cardLabel(card: main.ScorecardResult, providers: main.AIProvider[] | undefined): string {
+export function cardLabel(card: main.ScorecardResult, providers: ai.AIProvider[] | undefined): string {
   const name = providers?.find((p) => p.id === card.provider)?.label ?? card.provider
   return card.model ? `${name} · ${card.model}` : name
 }
@@ -27,7 +27,7 @@ export function ScorecardTabs({
 }: {
   cards: main.ScorecardResult[]
   selected: string
-  providers: main.AIProvider[] | undefined
+  providers: ai.AIProvider[] | undefined
   hasPlan?: boolean
   onSelect: (tab: string) => void
   onDelete: (provider: string) => void

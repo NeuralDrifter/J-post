@@ -1,4 +1,4 @@
-export namespace main {
+export namespace ai {
 	
 	export class AIProvider {
 	    id: string;
@@ -30,6 +30,11 @@ export namespace main {
 	        this.millis = source["millis"];
 	    }
 	}
+
+}
+
+export namespace main {
+	
 	export class Attachment {
 	    id: string;
 	    jobId: string;

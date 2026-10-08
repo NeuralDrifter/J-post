@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
@@ -34,7 +34,7 @@ func TestGeminiSchemaConversion(t *testing.T) {
 		},
 		"required": []string{"a"},
 	}
-	if got := geminiSchema(in); !reflect.DeepEqual(got, want) {
+	if got := GeminiSchema(in); !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v", got)
 	}
 	if in["type"] != "object" {
@@ -44,11 +44,11 @@ func TestGeminiSchemaConversion(t *testing.T) {
 
 func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 	var n testNudge
-	if _, err := runAITask(context.Background(), settings.Settings{}, "nope", testNudgeTask("q", "a"), &n); err == nil {
+	if _, err := RunTask(context.Background(), settings.Settings{}, "nope", testNudgeTask("q", "a"), &n); err == nil {
 		t.Fatal("unknown provider should fail")
 	}
 	gemini.SetTestEndpoints(t, "", "ws://127.0.0.1:1") // a dial here would fail with a connection error
-	_, err := runAITask(context.Background(), settings.Settings{}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), settings.Settings{}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Gemini API key") || strings.Contains(err.Error(), "reach") {
 		t.Fatalf("an unconfigured provider should fail with its setup reason before connecting: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 func TestRunAITaskReturnsModel(t *testing.T) {
 	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
 	var n testNudge
-	model, err := runAITask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
+	model, err := RunTask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "gemini-3.8-live" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -95,7 +95,7 @@ func TestProviderIDsMatchRegistry(t *testing.T) {
 }
 
 func TestPlanningRoleLimits(t *testing.T) {
-	if claudeCodeTimeout[rolePlanning] != 3*time.Minute || anthropicTimeout[rolePlanning] != 2*time.Minute || anthropicMaxTokens[rolePlanning] != 16000 {
-		t.Fatalf("claude code %v, anthropic %v / %d", claudeCodeTimeout[rolePlanning], anthropicTimeout[rolePlanning], anthropicMaxTokens[rolePlanning])
+	if claudeCodeTimeout[RolePlanning] != 3*time.Minute || anthropicTimeout[RolePlanning] != 2*time.Minute || anthropicMaxTokens[RolePlanning] != 16000 {
+		t.Fatalf("claude code %v, anthropic %v / %d", claudeCodeTimeout[RolePlanning], anthropicTimeout[RolePlanning], anthropicMaxTokens[RolePlanning])
 	}
 }

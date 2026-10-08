@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
@@ -26,20 +26,20 @@ func (geminiProvider) unavailable(s settings.Settings) string {
 	return ""
 }
 
-func (geminiProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
+func (geminiProvider) run(ctx context.Context, s settings.Settings, t Task) (aiResult, error) {
 	var raw json.RawMessage
 	err := gemini.LiveStructured(ctx, s.GeminiKey, gemini.JSONPrompt{
 		Model:  s.GeminiLiveModel,
-		System: t.instruction,
-		Parts:  []gemini.Part{{Text: t.input}},
-		Schema: geminiSchema(t.schema),
+		System: t.Instruction,
+		Parts:  []gemini.Part{{Text: t.Input}},
+		Schema: GeminiSchema(t.Schema),
 	}, &raw)
 	return aiResult{raw: raw, model: s.GeminiLiveModel}, err
 }
 
-// geminiSchema converts a standard JSON Schema to Gemini's dialect: uppercase
+// GeminiSchema converts a standard JSON Schema to Gemini's dialect: uppercase
 // types and no additionalProperties. The input is not modified.
-func geminiSchema(schema map[string]any) map[string]any {
+func GeminiSchema(schema map[string]any) map[string]any {
 	out := make(map[string]any, len(schema))
 	for k, v := range schema {
 		switch k {
@@ -52,11 +52,11 @@ func geminiSchema(schema map[string]any) map[string]any {
 		case "properties":
 			props := map[string]any{}
 			for name, p := range v.(map[string]any) {
-				props[name] = geminiSchema(p.(map[string]any))
+				props[name] = GeminiSchema(p.(map[string]any))
 			}
 			v = props
 		case "items":
-			v = geminiSchema(v.(map[string]any))
+			v = GeminiSchema(v.(map[string]any))
 		}
 		out[k] = v
 	}

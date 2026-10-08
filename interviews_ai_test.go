@@ -16,6 +16,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"jobtrack/internal/ai"
+	"jobtrack/internal/ai/aitest"
 	"jobtrack/internal/gemini"
 	"jobtrack/internal/gemini/geminitest"
 	"jobtrack/internal/settings"
@@ -379,11 +381,11 @@ func scorecardJSON() string {
 func TestScoreInterviewUsesGradingProviderAndSavesCard(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
-	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
+	aitest.FakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(anthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
+		w.Write(aitest.AnthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
 	})
-	s := anthropicSettings
+	s := aitest.AnthropicSettings
 	s.GradingProvider = settings.ProviderAnthropic
 	done, err := scoreInterview(context.Background(), r, s, mi.ID)
 	if err != nil || done.Status != MockDone || len(done.Scorecards) != 1 {
@@ -398,14 +400,14 @@ func TestRegradeAddsSecondCard(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
 	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, scorecardArgs(), nil))
-	s := anthropicSettings
+	s := aitest.AnthropicSettings
 	s.GeminiKey, s.GeminiLiveModel = "k", "gemini-3.8-live"
 	if _, err := scoreInterview(context.Background(), r, s, mi.ID); err != nil {
 		t.Fatal(err)
 	}
-	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
+	aitest.FakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(anthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
+		w.Write(aitest.AnthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
 	})
 	got, err := regradeInterview(context.Background(), r, s, mi.ID, settings.ProviderAnthropic)
 	if err != nil || len(got.Scorecards) != 2 || got.Scorecards[0].Provider != settings.ProviderAnthropic || got.Status != MockDone {
@@ -417,11 +419,11 @@ func TestRegradeFailureKeepsStatusAndCards(t *testing.T) {
 	r := newTestRepo(t)
 	mi := scoredInterviewSetup(t, r)
 	r.markDone(mi.ID, settings.ProviderGeminiLive, "gemini-3.8-live", card("first", 3))
-	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
+	aitest.FakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"type":"error","error":{"type":"api_error","message":"boom"}}`))
 	})
-	got, err := regradeInterview(context.Background(), r, anthropicSettings, mi.ID, settings.ProviderAnthropic)
+	got, err := regradeInterview(context.Background(), r, aitest.AnthropicSettings, mi.ID, settings.ProviderAnthropic)
 	if err == nil {
 		t.Fatal("the re-grade should report the failure")
 	}
@@ -435,7 +437,7 @@ func TestRegradeWithUnavailableProvider(t *testing.T) {
 	mi := scoredInterviewSetup(t, r)
 	r.markDone(mi.ID, settings.ProviderGeminiLive, "gemini-3.8-live", card("first", 3))
 	calls := 0
-	fakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) { calls++ })
+	aitest.FakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) { calls++ })
 	got, err := regradeInterview(context.Background(), r, settings.Settings{}, mi.ID, settings.ProviderAnthropic)
 	if err == nil || !strings.Contains(err.Error(), "Anthropic API key") || calls != 0 {
 		t.Fatalf("err = %v, calls = %d", err, calls)
@@ -471,7 +473,7 @@ func TestLiveStructuredReturnsToolCallArgs(t *testing.T) {
 		geminitest.ReplyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, &prompt)(c, setup)
 	})
 	var n Nudge
-	err := gemini.LiveStructured(context.Background(), "k3y", gemini.JSONPrompt{Model: "gemini-3.8-live", System: "coach", Parts: []gemini.Part{{Text: "the answer"}}, Schema: geminiSchema(nudgeSchema)}, &n)
+	err := gemini.LiveStructured(context.Background(), "k3y", gemini.JSONPrompt{Model: "gemini-3.8-live", System: "coach", Parts: []gemini.Part{{Text: "the answer"}}, Schema: ai.GeminiSchema(nudgeSchema)}, &n)
 	if err != nil || n.Nudge != "Lead with the result" || n.Kind != "tip" {
 		t.Fatalf("n = %+v, err = %v", n, err)
 	}
@@ -488,7 +490,7 @@ func TestLiveStructuredWithoutToolCallFails(t *testing.T) {
 		c.ReadMessage()
 	})
 	var n Nudge
-	if err := gemini.LiveStructured(context.Background(), "k", gemini.JSONPrompt{Model: "m", Parts: []gemini.Part{{Text: "x"}}, Schema: geminiSchema(nudgeSchema)}, &n); err == nil {
+	if err := gemini.LiveStructured(context.Background(), "k", gemini.JSONPrompt{Model: "m", Parts: []gemini.Part{{Text: "x"}}, Schema: ai.GeminiSchema(nudgeSchema)}, &n); err == nil {
 		t.Fatal("a turn with no tool call should fail")
 	}
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package ai
 
 import (
 	"context"
@@ -28,10 +28,10 @@ type anthropicProvider struct{}
 var (
 	anthropicBaseURL    = "" // "" = the SDK default; tests point it at a fake server
 	anthropicMaxRetries = 1  // one retry for transient errors; a long rate-limit wait is reported instead
-	anthropicMaxTokens  = map[aiRole]int64{roleGrading: 16000, roleTips: 1024, rolePlanning: 16000}
+	anthropicMaxTokens  = map[Role]int64{RoleGrading: 16000, RoleTips: 1024, RolePlanning: 16000}
 	// anthropicTimeout bounds a whole run (retries included); the SDK's own
 	// per-attempt limit for large max_tokens is 10 minutes.
-	anthropicTimeout = map[aiRole]time.Duration{roleGrading: 5 * time.Minute, roleTips: 60 * time.Second, rolePlanning: 2 * time.Minute}
+	anthropicTimeout = map[Role]time.Duration{RoleGrading: 5 * time.Minute, RoleTips: 60 * time.Second, RolePlanning: 2 * time.Minute}
 )
 
 func (anthropicProvider) id() string    { return settings.ProviderAnthropic }
@@ -44,27 +44,27 @@ func (anthropicProvider) unavailable(s settings.Settings) string {
 	return ""
 }
 
-func (anthropicProvider) run(ctx context.Context, s settings.Settings, t aiTask) (aiResult, error) {
+func (anthropicProvider) run(ctx context.Context, s settings.Settings, t Task) (aiResult, error) {
 	opts := []option.RequestOption{option.WithAPIKey(s.AnthropicKey), option.WithMaxRetries(anthropicMaxRetries)}
 	if anthropicBaseURL != "" {
 		opts = append(opts, option.WithBaseURL(anthropicBaseURL))
 	}
 	client := anthropic.NewClient(opts...)
-	timeout := anthropicTimeout[t.role]
+	timeout := anthropicTimeout[t.Role]
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	effort := s.AnthropicGradingEffort
-	if t.role == roleTips {
+	if t.Role == RoleTips {
 		effort = s.AnthropicTipsEffort
 	}
 	msg, err := client.Beta.Messages.New(ctx, anthropic.BetaMessageNewParams{
 		Model:     anthropic.Model(s.AnthropicModel),
-		MaxTokens: anthropicMaxTokens[t.role],
-		System:    []anthropic.BetaTextBlockParam{{Text: t.instruction}},
-		Messages:  []anthropic.BetaMessageParam{anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock(t.input))},
+		MaxTokens: anthropicMaxTokens[t.Role],
+		System:    []anthropic.BetaTextBlockParam{{Text: t.Instruction}},
+		Messages:  []anthropic.BetaMessageParam{anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock(t.Input))},
 		OutputConfig: anthropic.BetaOutputConfigParam{
 			Effort: anthropic.BetaOutputConfigEffort(effort),
-			Format: anthropic.BetaJSONOutputFormatParam{Schema: t.schema},
+			Format: anthropic.BetaJSONOutputFormatParam{Schema: t.Schema},
 		},
 		// If the model declines, Anthropic re-runs the request on a fallback model it picks.
 		Fallbacks: anthropic.BetaFallbacksParamUnion{OfDefault: constant.ValueOf[constant.Default]()},

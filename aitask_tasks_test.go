@@ -6,6 +6,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"jobtrack/internal/ai"
 )
 
 // checkStandardSchema walks a JSON Schema and reports anything a provider
@@ -34,8 +36,8 @@ func checkStandardSchema(t *testing.T, path string, s map[string]any) {
 }
 
 func TestTaskSchemasAreStandardJSONSchema(t *testing.T) {
-	checkStandardSchema(t, "scorecard", scorecardTask(Job{}, MockInterview{}, "").schema)
-	checkStandardSchema(t, "nudge", nudgeTask("q", "a").schema)
+	checkStandardSchema(t, "scorecard", scorecardTask(Job{}, MockInterview{}, "").Schema)
+	checkStandardSchema(t, "nudge", nudgeTask("q", "a").Schema)
 	checkStandardSchema(t, "interviewPlan", planSchema)
 }
 
@@ -51,7 +53,7 @@ func TestStrictCompatible(t *testing.T) {
 		"scorecard":     {scorecardSchema, false},
 	}
 	for name, c := range cases {
-		if got := strictCompatible(c.schema); got != c.want {
+		if got := ai.StrictCompatible(c.schema); got != c.want {
 			t.Errorf("%s: strictCompatible = %v, want %v", name, got, c.want)
 		}
 	}
