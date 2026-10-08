@@ -7,7 +7,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-unformatted=$(gofmt -l $(git ls-files --cached --others --exclude-standard '*.go'))
+gofiles=$(git ls-files --cached --others --exclude-standard '*.go' | while read -r f; do [ -f "$f" ] && echo "$f"; done)
+unformatted=$(gofmt -l $gofiles)
 if [ -n "$unformatted" ]; then
 	echo "gofmt needed:"; echo "$unformatted"; exit 1
 fi
