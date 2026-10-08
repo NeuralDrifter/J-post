@@ -52,6 +52,7 @@ export function scoringStatus(done: number, total: number): string {
   return total > 0 ? `Scoring matches… ${done} of ${total}` : 'Scoring matches…'
 }
 
+/** Outdated scores that "Re-score outdated" would redo (it skips Not interested postings). */
 export function outdatedCount(postings: app.Posting[] | undefined): number {
-  return postings?.filter((p) => p.match?.outdated).length ?? 0
+  return postings?.filter((p) => p.match?.outdated && p.state !== 'dismissed').length ?? 0
 }

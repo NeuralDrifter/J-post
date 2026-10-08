@@ -75,4 +75,8 @@ describe('outdatedCount', () => {
     expect(outdatedCount([posting('a', 70, true), posting('b', 70), posting('c')])).toBe(1)
     expect(outdatedCount(undefined)).toBe(0)
   })
+  it('ignores Not interested postings, which re-scoring skips', () => {
+    const dismissed = { ...posting('d', 70, true), state: 'dismissed' } as app.Posting
+    expect(outdatedCount([dismissed, posting('a', 70, true)])).toBe(1)
+  })
 })
