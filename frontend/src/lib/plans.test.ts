@@ -28,10 +28,11 @@ describe('attemptLabel', () => {
 })
 
 describe('canRetry', () => {
-  it('needs a readable plan', () => {
-    expect(canRetry({ planId: 'p1', planError: '' })).toBe(true)
-    expect(canRetry({ planId: '', planError: '' })).toBe(false)
-    expect(canRetry({ planId: 'p1', planError: 'unreadable' })).toBe(false)
+  const record = {} as main.InterviewPlanRecord
+  it('needs a plan that actually loaded', () => {
+    expect(canRetry({ plan: record, planError: '' })).toBe(true)
+    expect(canRetry({ plan: undefined, planError: '' })).toBe(false)
+    expect(canRetry({ plan: undefined, planError: 'unreadable' })).toBe(false)
   })
 })
 

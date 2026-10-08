@@ -7,9 +7,9 @@ export function attemptLabel(attempt: number, total: number): string {
   return attempt > 0 && total > 1 ? `Attempt ${attempt} of ${total}` : ''
 }
 
-/** Only an interview with a readable plan can be retried with the same questions. */
-export function canRetry(mi: { planId: string; planError: string }): boolean {
-  return mi.planId !== '' && mi.planError === ''
+/** Only an interview whose plan actually loaded can be retried with the same questions. */
+export function canRetry(mi: { plan?: unknown; planError: string }): boolean {
+  return !!mi.plan && mi.planError === ''
 }
 
 export type AttemptAnswer = { attemptId: string; answerSummary: string; improve: string }
