@@ -151,7 +151,7 @@ func (o openAIProvider) run(ctx context.Context, s Settings, t aiTask) (aiResult
 	for attempt := 1; ; attempt++ {
 		resp, err := chat.New(ctx, params)
 		if err != nil {
-			return aiResult{}, err
+			return aiResult{}, openAIError(err, o.p.label, c)
 		}
 		model = resp.Model
 		logOpenAIUsage(o.p.label, resp)
