@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"jobtrack/internal/marketdata"
+	"jobtrack/internal/taxes"
 )
 
 func mustEval(t *testing.T, p CompPackage, current *CompPackage) PackageResult {
@@ -36,7 +37,7 @@ func TestEvaluateStandardVesting(t *testing.T) {
 	if r.Year1Total != 219500 || r.FourYearTotal != 878000 || r.AvgPerYear != 219500 {
 		t.Fatalf("totals = %d %d %d", r.Year1Total, r.FourYearTotal, r.AvgPerYear)
 	}
-	tax, _ := ComputeTax(TaxInput{Wages: 215000, PreTax401k: 9000, Filing: "single", State: "CO"})
+	tax, _ := taxes.ComputeTax(taxes.TaxInput{Wages: 215000, PreTax401k: 9000, Filing: "single", State: "CO"})
 	if y.Taxable != 215000 || r.Tax1.Total != tax.Total || y.TakeHome != 215000-9000-tax.Total || r.Year1TakeHome != y.TakeHome {
 		t.Fatalf("take-home = %+v tax %+v", y, r.Tax1)
 	}
@@ -97,7 +98,7 @@ func TestEvaluateBenefitsEdgeCases(t *testing.T) {
 	// 10% of 150k is over the 2026 limit? No (15k < 24.5k); 20% of 150k would be capped.
 	p.K401ContribPct = 20
 	r = mustEval(t, p, nil)
-	tax, _ := ComputeTax(TaxInput{Wages: 215000, PreTax401k: 24500, Filing: "single", State: "CO"})
+	tax, _ := taxes.ComputeTax(taxes.TaxInput{Wages: 215000, PreTax401k: 24500, Filing: "single", State: "CO"})
 	if r.Tax1.Total != tax.Total {
 		t.Fatalf("401k contribution should be capped at the IRS limit: %+v vs %+v", r.Tax1, tax)
 	}

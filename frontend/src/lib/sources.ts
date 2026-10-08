@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { MarketSources, type main, type marketdata } from './backend'
+import { MarketSources, type main, type marketdata, type taxes } from './backend'
 import { useStaticData } from './staticData'
 
 // Every figure derived from an outside dataset carries a numbered ✦ mark.
@@ -28,7 +28,7 @@ export function colDetail(r: main.PackageResult, sources?: main.DataSources): st
   return r.colLevel && r.colLevel !== 'metro' && r.colLevel !== 'national' ? `${base} — ${r.colLevel} index used` : base
 }
 
-export function taxDetail(t: main.TaxResult): string {
+export function taxDetail(t: taxes.TaxResult): string {
   const state = t.stateName ? ` + ${t.stateName} (${t.stateSource})` : ', no state tax'
   return `Tax year ${t.year || 2026} · federal (IRS)${state} · estimate`
 }

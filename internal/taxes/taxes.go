@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package taxes
 
 import (
 	_ "embed"
@@ -17,7 +17,7 @@ import (
 // Tax Foundation state tables). It covers wage income only: no credits beyond the
 // state exemption credits, no AMT, itemizing, or multi-state allocation.
 //
-//go:embed taxdata/us_2026.json
+//go:embed us_2026.json
 var taxDataJSON []byte
 
 // Bracket is one marginal rate, starting at From dollars of taxable income.
@@ -74,7 +74,7 @@ const (
 	FilingHead    = "head"    // head of household
 )
 
-func validFilingStatus(s string) bool {
+func ValidFilingStatus(s string) bool {
 	return s == FilingSingle || s == FilingMarried || s == FilingHead
 }
 
@@ -109,8 +109,8 @@ type TaxResult struct {
 	Year           int     `json:"year"`
 }
 
-// taxSource credits the tax tables behind every take-home figure.
-var taxSource = marketdata.SourceInfo{
+// Source credits the tax tables behind every take-home figure.
+var Source = marketdata.SourceInfo{
 	Name:    "Income tax tables, tax year 2026",
 	Release: "2026",
 	URL:     "https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/",
@@ -123,7 +123,7 @@ var (
 	taxErr  error
 )
 
-func loadTaxData() (*TaxData, error) {
+func Load() (*TaxData, error) {
 	taxOnce.Do(func() {
 		var td TaxData
 		if err := json.Unmarshal(taxDataJSON, &td); err != nil {
@@ -151,10 +151,10 @@ func bracketTax(income float64, brackets []Bracket) float64 {
 	return tax
 }
 
-func roundDollars(v float64) int64 { return int64(math.Round(v)) }
+func RoundDollars(v float64) int64 { return int64(math.Round(v)) }
 
 func ComputeTax(in TaxInput) (TaxResult, error) {
-	td, err := loadTaxData()
+	td, err := Load()
 	if err != nil {
 		return TaxResult{}, err
 	}
@@ -177,23 +177,23 @@ func ComputeTax(in TaxInput) (TaxResult, error) {
 	afterRetirement := math.Max(0, wages-float64(in.PreTax401k))
 
 	fedTaxable := math.Max(0, afterRetirement-float64(td.Federal.StandardDeduction[in.Filing]))
-	res.Federal = roundDollars(bracketTax(fedTaxable, fedBrackets))
+	res.Federal = RoundDollars(bracketTax(fedTaxable, fedBrackets))
 
 	ss := td.Federal.SocialSecurity
-	res.SocialSecurity = roundDollars(math.Min(wages, float64(ss.WageBase)) * ss.Rate)
+	res.SocialSecurity = RoundDollars(math.Min(wages, float64(ss.WageBase)) * ss.Rate)
 	mc := td.Federal.Medicare
 	medicare := wages * mc.Rate
 	if over := wages - float64(mc.Threshold[in.Filing]); over > 0 {
 		medicare += over * mc.AdditionalRate
 	}
-	res.Medicare = roundDollars(medicare)
+	res.Medicare = RoundDollars(medicare)
 
 	if st.Type != "none" {
 		status := stateSchedule(in.Filing)
 		taxable := math.Max(0, afterRetirement-float64(st.StandardDeduction[status])-float64(st.Exemption[status]))
-		res.State = roundDollars(math.Max(0, bracketTax(taxable, st.Brackets[status])-float64(st.Credit[status])))
+		res.State = RoundDollars(math.Max(0, bracketTax(taxable, st.Brackets[status])-float64(st.Credit[status])))
 	}
-	res.Local = roundDollars(afterRetirement * in.LocalPct / 100)
+	res.Local = RoundDollars(afterRetirement * in.LocalPct / 100)
 
 	res.Total = res.Federal + res.SocialSecurity + res.Medicare + res.State + res.Local
 	res.EffectiveRate = float64(res.Total) / wages

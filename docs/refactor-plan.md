@@ -72,7 +72,7 @@ Each line is one commit, green before the next.
 - [x] prep: `httpErrorMessage` and its test move next to the HTTP client
 - [x] extract-leaf-module: HTTP client -> internal/httpapi (fakeServer test helper copied: 4 lines)
 - [x] extract-leaf-module: market data -> internal/marketdata (+ data file, build script path)
-- [ ] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
+- [x] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
 - [ ] prep: provider IDs and answer modes move to settings.go (break settings <-> ai)
 - [ ] extract-data-types: settings and window state store -> internal/settings
 - [ ] extract-leaf-module: Gemini API, Live, voices -> internal/gemini
@@ -106,3 +106,5 @@ Each line is one commit, green before the next.
   interviews, postings, comp) — Repo methods span ~15 files — refactor-legacy
 - [ ] `textproc.InnerSpaceRun` is an exported regexp only because profile.go
   uses it; give profile a function instead — clean-code
+- [ ] `taxes.RoundDollars` is exported only because compcalc uses it; it is
+  general rounding, not tax logic — clean-code

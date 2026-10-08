@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package taxes
 
 import "testing"
 
@@ -125,7 +125,7 @@ func TestAllStatesPresentAndWellFormed(t *testing.T) {
 
 func mustTaxData(t *testing.T) *TaxData {
 	t.Helper()
-	td, err := loadTaxData()
+	td, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,11 +145,11 @@ func TestHeadOfHouseholdUsesSingleStateSchedule(t *testing.T) {
 
 func TestValidFilingStatus(t *testing.T) {
 	for _, s := range []string{FilingSingle, FilingMarried, FilingHead} {
-		if !validFilingStatus(s) {
+		if !ValidFilingStatus(s) {
 			t.Errorf("%q rejected", s)
 		}
 	}
-	if validFilingStatus("widowed") || validFilingStatus("") {
+	if ValidFilingStatus("widowed") || ValidFilingStatus("") {
 		t.Error("unknown status accepted")
 	}
 }

@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"jobtrack/internal/marketdata"
+	"jobtrack/internal/taxes"
 )
 
 const (
@@ -100,7 +101,7 @@ func applySettingsDefaults(s *Settings) {
 		s.FollowUpDays = defaultFollowUpDays
 	}
 	if s.FilingStatus == "" {
-		s.FilingStatus = FilingSingle
+		s.FilingStatus = taxes.FilingSingle
 	}
 	if s.HomeAreaCode == "" {
 		s.HomeAreaCode = marketdata.NationalArea
@@ -158,7 +159,7 @@ func (s *SettingsStore) Load() (Settings, error) {
 // Save writes atomically; 0600 because the file holds API keys.
 func (s *SettingsStore) Save(settings Settings) error {
 	applySettingsDefaults(&settings)
-	if !validFilingStatus(settings.FilingStatus) {
+	if !taxes.ValidFilingStatus(settings.FilingStatus) {
 		return errors.New("filing status must be single, married or head of household")
 	}
 	if settings.USAJobsKey != "" && !strings.Contains(settings.USAJobsEmail, "@") {

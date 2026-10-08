@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"jobtrack/internal/marketdata"
+	"jobtrack/internal/taxes"
 )
 
 // YearBreakdown is one year of a package. Total includes equity and benefits;
@@ -53,7 +54,7 @@ type PackageResult struct {
 	FourYearTotal    int64                    `json:"fourYearTotal"`
 	AvgPerYear       int64                    `json:"avgPerYear"`
 	Year1TakeHome    int64                    `json:"year1TakeHome"`
-	Tax1             TaxResult                `json:"tax1"`
+	Tax1             taxes.TaxResult          `json:"tax1"`
 	DeltaVsCurrent   *Deltas                  `json:"deltaVsCurrent,omitempty"`
 	MarketBaseline   *MarketBaseline          `json:"marketBaseline,omitempty"`
 	PTOValue         int64                    `json:"ptoValue"`
@@ -106,7 +107,7 @@ func Evaluate(p CompPackage, s Settings, md *marketdata.MarketData, current *Com
 	res.Year1Total = years[0].Total
 	res.AvgPerYear = res.FourYearTotal / compYears
 	res.Year1TakeHome = years[0].TakeHome
-	res.PTOValue = roundDollars(float64(p.BaseSalary) / workDaysPerYear * float64(p.PTODays))
+	res.PTOValue = taxes.RoundDollars(float64(p.BaseSalary) / workDaysPerYear * float64(p.PTODays))
 
 	if md != nil {
 		addMarketFigures(&res, p, s.HomeAreaCode, md)
@@ -121,27 +122,27 @@ func Evaluate(p CompPackage, s Settings, md *marketdata.MarketData, current *Com
 }
 
 // yearBreakdowns computes each year's pay and take-home; it also returns year 1's tax detail.
-func yearBreakdowns(p CompPackage, filing string) ([compYears]YearBreakdown, TaxResult, error) {
+func yearBreakdowns(p CompPackage, filing string) ([compYears]YearBreakdown, taxes.TaxResult, error) {
 	var years [compYears]YearBreakdown
-	var tax1 TaxResult
+	var tax1 taxes.TaxResult
 	vest, err := vestingPercents(p)
 	if err != nil {
 		return years, tax1, err
 	}
-	td, err := loadTaxData()
+	td, err := taxes.Load()
 	if err != nil {
 		return years, tax1, err
 	}
 	grant := equityValue(p, 1)
 	for y := range compYears {
 		base := float64(p.BaseSalary) * math.Pow(1+pct(p.AnnualRaisePct), float64(y))
-		yb := YearBreakdown{Year: y + 1, Base: roundDollars(base), Bonus: roundDollars(base * pct(p.TargetBonusPct))}
+		yb := YearBreakdown{Year: y + 1, Base: taxes.RoundDollars(base), Bonus: taxes.RoundDollars(base * pct(p.TargetBonusPct))}
 		if y == 0 {
 			yb.Signing = p.SigningBonus
 		}
-		yb.Equity = roundDollars(grant * pct(vest[y]))
+		yb.Equity = taxes.RoundDollars(grant * pct(vest[y]))
 		match := base * math.Min(pct(p.K401ContribPct), pct(p.K401MatchCapPct)) * pct(p.K401MatchPct)
-		yb.Benefits = roundDollars(match) + p.StipendsAnnual + p.OtherAnnual - p.HealthPremiumAnnual
+		yb.Benefits = taxes.RoundDollars(match) + p.StipendsAnnual + p.OtherAnnual - p.HealthPremiumAnnual
 		yb.Total = yb.Base + yb.Bonus + yb.Signing + yb.Equity + yb.Benefits
 
 		// RSUs are taxed as wages when they vest; options are assumed unexercised.
@@ -149,8 +150,8 @@ func yearBreakdowns(p CompPackage, filing string) ([compYears]YearBreakdown, Tax
 		if p.EquityType == EquityRSU {
 			yb.Taxable += yb.Equity
 		}
-		contrib := min(roundDollars(base*pct(p.K401ContribPct)), td.Federal.K401Limit)
-		tax, err := ComputeTax(TaxInput{Wages: yb.Taxable, PreTax401k: contrib, Filing: filing, State: p.TaxState, LocalPct: p.LocalTaxPct})
+		contrib := min(taxes.RoundDollars(base*pct(p.K401ContribPct)), td.Federal.K401Limit)
+		tax, err := taxes.ComputeTax(taxes.TaxInput{Wages: yb.Taxable, PreTax401k: contrib, Filing: filing, State: p.TaxState, LocalPct: p.LocalTaxPct})
 		if err != nil {
 			return years, tax1, err
 		}
@@ -170,7 +171,7 @@ func equityScenarios(p CompPackage) []Scenario {
 		return out
 	}
 	for _, m := range scenarioMultipliers {
-		out = append(out, Scenario{Multiplier: m, Value: roundDollars(equityValue(p, m))})
+		out = append(out, Scenario{Multiplier: m, Value: taxes.RoundDollars(equityValue(p, m))})
 	}
 	return out
 }
@@ -186,7 +187,7 @@ func addMarketFigures(res *PackageResult, p CompPackage, homeArea string, md *ma
 	res.COLIndex, res.COLLevel = md.CostOfLiving(area)
 	res.HomeCOLIndex, _ = md.CostOfLiving(homeArea)
 	res.COLAreaTitle, res.HomeAreaTitle = md.Areas[area].Title, md.Areas[homeArea].Title
-	res.Year1COLAdjusted = roundDollars(float64(res.Year1Total) * res.HomeCOLIndex / res.COLIndex)
+	res.Year1COLAdjusted = taxes.RoundDollars(float64(res.Year1Total) * res.HomeCOLIndex / res.COLIndex)
 }
 
 // marketBaseline compares base pay with the typical (median) pay for the user's

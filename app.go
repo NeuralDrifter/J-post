@@ -17,6 +17,7 @@ import (
 
 	"jobtrack/internal/marketdata"
 	"jobtrack/internal/osproc"
+	"jobtrack/internal/taxes"
 )
 
 // App is the thin layer bound to the frontend. Every exported method is
@@ -464,7 +465,7 @@ func (a *App) DescribeOccupation(code string) marketdata.Option {
 }
 
 func (a *App) MarketSources() DataSources {
-	ds := DataSources{Tax: taxSource}
+	ds := DataSources{Tax: taxes.Source}
 	if md := a.market; md != nil {
 		ds.BLS, ds.BEA, ds.Built = md.Sources["bls"], md.Sources["bea"], md.Built
 	}

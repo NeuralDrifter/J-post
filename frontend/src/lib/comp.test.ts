@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import type { main, marketdata } from './backend'
+import type { main, marketdata, taxes } from './backend'
 import { blankPackage, formatDelta, formatMoneyFull, ordinal, percentileLabel } from './comp'
 import { baselineDetail, colDetail, marketDetail, taxDetail } from './sources'
 
@@ -57,9 +57,9 @@ describe('source details', () => {
   })
 
   it('describes the tax basis', () => {
-    const t = { year: 2026, stateName: 'Colorado', stateSource: 'Tax Foundation 2026' } as main.TaxResult
+    const t = { year: 2026, stateName: 'Colorado', stateSource: 'Tax Foundation 2026' } as taxes.TaxResult
     expect(taxDetail(t)).toBe('Tax year 2026 · federal (IRS) + Colorado (Tax Foundation 2026) · estimate')
-    expect(taxDetail({ year: 2026, stateName: '', stateSource: '' } as main.TaxResult)).toBe('Tax year 2026 · federal (IRS), no state tax · estimate')
+    expect(taxDetail({ year: 2026, stateName: '', stateSource: '' } as taxes.TaxResult)).toBe('Tax year 2026 · federal (IRS), no state tax · estimate')
   })
 })
 

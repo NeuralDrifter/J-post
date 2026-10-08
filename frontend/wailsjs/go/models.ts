@@ -228,36 +228,6 @@ export namespace main {
 	        this.year1TakeHome = source["year1TakeHome"];
 	    }
 	}
-	export class TaxResult {
-	    federal: number;
-	    socialSecurity: number;
-	    medicare: number;
-	    state: number;
-	    local: number;
-	    total: number;
-	    effectiveRate: number;
-	    stateName: string;
-	    stateSource: string;
-	    year: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new TaxResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.federal = source["federal"];
-	        this.socialSecurity = source["socialSecurity"];
-	        this.medicare = source["medicare"];
-	        this.state = source["state"];
-	        this.local = source["local"];
-	        this.total = source["total"];
-	        this.effectiveRate = source["effectiveRate"];
-	        this.stateName = source["stateName"];
-	        this.stateSource = source["stateSource"];
-	        this.year = source["year"];
-	    }
-	}
 	export class YearBreakdown {
 	    year: number;
 	    base: number;
@@ -292,7 +262,7 @@ export namespace main {
 	    fourYearTotal: number;
 	    avgPerYear: number;
 	    year1TakeHome: number;
-	    tax1: TaxResult;
+	    tax1: taxes.TaxResult;
 	    deltaVsCurrent?: Deltas;
 	    marketBaseline?: MarketBaseline;
 	    ptoValue: number;
@@ -317,7 +287,7 @@ export namespace main {
 	        this.fourYearTotal = source["fourYearTotal"];
 	        this.avgPerYear = source["avgPerYear"];
 	        this.year1TakeHome = source["year1TakeHome"];
-	        this.tax1 = this.convertValues(source["tax1"], TaxResult);
+	        this.tax1 = this.convertValues(source["tax1"], taxes.TaxResult);
 	        this.deltaVsCurrent = this.convertValues(source["deltaVsCurrent"], Deltas);
 	        this.marketBaseline = this.convertValues(source["marketBaseline"], MarketBaseline);
 	        this.ptoValue = source["ptoValue"];
@@ -1537,7 +1507,6 @@ export namespace main {
 	    }
 	}
 	
-	
 	export class VoiceOption {
 	    name: string;
 	    style: string;
@@ -1621,6 +1590,41 @@ export namespace marketdata {
 	        this.release = source["release"];
 	        this.url = source["url"];
 	        this.note = source["note"];
+	    }
+	}
+
+}
+
+export namespace taxes {
+	
+	export class TaxResult {
+	    federal: number;
+	    socialSecurity: number;
+	    medicare: number;
+	    state: number;
+	    local: number;
+	    total: number;
+	    effectiveRate: number;
+	    stateName: string;
+	    stateSource: string;
+	    year: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TaxResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.federal = source["federal"];
+	        this.socialSecurity = source["socialSecurity"];
+	        this.medicare = source["medicare"];
+	        this.state = source["state"];
+	        this.local = source["local"];
+	        this.total = source["total"];
+	        this.effectiveRate = source["effectiveRate"];
+	        this.stateName = source["stateName"];
+	        this.stateSource = source["stateSource"];
+	        this.year = source["year"];
 	    }
 	}
 
