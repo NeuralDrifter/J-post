@@ -1505,6 +1505,16 @@ export namespace main {
 	    anthropicTipsEffort: string;
 	    claudeCodePath: string;
 	    claudeCodeModel: string;
+	    openaiKey: string;
+	    openaiModel: string;
+	    deepseekKey: string;
+	    deepseekModel: string;
+	    ollamaURL: string;
+	    ollamaModel: string;
+	    customAIBaseURL: string;
+	    customAIKey: string;
+	    customAIModel: string;
+	    customAIMode: string;
 	    discoverCacheHours: number;
 	
 	    static createFrom(source: any = {}) {
@@ -1534,6 +1544,16 @@ export namespace main {
 	        this.anthropicTipsEffort = source["anthropicTipsEffort"];
 	        this.claudeCodePath = source["claudeCodePath"];
 	        this.claudeCodeModel = source["claudeCodeModel"];
+	        this.openaiKey = source["openaiKey"];
+	        this.openaiModel = source["openaiModel"];
+	        this.deepseekKey = source["deepseekKey"];
+	        this.deepseekModel = source["deepseekModel"];
+	        this.ollamaURL = source["ollamaURL"];
+	        this.ollamaModel = source["ollamaModel"];
+	        this.customAIBaseURL = source["customAIBaseURL"];
+	        this.customAIKey = source["customAIKey"];
+	        this.customAIModel = source["customAIModel"];
+	        this.customAIMode = source["customAIMode"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
 	    }
 	}

@@ -18,7 +18,9 @@ func TestSettingsDefaults(t *testing.T) {
 func TestSettingsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := NewSettingsStore(dir)
-	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: providerGeminiLive, TipsProvider: providerGeminiLive, PlanProvider: providerAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet"}
+	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: providerGeminiLive, TipsProvider: providerGeminiLive, PlanProvider: providerAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet",
+		OpenAIKey: "ok", OpenAIModel: "om", DeepSeekKey: "dk", DeepSeekModel: "dm", OllamaURL: "http://box:11434/v1", OllamaModel: "lm",
+		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object"}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
 	}
@@ -94,5 +96,39 @@ func TestPlanProviderMustBeKnown(t *testing.T) {
 	err := NewSettingsStore(t.TempDir()).Save(Settings{PlanProvider: "nope"})
 	if err == nil || !strings.Contains(err.Error(), `unknown AI provider "nope"`) {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestSettingsOpenAIDefaults(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"followUpDays": 7}`), 0o600)
+	s, err := NewSettingsStore(dir).Load()
+	if err != nil || s.OllamaURL != "http://localhost:11434/v1" || s.CustomAIMode != "plain" {
+		t.Fatalf("OllamaURL = %q, CustomAIMode = %q, %v", s.OllamaURL, s.CustomAIMode, err)
+	}
+}
+
+func TestSettingsRejectsUnknownCustomAIMode(t *testing.T) {
+	err := NewSettingsStore(t.TempDir()).Save(Settings{CustomAIMode: "xml"})
+	if err == nil || !strings.Contains(err.Error(), "answer mode") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+// Choosing a provider that isn't set up yet is allowed; it shows "setup needed" until it is.
+func TestSettingsAllowsUnconfiguredProvider(t *testing.T) {
+	if err := NewSettingsStore(t.TempDir()).Save(Settings{GradingProvider: "deepseek"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSettingsTrimsOpenAIFields(t *testing.T) {
+	store := NewSettingsStore(t.TempDir())
+	if err := store.Save(Settings{DeepSeekModel: " deepseek-chat ", CustomAIBaseURL: " http://c/v1 "}); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := store.Load()
+	if s.DeepSeekModel != "deepseek-chat" || s.CustomAIBaseURL != "http://c/v1" {
+		t.Fatalf("s = %+v", s)
 	}
 }

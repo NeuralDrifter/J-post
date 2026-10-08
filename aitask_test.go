@@ -100,7 +100,7 @@ func TestListAIProvidersReadiness(t *testing.T) {
 			t.Errorf("%s: label %q, unavailable %q (unconfigured providers need a reason)", p.ID, p.Label, p.Unavailable)
 		}
 	}
-	if got := strings.Join(ids, ","); got != "gemini-live,anthropic,claude-code" {
+	if got := strings.Join(ids, ","); got != "gemini-live,anthropic,claude-code,openai,deepseek,ollama,openai-compatible" {
 		t.Fatalf("ids = %s", got)
 	}
 	if ListAIProviders(Settings{GeminiKey: "k"})[0].Unavailable != "" {
