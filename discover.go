@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-//go:embed scraper.py
+//go:embed scripts/scraper.py
 var scraperScript []byte
 
 var (
