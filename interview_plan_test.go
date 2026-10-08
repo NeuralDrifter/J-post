@@ -462,3 +462,14 @@ func TestScorecardSchemaPlanIndexIsOptionalInteger(t *testing.T) {
 		t.Fatal("Gemini's dialect needs INTEGER")
 	}
 }
+
+func TestPlanTaskNamesTheInterviewer(t *testing.T) {
+	screen, _ := findInterviewKind("phone_screen")
+	task := planTask(planJob, "cv", InterviewSetup{Kind: "phone_screen", Minutes: 10, Persona: "neutral"})
+	if !strings.Contains(task.input, screen.interviewer) {
+		t.Errorf("the planner should know who runs the interview (%q):\n%s", screen.interviewer, task.input)
+	}
+	if strings.Contains(task.instruction, "hiring manager") {
+		t.Error("the instruction should not fix the role; a phone screen is run by a recruiter")
+	}
+}

@@ -62,7 +62,8 @@ var planSchema = func() map[string]any {
 	}
 }()
 
-const planInstruction = "You are an experienced hiring manager preparing your private notes for a realistic interview. " +
+const planInstruction = "You are the interviewer described below, preparing your private notes for a realistic interview. " +
+	"Ask what someone in your role would really ask in this kind of interview, at the depth that role goes to. " +
 	"Write exactly the requested number of core questions, grounded in the job description and the candidate's resume, " +
 	"in the order a real interview of this kind would flow. For each question give: what it tests; a time budget in " +
 	"minutes (the budgets should add up to about the interview length minus 3 minutes for the greeting and wrap-up); " +
@@ -74,8 +75,11 @@ const planInstruction = "You are an experienced hiring manager preparing your pr
 // planTask asks for the question plan of a mock interview. s must already be validated.
 func planTask(job Job, resume string, s InterviewSetup) aiTask {
 	persona, _ := findInterviewPersona(s.Persona)
+	kind, _ := findInterviewKind(s.Kind)
 	var b strings.Builder
 	fmt.Fprintf(&b, "Interview: a %d minutes %s interview for the %s role at %s.\n", s.Minutes, kindBriefName(s.Kind), job.Position, job.Company)
+	fmt.Fprintf(&b, "You are %s.\n", orDefault(kind.interviewer, "the interviewer"))
+
 	fmt.Fprintf(&b, "Interviewer style: %s (%s).\n", s.Persona, persona.briefStyle)
 	fmt.Fprintf(&b, "Write %d core questions.\n", planQuestionCount(s.Minutes))
 	if s.Focus != "" {
