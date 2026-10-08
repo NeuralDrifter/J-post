@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"jobtrack/internal/discover"
 	"jobtrack/internal/settings"
 )
 
@@ -84,17 +85,17 @@ func TestSearchCacheRules(t *testing.T) {
 
 type fakeFetch struct {
 	mu    sync.Mutex
-	calls map[string]fetchOptions
+	calls map[string]discover.FetchOptions
 }
 
-func (f *fakeFetch) fn(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+func (f *fakeFetch) fn(ctx context.Context, source string, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
 	f.mu.Lock()
 	f.calls[source] = opts
 	f.mu.Unlock()
 	if source == "linkedin" {
 		return nil, errors.New("blocked")
 	}
-	return []rawJob{{Title: "Go Dev", Company: "Acme"}, {Title: "Rust Dev", Company: "Brex"}}, nil
+	return []discover.RawJob{{Title: "Go Dev", Company: "Acme"}, {Title: "Rust Dev", Company: "Brex"}}, nil
 }
 
 func TestRunSearchFakeFetcher(t *testing.T) {
@@ -102,7 +103,7 @@ func TestRunSearchFakeFetcher(t *testing.T) {
 	settings := settings.Settings{DiscoverCacheHours: 12}
 	q := SearchQuery{Term: "dev", Sources: []string{"indeed", "linkedin"}, PerSource: map[string]int{"indeed": 30}}
 
-	f := &fakeFetch{calls: map[string]fetchOptions{}}
+	f := &fakeFetch{calls: map[string]discover.FetchOptions{}}
 	run, err := RunSearch(context.Background(), r, q, settings, f.fn)
 	if err != nil {
 		t.Fatal(err)
@@ -110,11 +111,11 @@ func TestRunSearchFakeFetcher(t *testing.T) {
 	if run.Cached || run.Fetched != 2 || run.NewCount != 2 || run.Errors["linkedin"] != "blocked" {
 		t.Fatalf("first run = %+v", run)
 	}
-	if f.calls["indeed"] != (fetchOptions{Results: 30, HoursOld: 0}) || f.calls["linkedin"].Results != 20 {
+	if f.calls["indeed"] != (discover.FetchOptions{Results: 30, HoursOld: 0}) || f.calls["linkedin"].Results != 20 {
 		t.Fatalf("options = %+v", f.calls)
 	}
 
-	f2 := &fakeFetch{calls: map[string]fetchOptions{}}
+	f2 := &fakeFetch{calls: map[string]discover.FetchOptions{}}
 	again, _ := RunSearch(context.Background(), r, q, settings, f2.fn)
 	if !again.Cached || len(f2.calls) != 0 {
 		t.Fatalf("second run within the window should be cached: %+v calls=%v", again, f2.calls)
@@ -144,17 +145,17 @@ func TestUnreadablePerSourceIsReported(t *testing.T) {
 }
 
 func TestRunDiscoverPartialFailure(t *testing.T) {
-	fetch := func(ctx context.Context, source string, q DiscoverQuery, _ fetchOptions) ([]rawJob, error) {
+	fetch := func(ctx context.Context, source string, q discover.DiscoverQuery, _ discover.FetchOptions) ([]discover.RawJob, error) {
 		switch source {
 		case "linkedin":
 			return nil, errors.New("blocked")
 		case "indeed":
-			return []rawJob{{Title: "Dev", Company: "Acme"}, {Title: "", Company: "NoTitle"}}, nil
+			return []discover.RawJob{{Title: "Dev", Company: "Acme"}, {Title: "", Company: "NoTitle"}}, nil
 		}
 		return nil, nil
 	}
-	q := DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin", "indeed", "myspace"}}
-	resp := runDiscover(context.Background(), q, fetch, func(string) fetchOptions { return fetchOptions{} })
+	q := discover.DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin", "indeed", "myspace"}}
+	resp := runDiscover(context.Background(), q, fetch, func(string) discover.FetchOptions { return discover.FetchOptions{} })
 	if len(resp.Results) != 1 || resp.Results[0].Company != "Acme" {
 		t.Fatalf("results = %+v", resp.Results)
 	}

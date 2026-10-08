@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package discover
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ import (
 	"jobtrack/internal/textproc"
 )
 
-//go:embed scripts/scraper.py
+//go:embed scraper.py
 var scraperScript []byte
 
 var (
@@ -36,18 +36,18 @@ var (
 )
 
 const (
-	defaultPerSource = 20
-	maxAdzunaResults = 50 // Adzuna's results_per_page limit
+	DefaultPerSource = 20
+	MaxAdzunaResults = 50 // Adzuna's results_per_page limit
 )
 
-// fetchOptions are the per-source limits passed to a scraper or API.
-type fetchOptions struct {
+// FetchOptions are the per-source limits passed to a scraper or API.
+type FetchOptions struct {
 	Results  int
 	HoursOld int // 0 = no age limit
 }
 
 // maxDaysOld is HoursOld in whole days, rounded up, for APIs that filter by day.
-func (o fetchOptions) maxDaysOld() int { return (o.HoursOld + 23) / 24 }
+func (o FetchOptions) maxDaysOld() int { return (o.HoursOld + 23) / 24 }
 
 type DiscoverQuery struct {
 	Term       string   `json:"term"`
@@ -79,8 +79,8 @@ type DiscoverResponse struct {
 	Errors  map[string]string `json:"errors"`
 }
 
-// rawJob is one posting as reported by a single source, before normalization.
-type rawJob struct {
+// RawJob is one posting as reported by a single source, before normalization.
+type RawJob struct {
 	Title       string   `json:"title"`
 	Company     string   `json:"company"`
 	Location    string   `json:"location"`
@@ -112,9 +112,9 @@ func resolvePython(override, exeDir, cwd string) (string, error) {
 	return "", fmt.Errorf("Python with JobSpy not found (checked %s). Set the Python path in Settings", strings.Join(candidates, ", "))
 }
 
-// findPython locates the Python that has JobSpy: the Settings override, else a
+// FindPython locates the Python that has JobSpy: the Settings override, else a
 // venv next to the app or in the working directory.
-func findPython(override string) (string, error) {
+func FindPython(override string) (string, error) {
 	cwd, _ := os.Getwd() // "" just drops that candidate's directory
 	return resolvePython(strings.TrimSpace(override), exeDir(), cwd)
 }
@@ -131,10 +131,10 @@ var errUnreadableOutput = errors.New("unreadable scraper output")
 
 // parseScraperOutput reads the JSON payload from the last non-empty stdout
 // line, ignoring any log noise printed before it.
-func parseScraperOutput(out []byte) ([]rawJob, error) {
+func parseScraperOutput(out []byte) ([]RawJob, error) {
 	line := textproc.LastLine(string(out), "")
 	var payload struct {
-		Jobs  []rawJob `json:"jobs"`
+		Jobs  []RawJob `json:"jobs"`
 		Error string   `json:"error"`
 	}
 	if line == "" || json.Unmarshal([]byte(line), &payload) != nil {
@@ -144,12 +144,12 @@ func parseScraperOutput(out []byte) ([]rawJob, error) {
 		return nil, errors.New(payload.Error)
 	}
 	if payload.Jobs == nil {
-		payload.Jobs = []rawJob{}
+		payload.Jobs = []RawJob{}
 	}
 	return payload.Jobs, nil
 }
 
-func runScraperScript(ctx context.Context, python string, timeout time.Duration, args ...string) ([]rawJob, error) {
+func runScraperScript(ctx context.Context, python string, timeout time.Duration, args ...string) ([]RawJob, error) {
 	f, err := os.CreateTemp("", "jobtrack_scraper_*.py")
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func runScraperScript(ctx context.Context, python string, timeout time.Duration,
 	return jobs, err
 }
 
-func runJobSpy(ctx context.Context, python, site string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+func RunJobSpy(ctx context.Context, python, site string, q DiscoverQuery, opts FetchOptions) ([]RawJob, error) {
 	args := []string{"--site", site, "--term", q.Term, "--location", q.Location}
 	if q.RemoteOnly {
 		args = append(args, "--remote")
@@ -195,8 +195,8 @@ func runJobSpy(ctx context.Context, python, site string, q DiscoverQuery, opts f
 	return runScraperScript(ctx, python, jobspyTimeout, args...)
 }
 
-// checkScraper verifies that python can import JobSpy (Settings "Test" button).
-func checkScraper(ctx context.Context, python string) error {
+// CheckScraper verifies that python can import JobSpy (Settings "Test" button).
+func CheckScraper(ctx context.Context, python string) error {
 	_, err := runScraperScript(ctx, python, selfTestTimeout, "--self-test")
 	return err
 }
@@ -220,16 +220,16 @@ type adzunaResponse struct {
 	} `json:"results"`
 }
 
-func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+func AdzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, opts FetchOptions) ([]RawJob, error) {
 	what := q.Term
 	if q.RemoteOnly {
 		what += " remote"
 	}
 	results := opts.Results
 	if results <= 0 {
-		results = defaultPerSource
+		results = DefaultPerSource
 	}
-	params := url.Values{"app_id": {appID}, "app_key": {appKey}, "results_per_page": {strconv.Itoa(min(results, maxAdzunaResults))}, "what": {what}}
+	params := url.Values{"app_id": {appID}, "app_key": {appKey}, "results_per_page": {strconv.Itoa(min(results, MaxAdzunaResults))}, "what": {what}}
 	if q.Location != "" {
 		params.Set("where", q.Location)
 	}
@@ -241,9 +241,9 @@ func adzunaSearch(ctx context.Context, appID, appKey string, q DiscoverQuery, op
 	if _, err := httpapi.GetJSON(ctx, req, &parsed); err != nil {
 		return nil, err
 	}
-	out := make([]rawJob, 0, len(parsed.Results))
+	out := make([]RawJob, 0, len(parsed.Results))
 	for _, it := range parsed.Results {
-		out = append(out, rawJob{
+		out = append(out, RawJob{
 			Title: it.Title, Company: it.Company.DisplayName, Location: it.Location.DisplayName,
 			MinAmount: it.SalaryMin, MaxAmount: it.SalaryMax, Interval: "yearly",
 			Description: it.Description, DatePosted: textproc.DatePart(it.Created), URL: it.RedirectURL, Site: "adzuna",
@@ -317,11 +317,11 @@ func normalizeSalary(minAmount, maxAmount *float64, interval string) annualSalar
 	return annualSalary{min: annualize(minAmount), max: annualize(maxAmount), annualized: interval != "yearly", text: text}
 }
 
-func dedupeKey(company, title string) string {
+func DedupeKey(company, title string) string {
 	return textproc.NormalizeForMatch(company) + "|" + textproc.NormalizeForMatch(title)
 }
 
-func fromRaw(r rawJob, source string) DiscoverResult {
+func FromRaw(r RawJob, source string) DiscoverResult {
 	res := DiscoverResult{
 		Title:       strings.TrimSpace(r.Title),
 		Company:     strings.TrimSpace(r.Company),
@@ -336,11 +336,11 @@ func fromRaw(r rawJob, source string) DiscoverResult {
 	}
 	pay := normalizeSalary(r.MinAmount, r.MaxAmount, r.Interval)
 	res.SalaryMin, res.SalaryMax, res.Annualized, res.SalaryText = pay.min, pay.max, pay.annualized, pay.text
-	res.Key = dedupeKey(res.Company, res.Title)
+	res.Key = DedupeKey(res.Company, res.Title)
 	return res
 }
 
-func mergeInto(a, b DiscoverResult) DiscoverResult {
+func MergeInto(a, b DiscoverResult) DiscoverResult {
 	for _, s := range b.Sources {
 		if !slices.Contains(a.Sources, s) {
 			a.Sources = append(a.Sources, s)
@@ -364,14 +364,14 @@ func mergeInto(a, b DiscoverResult) DiscoverResult {
 	return a
 }
 
-// mergeResults de-duplicates by company+title, keeping first-seen order.
-func mergeResults(lists ...[]DiscoverResult) []DiscoverResult {
+// MergeResults de-duplicates by company+title, keeping first-seen order.
+func MergeResults(lists ...[]DiscoverResult) []DiscoverResult {
 	index := map[string]int{}
 	out := []DiscoverResult{}
 	for _, list := range lists {
 		for _, r := range list {
 			if i, ok := index[r.Key]; ok {
-				out[i] = mergeInto(out[i], r)
+				out[i] = MergeInto(out[i], r)
 				continue
 			}
 			index[r.Key] = len(out)

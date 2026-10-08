@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"jobtrack/internal/discover"
 	"jobtrack/internal/settings"
 )
 
@@ -42,26 +43,24 @@ func TestListJobSourcesOrderAndReadiness(t *testing.T) {
 func TestSourceFetcherRefusesUnconfiguredSource(t *testing.T) {
 	f := sourceFetcher{repo: newTestRepo(t)}
 	for _, id := range []string{"adzuna", "usajobs", "themuse"} {
-		if _, err := f.fetch(context.Background(), id, DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil || !strings.Contains(err.Error(), "Settings") {
+		if _, err := f.fetch(context.Background(), id, discover.DiscoverQuery{Term: "x"}, discover.FetchOptions{}); err == nil || !strings.Contains(err.Error(), "Settings") {
 			t.Errorf("%s: err = %v", id, err)
 		}
 	}
-	if _, err := f.fetch(context.Background(), "nope", DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil {
+	if _, err := f.fetch(context.Background(), "nope", discover.DiscoverQuery{Term: "x"}, discover.FetchOptions{}); err == nil {
 		t.Error("unknown source should error")
 	}
 }
 
 func TestSourceFetcherRateLimitsJobicy(t *testing.T) {
 	url := fakeServer(t, func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{"jobs":[]}`)) })
-	old := jobicyBaseURL
-	jobicyBaseURL = url
-	t.Cleanup(func() { jobicyBaseURL = old })
+	discover.SetTestJobicy(t, url)
 
 	f := sourceFetcher{repo: newTestRepo(t)}
-	if _, err := f.fetch(context.Background(), "jobicy", DiscoverQuery{Term: "x"}, fetchOptions{}); err != nil {
+	if _, err := f.fetch(context.Background(), "jobicy", discover.DiscoverQuery{Term: "x"}, discover.FetchOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.fetch(context.Background(), "jobicy", DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil || !strings.Contains(err.Error(), "skipped") {
+	if _, err := f.fetch(context.Background(), "jobicy", discover.DiscoverQuery{Term: "x"}, discover.FetchOptions{}); err == nil || !strings.Contains(err.Error(), "skipped") {
 		t.Fatalf("second call within the hour: err = %v", err)
 	}
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package discover
 
 import (
 	"context"
@@ -49,8 +49,8 @@ func TestUSAJobsSearch(t *testing.T) {
 	usajobsBaseURL = url
 	t.Cleanup(func() { usajobsBaseURL = old })
 
-	jobs, err := usajobsSearch(context.Background(), "k3y", "me@example.test",
-		DiscoverQuery{Term: "analyst", Location: "Denver, CO", RemoteOnly: true}, fetchOptions{Results: 25, HoursOld: 50})
+	jobs, err := USAJobsSearch(context.Background(), "k3y", "me@example.test",
+		DiscoverQuery{Term: "analyst", Location: "Denver, CO", RemoteOnly: true}, FetchOptions{Results: 25, HoursOld: 50})
 	if err != nil || len(jobs) != 1 {
 		t.Fatalf("jobs=%+v err=%v", jobs, err)
 	}
@@ -66,7 +66,7 @@ func TestUSAJobsErrorsDoNotLeak(t *testing.T) {
 	old := usajobsBaseURL
 	usajobsBaseURL = url
 	t.Cleanup(func() { usajobsBaseURL = old })
-	_, err := usajobsSearch(context.Background(), "s3cret", "me@example.test", DiscoverQuery{Term: "x"}, fetchOptions{})
+	_, err := USAJobsSearch(context.Background(), "s3cret", "me@example.test", DiscoverQuery{Term: "x"}, FetchOptions{})
 	if err == nil || !strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "s3cret") || strings.Contains(err.Error(), "me@example") {
 		t.Fatalf("err = %v", err)
 	}
@@ -100,7 +100,7 @@ func TestHimalayasSearchPagesAndMaps(t *testing.T) {
 	himalayasBaseURL = url
 	t.Cleanup(func() { himalayasBaseURL = old })
 
-	jobs, err := himalayasSearch(context.Background(), DiscoverQuery{Term: "golang"}, fetchOptions{Results: 30})
+	jobs, err := HimalayasSearch(context.Background(), DiscoverQuery{Term: "golang"}, FetchOptions{Results: 30})
 	if err != nil || len(jobs) != 23 || pages != 2 {
 		t.Fatalf("jobs=%d pages=%d err=%v", len(jobs), pages, err)
 	}
@@ -116,7 +116,7 @@ func TestHimalayasRateLimited(t *testing.T) {
 	old := himalayasBaseURL
 	himalayasBaseURL = url
 	t.Cleanup(func() { himalayasBaseURL = old })
-	if _, err := himalayasSearch(context.Background(), DiscoverQuery{Term: "x"}, fetchOptions{}); err == nil || !strings.Contains(err.Error(), "rate-limiting") {
+	if _, err := HimalayasSearch(context.Background(), DiscoverQuery{Term: "x"}, FetchOptions{}); err == nil || !strings.Contains(err.Error(), "rate-limiting") {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -136,7 +136,7 @@ func TestJobicySearch(t *testing.T) {
 	jobicyBaseURL = url
 	t.Cleanup(func() { jobicyBaseURL = old })
 
-	jobs, err := jobicySearch(context.Background(), DiscoverQuery{Term: "golang"}, fetchOptions{Results: 40})
+	jobs, err := JobicySearch(context.Background(), DiscoverQuery{Term: "golang"}, FetchOptions{Results: 40})
 	if err != nil || len(jobs) != 2 {
 		t.Fatalf("jobs=%+v err=%v", jobs, err)
 	}
@@ -156,7 +156,7 @@ func TestAdzunaHTMLErrorPage(t *testing.T) {
 	old := adzunaBaseURL
 	adzunaBaseURL = url
 	t.Cleanup(func() { adzunaBaseURL = old })
-	_, err := adzunaSearch(context.Background(), "id", "key", DiscoverQuery{Term: "x"}, fetchOptions{})
+	_, err := AdzunaSearch(context.Background(), "id", "key", DiscoverQuery{Term: "x"}, FetchOptions{})
 	if err == nil || strings.Contains(err.Error(), "<") || !strings.Contains(err.Error(), "temporarily unavailable") {
 		t.Fatalf("err = %v", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"jobtrack/internal/discover"
 	"jobtrack/internal/settings"
 )
 
@@ -31,17 +32,17 @@ type jobSource struct {
 	minInterval time.Duration
 	// unavailable explains what's missing before the board can be searched; "" when ready.
 	unavailable func(settings.Settings) string
-	fetch       func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error)
+	fetch       func(ctx context.Context, f sourceFetcher, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error)
 }
 
 var jobSources = []jobSource{
 	{
-		id: "adzuna", label: "Adzuna", kind: sourceOfficial, maxResults: maxAdzunaResults,
+		id: "adzuna", label: "Adzuna", kind: sourceOfficial, maxResults: discover.MaxAdzunaResults,
 		unavailable: func(s settings.Settings) string {
 			return missingUnless(s.AdzunaAppID != "" && s.AdzunaAppKey != "", "Add your Adzuna keys in Settings")
 		},
-		fetch: func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-			return adzunaSearch(ctx, f.settings.AdzunaAppID, f.settings.AdzunaAppKey, q, opts)
+		fetch: func(ctx context.Context, f sourceFetcher, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
+			return discover.AdzunaSearch(ctx, f.settings.AdzunaAppID, f.settings.AdzunaAppKey, q, opts)
 		},
 	},
 	{
@@ -49,21 +50,21 @@ var jobSources = []jobSource{
 		unavailable: func(s settings.Settings) string {
 			return missingUnless(s.USAJobsKey != "" && s.USAJobsEmail != "", "Add your USAJobs key and email in Settings")
 		},
-		fetch: func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-			return usajobsSearch(ctx, f.settings.USAJobsKey, f.settings.USAJobsEmail, q, opts)
+		fetch: func(ctx context.Context, f sourceFetcher, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
+			return discover.USAJobsSearch(ctx, f.settings.USAJobsKey, f.settings.USAJobsEmail, q, opts)
 		},
 	},
 	{
 		id: "himalayas", label: "Himalayas", kind: sourceOfficial, note: "remote only", defaultOn: true,
-		fetch: func(ctx context.Context, _ sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-			return himalayasSearch(ctx, q, opts)
+		fetch: func(ctx context.Context, _ sourceFetcher, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
+			return discover.HimalayasSearch(ctx, q, opts)
 		},
 	},
 	{
 		id: "jobicy", label: "Jobicy", kind: sourceOfficial, note: "remote only, 1 call/hour", defaultOn: true,
 		minInterval: time.Hour, // Jobicy asks for at most one call per hour
-		fetch: func(ctx context.Context, _ sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-			return jobicySearch(ctx, q, opts)
+		fetch: func(ctx context.Context, _ sourceFetcher, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
+			return discover.JobicySearch(ctx, q, opts)
 		},
 	},
 	{
@@ -71,7 +72,7 @@ var jobSources = []jobSource{
 		unavailable: func(s settings.Settings) string {
 			return missingUnless(len(s.MuseCategories) > 0, "Pick The Muse categories in Settings")
 		},
-		fetch: func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+		fetch: func(ctx context.Context, f sourceFetcher, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
 			return f.repo.museSearch(ctx, q, opts, f.settings.MuseCategories)
 		},
 	},
@@ -83,12 +84,12 @@ var jobSources = []jobSource{
 func jobSpySource(id, label string) jobSource {
 	return jobSource{
 		id: id, label: label, kind: sourceScraped, defaultOn: true,
-		fetch: func(ctx context.Context, f sourceFetcher, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
-			python, err := findPython(f.settings.PythonPath)
+		fetch: func(ctx context.Context, f sourceFetcher, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
+			python, err := discover.FindPython(f.settings.PythonPath)
 			if err != nil {
 				return nil, err
 			}
-			return runJobSpy(ctx, python, id, q, opts)
+			return discover.RunJobSpy(ctx, python, id, q, opts)
 		},
 	}
 }
@@ -159,7 +160,7 @@ type sourceFetcher struct {
 }
 
 // fetch matches sourceFunc, so it can be handed to RunSearch.
-func (f sourceFetcher) fetch(ctx context.Context, id string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+func (f sourceFetcher) fetch(ctx context.Context, id string, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error) {
 	src, ok := findSource(id)
 	if !ok {
 		return nil, fmt.Errorf("unknown job board %q", id)

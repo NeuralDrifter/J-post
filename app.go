@@ -17,6 +17,7 @@ import (
 
 	"jobtrack/internal/ai"
 	"jobtrack/internal/comp"
+	"jobtrack/internal/discover"
 	"jobtrack/internal/marketdata"
 	"jobtrack/internal/osproc"
 	"jobtrack/internal/settings"
@@ -307,11 +308,11 @@ func (a *App) SaveSettings(s settings.Settings) error {
 
 // TestPython reports which Python will be used and whether it can import JobSpy.
 func (a *App) TestPython(path string) (string, error) {
-	python, err := findPython(path)
+	python, err := discover.FindPython(path)
 	if err != nil {
 		return "", err
 	}
-	if err := checkScraper(context.Background(), python); err != nil {
+	if err := discover.CheckScraper(context.Background(), python); err != nil {
 		return "", fmt.Errorf("%s: %w", python, err)
 	}
 	return python, nil

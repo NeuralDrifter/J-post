@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"jobtrack/internal/discover"
 )
 
 // Posting states: new → seen (opened) → saved (on the pipeline) or dismissed (not interested).
@@ -94,8 +96,8 @@ func splitSources(s string) []string {
 	return out
 }
 
-func (p Posting) asResult() DiscoverResult {
-	return DiscoverResult{
+func (p Posting) asResult() discover.DiscoverResult {
+	return discover.DiscoverResult{
 		Key: p.DedupeKey, Title: p.Title, Company: p.Company, Location: p.Location, WorkMode: p.WorkMode,
 		SalaryMin: p.SalaryMin, SalaryMax: p.SalaryMax, SalaryText: p.SalaryText, Annualized: p.Annualized,
 		Description: p.Description, DatePosted: p.DatePosted, URL: p.URL, Sources: p.Sources,
@@ -111,7 +113,7 @@ func findPosting(q querier, key, url string) (Posting, error) {
 // missing fields, longer description) but keep their state, so dismissed stays
 // dismissed. Postings matching a pipeline job are filed as saved. Returns how
 // many landed in the inbox as new.
-func (r *Repo) UpsertPostings(results []DiscoverResult, searchID string) (int, error) {
+func (r *Repo) UpsertPostings(results []discover.DiscoverResult, searchID string) (int, error) {
 	jobs, err := r.ListJobs()
 	if err != nil {
 		return 0, err
@@ -130,7 +132,7 @@ func (r *Repo) UpsertPostings(results []DiscoverResult, searchID string) (int, e
 		existing, err := findPosting(tx, res.Key, res.URL)
 		switch {
 		case err == nil:
-			m := mergeInto(existing.asResult(), res)
+			m := discover.MergeInto(existing.asResult(), res)
 			_, err = tx.Exec(`UPDATE postings SET url = ?, location = ?, work_mode = ?, salary_min = ?, salary_max = ?,
 				salary_text = ?, annualized = ?, description = ?, date_posted = ?, sources = ?, last_seen = ? WHERE id = ?`,
 				m.URL, m.Location, m.WorkMode, nullInt(m.SalaryMin), nullInt(m.SalaryMax), m.SalaryText, m.Annualized,
@@ -284,11 +286,11 @@ func (r *Repo) ClearDismissed(olderThanDays int) (int, error) {
 }
 
 // markTracked flags results that are already on the board, by company+title or URL.
-func markTracked(results []DiscoverResult, jobs []Job) {
+func markTracked(results []discover.DiscoverResult, jobs []Job) {
 	byKey := map[string]Job{}
 	byURL := map[string]Job{}
 	for _, j := range jobs {
-		byKey[dedupeKey(j.Company, j.Position)] = j
+		byKey[discover.DedupeKey(j.Company, j.Position)] = j
 		if j.URL != "" {
 			byURL[j.URL] = j
 		}

@@ -4,6 +4,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
@@ -28,4 +30,10 @@ func newTestRepo(t *testing.T) *Repo {
 func setNow(r *Repo, y int, m time.Month, d, hour int) {
 	fixed := time.Date(y, m, d, hour, 0, 0, 0, time.Local)
 	r.now = func() time.Time { return fixed }
+}
+
+func fakeServer(t *testing.T, handler http.HandlerFunc) string {
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	return srv.URL
 }

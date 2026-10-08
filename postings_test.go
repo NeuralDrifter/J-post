@@ -8,13 +8,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"jobtrack/internal/discover"
 )
 
-func result(company, title, url, source string) DiscoverResult {
-	return fromRaw(rawJob{Title: title, Company: company, URL: url, Description: "desc from " + source}, source)
+func result(company, title, url, source string) discover.DiscoverResult {
+	return discover.FromRaw(discover.RawJob{Title: title, Company: company, URL: url, Description: "desc from " + source}, source)
 }
 
-func mustUpsert(t *testing.T, r *Repo, results ...DiscoverResult) int {
+func mustUpsert(t *testing.T, r *Repo, results ...discover.DiscoverResult) int {
 	t.Helper()
 	n, err := r.UpsertPostings(results, "")
 	if err != nil {
@@ -213,10 +215,10 @@ func TestSavePostingLeavesNoJobWhenPostingUpdateFails(t *testing.T) {
 }
 
 func TestMarkTracked(t *testing.T) {
-	results := []DiscoverResult{
-		fromRaw(rawJob{Title: "Dev", Company: "Acme"}, "indeed"),
-		fromRaw(rawJob{Title: "Different title", Company: "Brex", URL: "https://brex.test/9"}, "indeed"),
-		fromRaw(rawJob{Title: "New", Company: "Cora"}, "indeed"),
+	results := []discover.DiscoverResult{
+		discover.FromRaw(discover.RawJob{Title: "Dev", Company: "Acme"}, "indeed"),
+		discover.FromRaw(discover.RawJob{Title: "Different title", Company: "Brex", URL: "https://brex.test/9"}, "indeed"),
+		discover.FromRaw(discover.RawJob{Title: "New", Company: "Cora"}, "indeed"),
 	}
 	jobs := []Job{
 		{ID: "j1", Company: "ACME", Position: "dev", Status: StatusApplied},

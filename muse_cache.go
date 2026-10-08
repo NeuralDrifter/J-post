@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"jobtrack/internal/discover"
 	"jobtrack/internal/textproc"
 )
 
@@ -30,7 +31,7 @@ func (r *Repo) syncMuseSlice(ctx context.Context, category, location string) (in
 	if err != nil || fresh {
 		return total, err
 	}
-	jobs, err := fetchMuseSlice(ctx, category, location)
+	jobs, err := discover.FetchMuseSlice(ctx, category, location)
 	if err != nil {
 		return 0, err
 	}
@@ -55,7 +56,7 @@ func (r *Repo) freshMuseSlice(key string) (total int, fresh bool, err error) {
 }
 
 // replaceMuseSlice swaps the stored copy of a slice for jobs and stamps the sync time.
-func (r *Repo) replaceMuseSlice(key, category, location string, jobs []museJob) error {
+func (r *Repo) replaceMuseSlice(key, category, location string, jobs []discover.MuseJob) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func (r *Repo) replaceMuseSlice(key, category, location string, jobs []museJob) 
 	}
 	for _, j := range jobs {
 		if _, err := tx.Exec(`INSERT OR REPLACE INTO muse_jobs (muse_id, slice_key, title, company, locations, levels, publication_date, url, description)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, j.id, key, j.title, j.company, j.locations, j.levels, j.date, j.url, j.description); err != nil {
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, j.ID, key, j.Title, j.Company, j.Locations, j.Levels, j.Date, j.URL, j.Description); err != nil {
 			return err
 		}
 	}
@@ -80,8 +81,8 @@ func (r *Repo) replaceMuseSlice(key, category, location string, jobs []museJob) 
 
 // museSearch syncs the needed slices, then keyword-searches the local copy:
 // every word must appear in the title, company or description.
-func (r *Repo) museSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions, categories []string) ([]rawJob, error) {
-	location := museLocation(q)
+func (r *Repo) museSearch(ctx context.Context, q discover.DiscoverQuery, opts discover.FetchOptions, categories []string) ([]discover.RawJob, error) {
+	location := discover.MuseLocation(q)
 	keys := []string{}
 	found := 0
 	for _, c := range categories {
@@ -115,10 +116,10 @@ func (r *Repo) museSearch(ctx context.Context, q DiscoverQuery, opts fetchOption
 		WHERE `+strings.Join(where, " AND ")+` GROUP BY muse_id ORDER BY publication_date DESC, muse_id DESC LIMIT ?`, append(args, limit)...)
 }
 
-func scanMuseJob(s rowScanner) (rawJob, error) {
-	j := rawJob{Site: "themuse"}
+func scanMuseJob(s rowScanner) (discover.RawJob, error) {
+	j := discover.RawJob{Site: "themuse"}
 	err := s.Scan(&j.Title, &j.Company, &j.Location, &j.DatePosted, &j.URL, &j.Description)
-	j.IsRemote = strings.Contains(j.Location, museRemote)
+	j.IsRemote = strings.Contains(j.Location, discover.MuseRemote)
 	return j, err
 }
 

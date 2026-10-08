@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package discover
 
 import (
 	"context"
@@ -22,7 +22,7 @@ var (
 
 const (
 	museMaxPages     = 100 // 2,000 jobs per slice
-	museRemote       = "Flexible / Remote"
+	MuseRemote       = "Flexible / Remote"
 	museMinRemaining = 10 // stop paging when the hourly allowance runs this low
 )
 
@@ -49,11 +49,11 @@ type museResponse struct {
 	} `json:"results"`
 }
 
-// museLocation maps the search location to The Muse's "City, ST" names.
-func museLocation(q DiscoverQuery) string {
+// MuseLocation maps the search location to The Muse's "City, ST" names.
+func MuseLocation(q DiscoverQuery) string {
 	loc := strings.TrimSpace(q.Location)
 	if q.RemoteOnly || loc == "" {
-		return museRemote
+		return MuseRemote
 	}
 	parts := strings.SplitN(loc, ",", 2)
 	city := strings.Fields(strings.ToLower(parts[0]))
@@ -81,17 +81,17 @@ func fetchMusePage(ctx context.Context, category, location string, page int) (mu
 	return out, remaining, nil
 }
 
-// museJob is one listing in the local copy of a slice.
-type museJob struct {
-	id                                                        int64
-	title, company, locations, levels, date, url, description string
+// MuseJob is one listing in the local copy of a slice.
+type MuseJob struct {
+	ID                                                        int64
+	Title, Company, Locations, Levels, Date, URL, Description string
 }
 
-// fetchMuseSlice pages through The Muse for one slice, pausing between pages and
+// FetchMuseSlice pages through The Muse for one slice, pausing between pages and
 // stopping early when the hourly allowance runs low. A failure after the first
 // page keeps the pages already fetched.
-func fetchMuseSlice(ctx context.Context, category, location string) ([]museJob, error) {
-	var jobs []museJob
+func FetchMuseSlice(ctx context.Context, category, location string) ([]MuseJob, error) {
+	var jobs []MuseJob
 	for page := 0; page < museMaxPages; page++ {
 		if page > 0 && musePageDelay > 0 {
 			select {
@@ -115,8 +115,8 @@ func fetchMuseSlice(ctx context.Context, category, location string) ([]museJob, 
 	return jobs, nil
 }
 
-func museJobs(resp museResponse) []museJob {
-	jobs := make([]museJob, 0, len(resp.Results))
+func museJobs(resp museResponse) []MuseJob {
+	jobs := make([]MuseJob, 0, len(resp.Results))
 	for _, j := range resp.Results {
 		var locs, levels []string
 		for _, l := range j.Locations {
@@ -125,7 +125,7 @@ func museJobs(resp museResponse) []museJob {
 		for _, l := range j.Levels {
 			levels = append(levels, l.Name)
 		}
-		jobs = append(jobs, museJob{j.ID, j.Name, j.Company.Name, strings.Join(locs, "; "), strings.Join(levels, ", "),
+		jobs = append(jobs, MuseJob{j.ID, j.Name, j.Company.Name, strings.Join(locs, "; "), strings.Join(levels, ", "),
 			textproc.DatePart(j.PublicationDate), j.Refs.LandingPage, textproc.HTMLToText(j.Contents)})
 	}
 	return jobs

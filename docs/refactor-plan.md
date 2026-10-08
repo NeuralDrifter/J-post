@@ -40,6 +40,9 @@ settings store, window state, live sessions). `db.go` depends on plans.go
   pass, binding regeneration produces no diff).
 - `frontend/wailsjs` is tracked, so binding changes land in the move's commit
   and `tsc` checks every TypeScript use of a moved type.
+- Test-list check 2026-10-08 after the discover move: main and the branch run
+  the same tests with the same 3 skips (live API tests needing keys), plus the
+  new TestProviderIDsMatchRegistry.
 - Final check: `wails build`, then launch the app and click through each page.
 
 ## Target Structure
@@ -84,7 +87,7 @@ Each line is one commit, green before the next.
 - [x] prep: CompPackage type, kinds, vesting and validation move to comp_package.go; columns() becomes compColumnsOf()
 - [x] extract-pure-core: CompPackage + Evaluate -> internal/comp (basePackage fixture copied to comp_test.go)
 - [x] prep: markTracked -> postings.go; fetchOptions + fetch limits -> discover.go; Muse cache and rate-limit log -> muse_cache.go; runDiscover + sourceFunc -> searches.go (4 commits)
-- [ ] extract-leaf-module: job-site fetchers -> internal/discover (+ scraper.py)
+- [x] extract-leaf-module: job-board fetchers -> internal/discover (+ scraper.py; TestScraperSelfTest looks for the venv at the repo root)
 - [ ] prep: `keptPlans` dependency of db.go (if still needed once in app)
 - [ ] extract: Repo, bindings and interview flow -> internal/app
 - [ ] thin-entry-point: wails.Run moves into app.Run; main.go only wires
@@ -130,3 +133,4 @@ Each line is one commit, green before the next.
   campaign (touches the frontend models too) — clean-code
 - [ ] `ai.AIProvider`, `ai.ListAIProviders`, `ai.AIProviderTest`, `ai.ListAIModels`,
   `ai.TestAIProvider` stutter — rename with the frontend models — clean-code
+- [ ] `discover.DiscoverQuery`/`DiscoverResult`/`DiscoverResponse` stutter — clean-code

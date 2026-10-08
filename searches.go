@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"jobtrack/internal/discover"
 	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
@@ -78,7 +79,7 @@ func searchKey(q SearchQuery) string {
 func perSourceCount(q SearchQuery, source string) int {
 	n, ok := q.PerSource[source]
 	if !ok || n <= 0 {
-		n = defaultPerSource
+		n = discover.DefaultPerSource
 	}
 	src, _ := findSource(source)
 	return max(minPerSource, min(n, src.resultCap()))
@@ -203,9 +204,9 @@ func runSearch(ctx context.Context, r *Repo, q SearchQuery, cacheHours int, fetc
 	}
 
 	age := hoursOld(saved.LastRunAt, now)
-	dq := DiscoverQuery{Term: q.Term, Location: q.Location, RemoteOnly: q.RemoteOnly, Sources: q.Sources}
-	resp := runDiscover(ctx, dq, fetch, func(source string) fetchOptions {
-		return fetchOptions{Results: perSourceCount(q, source), HoursOld: age}
+	dq := discover.DiscoverQuery{Term: q.Term, Location: q.Location, RemoteOnly: q.RemoteOnly, Sources: q.Sources}
+	resp := runDiscover(ctx, dq, fetch, func(source string) discover.FetchOptions {
+		return discover.FetchOptions{Results: perSourceCount(q, source), HoursOld: age}
 	})
 	run.Errors, run.Fetched = resp.Errors, len(resp.Results)
 	if run.NewCount, err = r.UpsertPostings(resp.Results, saved.ID); err != nil {
@@ -223,7 +224,7 @@ func runSearch(ctx context.Context, r *Repo, q SearchQuery, cacheHours int, fetc
 
 // runDiscover queries every requested source concurrently; one failing source
 // only adds an entry to Errors.
-func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor func(source string) fetchOptions) DiscoverResponse {
+func runDiscover(ctx context.Context, q discover.DiscoverQuery, fetch sourceFunc, optsFor func(source string) discover.FetchOptions) discover.DiscoverResponse {
 	var sources []string
 	for _, s := range q.Sources {
 		if isKnownSource(s) && !slices.Contains(sources, s) {
@@ -232,7 +233,7 @@ func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor
 	}
 	type outcome struct {
 		source string
-		jobs   []rawJob
+		jobs   []discover.RawJob
 		err    error
 	}
 	ch := make(chan outcome, len(sources))
@@ -242,8 +243,8 @@ func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor
 			ch <- outcome{s, jobs, err}
 		}(s)
 	}
-	resp := DiscoverResponse{Results: []DiscoverResult{}, Errors: map[string]string{}}
-	perSource := map[string][]DiscoverResult{}
+	resp := discover.DiscoverResponse{Results: []discover.DiscoverResult{}, Errors: map[string]string{}}
+	perSource := map[string][]discover.DiscoverResult{}
 	for range sources {
 		o := <-ch
 		if o.err != nil {
@@ -254,16 +255,16 @@ func runDiscover(ctx context.Context, q DiscoverQuery, fetch sourceFunc, optsFor
 			if strings.TrimSpace(rj.Title) == "" {
 				continue
 			}
-			perSource[o.source] = append(perSource[o.source], fromRaw(rj, o.source))
+			perSource[o.source] = append(perSource[o.source], discover.FromRaw(rj, o.source))
 		}
 	}
-	lists := make([][]DiscoverResult, 0, len(sources))
+	lists := make([][]discover.DiscoverResult, 0, len(sources))
 	for _, s := range sources {
 		lists = append(lists, perSource[s])
 	}
-	resp.Results = mergeResults(lists...)
+	resp.Results = discover.MergeResults(lists...)
 	return resp
 }
 
 // sourceFunc fetches raw postings from one source; injected so tests can fake it.
-type sourceFunc func(ctx context.Context, source string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error)
+type sourceFunc func(ctx context.Context, source string, q discover.DiscoverQuery, opts discover.FetchOptions) ([]discover.RawJob, error)

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package discover
 
 import (
 	"context"
@@ -64,7 +64,7 @@ type usajobsResponse struct {
 	} `json:"SearchResult"`
 }
 
-func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+func USAJobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts FetchOptions) ([]RawJob, error) {
 	params := url.Values{"Keyword": {q.Term}, "ResultsPerPage": {strconv.Itoa(max(opts.Results, 1))}}
 	if q.Location != "" {
 		params.Set("LocationName", q.Location)
@@ -80,10 +80,10 @@ func usajobsSearch(ctx context.Context, key, email string, q DiscoverQuery, opts
 	if _, err := httpapi.GetJSON(ctx, httpapi.Request{Source: "USAJobs", URL: usajobsBaseURL + "?" + params.Encode(), Headers: headers}, &resp); err != nil {
 		return nil, err
 	}
-	out := []rawJob{}
+	out := []RawJob{}
 	for _, item := range resp.SearchResult.SearchResultItems {
 		d := item.MatchedObjectDescriptor
-		j := rawJob{
+		j := RawJob{
 			Title: d.PositionTitle, Company: d.OrganizationName, Location: d.PositionLocationDisplay,
 			URL: d.PositionURI, DatePosted: textproc.DatePart(d.PublicationStartDate), Site: "usajobs",
 			Description: textproc.HTMLToText(d.UserArea.Details.JobSummary),
@@ -115,9 +115,9 @@ type himalayasResponse struct {
 	} `json:"jobs"`
 }
 
-func himalayasSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+func HimalayasSearch(ctx context.Context, q DiscoverQuery, opts FetchOptions) ([]RawJob, error) {
 	want := max(opts.Results, 1)
-	out := []rawJob{}
+	out := []RawJob{}
 	for page := 1; page <= himalayasMaxPages && len(out) < want; page++ {
 		var resp himalayasResponse
 		params := url.Values{"q": {q.Term}, "page": {strconv.Itoa(page)}}
@@ -128,7 +128,7 @@ func himalayasSearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([
 			return nil, err
 		}
 		for _, h := range resp.Jobs {
-			j := rawJob{
+			j := RawJob{
 				Title: h.Title, Company: h.CompanyName, URL: h.GUID, IsRemote: true, Site: "himalayas",
 				Location: strings.Join(h.LocationRestrictions, ", "), Description: textproc.HTMLToText(h.Description), Interval: "yearly",
 			}
@@ -172,15 +172,15 @@ type jobicyResponse struct {
 	} `json:"jobs"`
 }
 
-func jobicySearch(ctx context.Context, q DiscoverQuery, opts fetchOptions) ([]rawJob, error) {
+func JobicySearch(ctx context.Context, q DiscoverQuery, opts FetchOptions) ([]RawJob, error) {
 	params := url.Values{"count": {strconv.Itoa(min(max(opts.Results, 1), jobicyMaxCount))}, "tag": {q.Term}}
 	var resp jobicyResponse
 	if _, err := httpapi.GetJSON(ctx, httpapi.Request{Source: "Jobicy", URL: jobicyBaseURL + "?" + params.Encode()}, &resp); err != nil {
 		return nil, err
 	}
-	out := []rawJob{}
+	out := []RawJob{}
 	for _, jb := range resp.Jobs {
-		j := rawJob{
+		j := RawJob{
 			Title: jb.JobTitle, Company: jb.CompanyName, URL: jb.URL, Location: jb.JobGeo, IsRemote: true,
 			DatePosted: textproc.DatePart(jb.PubDate), Description: textproc.HTMLToText(jb.JobDescription), Site: "jobicy",
 		}

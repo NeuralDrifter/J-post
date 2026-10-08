@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-package main
+package discover
 
 import (
 	"context"
@@ -75,11 +75,11 @@ func TestParseScraperOutputError(t *testing.T) {
 }
 
 func TestMergeResultsDedupes(t *testing.T) {
-	a := fromRaw(rawJob{Title: "Go  Developer", Company: "Acme", Description: "short", Site: "indeed"}, "indeed")
-	b := fromRaw(rawJob{Title: "go developer", Company: " ACME ", Description: "a much longer description", URL: "https://x.test/1",
+	a := FromRaw(RawJob{Title: "Go  Developer", Company: "Acme", Description: "short", Site: "indeed"}, "indeed")
+	b := FromRaw(RawJob{Title: "go developer", Company: " ACME ", Description: "a much longer description", URL: "https://x.test/1",
 		MinAmount: f64(100000), MaxAmount: f64(120000), Interval: "yearly", Location: "Denver, CO"}, "linkedin")
-	c := fromRaw(rawJob{Title: "Other", Company: "Acme"}, "linkedin")
-	merged := mergeResults([]DiscoverResult{a}, []DiscoverResult{b, c})
+	c := FromRaw(RawJob{Title: "Other", Company: "Acme"}, "linkedin")
+	merged := MergeResults([]DiscoverResult{a}, []DiscoverResult{b, c})
 	if len(merged) != 2 {
 		t.Fatalf("merged = %+v", merged)
 	}
@@ -134,7 +134,7 @@ func TestAdzunaSearchMapsFields(t *testing.T) {
 	}))
 	defer srv.Close()
 	withAdzunaURL(t, srv.URL)
-	jobs, err := adzunaSearch(context.Background(), "id", "key", DiscoverQuery{Term: "go developer", Location: "Denver", RemoteOnly: true}, fetchOptions{Results: 20})
+	jobs, err := AdzunaSearch(context.Background(), "id", "key", DiscoverQuery{Term: "go developer", Location: "Denver", RemoteOnly: true}, FetchOptions{Results: 20})
 	if err != nil || len(jobs) != 1 {
 		t.Fatalf("jobs=%+v err=%v", jobs, err)
 	}
@@ -150,12 +150,12 @@ func TestAdzunaErrorDoesNotLeakKey(t *testing.T) {
 	}))
 	defer srv.Close()
 	withAdzunaURL(t, srv.URL)
-	_, err := adzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"}, fetchOptions{})
+	_, err := AdzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"}, FetchOptions{})
 	if err == nil || strings.Contains(err.Error(), "s3cretkey") || !strings.Contains(err.Error(), "401") {
 		t.Fatalf("err = %v", err)
 	}
 	withAdzunaURL(t, "http://127.0.0.1:1/unreachable")
-	_, err = adzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"}, fetchOptions{})
+	_, err = AdzunaSearch(context.Background(), "id", "s3cretkey", DiscoverQuery{Term: "x"}, FetchOptions{})
 	if err == nil || strings.Contains(err.Error(), "s3cretkey") {
 		t.Fatalf("err = %v", err)
 	}
@@ -165,18 +165,18 @@ func TestScraperSelfTest(t *testing.T) {
 	if !strings.Contains(string(scraperScript), "--self-test") {
 		t.Fatal("embedded scraper is missing --self-test")
 	}
-	python, err := resolvePython("", "", ".")
+	python, err := resolvePython("", "", "../..") // the repo root, where the dev venv lives
 	if err != nil {
 		t.Skip("no venv python; skipping live scraper check")
 	}
-	if err := checkScraper(context.Background(), python); err != nil {
+	if err := CheckScraper(context.Background(), python); err != nil {
 		t.Fatalf("self-test failed: %v", err)
 	}
 }
 
 func TestMaxDaysOldRoundsUp(t *testing.T) {
 	for hours, want := range map[int]int{0: 0, 1: 1, 24: 1, 25: 2, 48: 2} {
-		if got := (fetchOptions{HoursOld: hours}).maxDaysOld(); got != want {
+		if got := (FetchOptions{HoursOld: hours}).maxDaysOld(); got != want {
 			t.Errorf("%d hours = %d days, want %d", hours, got, want)
 		}
 	}

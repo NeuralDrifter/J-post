@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"jobtrack/internal/discover"
 )
 
 // fakeMuse serves 45 jobs (3 pages of 20/20/5) for any slice and counts requests.
@@ -35,17 +37,15 @@ func fakeMuse(t *testing.T, total int) *int32 {
 		w.Header().Set("X-RateLimit-Remaining", "400")
 		fmt.Fprintf(w, `{"page":%d,"page_count":%d,"total":%d,"results":[%s]}`, page, pageCount, total, strings.Join(items, ","))
 	})
-	oldURL, oldDelay := museBaseURL, musePageDelay
-	museBaseURL, musePageDelay = url, 0
-	t.Cleanup(func() { museBaseURL, musePageDelay = oldURL, oldDelay })
+	discover.SetTestMuse(t, url)
 	return &calls
 }
 
 func TestMuseSyncAndLocalSearch(t *testing.T) {
 	r := newTestRepo(t)
 	calls := fakeMuse(t, 45)
-	q := DiscoverQuery{Term: "go developer", Location: "denver, co"}
-	jobs, err := r.museSearch(context.Background(), q, fetchOptions{Results: 10}, []string{"Software Engineering"})
+	q := discover.DiscoverQuery{Term: "go developer", Location: "denver, co"}
+	jobs, err := r.museSearch(context.Background(), q, discover.FetchOptions{Results: 10}, []string{"Software Engineering"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestMuseSyncAndLocalSearch(t *testing.T) {
 	}
 
 	// Within 24h the slice is reused: no new requests.
-	if _, err := r.museSearch(context.Background(), DiscoverQuery{Term: "accountant", Location: "Denver, CO"}, fetchOptions{Results: 50}, []string{"Software Engineering"}); err != nil {
+	if _, err := r.museSearch(context.Background(), discover.DiscoverQuery{Term: "accountant", Location: "Denver, CO"}, discover.FetchOptions{Results: 50}, []string{"Software Engineering"}); err != nil {
 		t.Fatal(err)
 	}
 	if *calls != 3 {
@@ -74,7 +74,7 @@ func TestMuseSyncAndLocalSearch(t *testing.T) {
 	}
 	// A day later it syncs again.
 	setNow(r, 2026, time.October, 2, 13)
-	r.museSearch(context.Background(), q, fetchOptions{Results: 10}, []string{"Software Engineering"})
+	r.museSearch(context.Background(), q, discover.FetchOptions{Results: 10}, []string{"Software Engineering"})
 	if *calls != 6 {
 		t.Fatalf("stale slice should re-sync, calls = %d", *calls)
 	}
@@ -83,11 +83,11 @@ func TestMuseSyncAndLocalSearch(t *testing.T) {
 func TestMuseRemoteAndAllWordsMustMatch(t *testing.T) {
 	r := newTestRepo(t)
 	fakeMuse(t, 45)
-	jobs, err := r.museSearch(context.Background(), DiscoverQuery{Term: "senior rust", RemoteOnly: true}, fetchOptions{Results: 50}, []string{"Software Engineering"})
+	jobs, err := r.museSearch(context.Background(), discover.DiscoverQuery{Term: "senior rust", RemoteOnly: true}, discover.FetchOptions{Results: 50}, []string{"Software Engineering"})
 	if err != nil || len(jobs) != 0 {
 		t.Fatalf("every word must match: %d jobs, %v", len(jobs), err)
 	}
-	jobs, _ = r.museSearch(context.Background(), DiscoverQuery{Term: "senior go", RemoteOnly: true}, fetchOptions{Results: 50}, []string{"Software Engineering"})
+	jobs, _ = r.museSearch(context.Background(), discover.DiscoverQuery{Term: "senior go", RemoteOnly: true}, discover.FetchOptions{Results: 50}, []string{"Software Engineering"})
 	if len(jobs) != 15 || jobs[0].Location != "Flexible / Remote" {
 		t.Fatalf("remote search = %d jobs, first %+v", len(jobs), jobs[0])
 	}
@@ -96,7 +96,7 @@ func TestMuseRemoteAndAllWordsMustMatch(t *testing.T) {
 func TestMuseEmptySlice(t *testing.T) {
 	r := newTestRepo(t)
 	fakeMuse(t, 0)
-	_, err := r.museSearch(context.Background(), DiscoverQuery{Term: "go", Location: "Denver"}, fetchOptions{Results: 10}, []string{"Software Engineering"})
+	_, err := r.museSearch(context.Background(), discover.DiscoverQuery{Term: "go", Location: "Denver"}, discover.FetchOptions{Results: 10}, []string{"Software Engineering"})
 	if err == nil || !strings.Contains(err.Error(), "Denver") {
 		t.Fatalf("err = %v", err)
 	}
