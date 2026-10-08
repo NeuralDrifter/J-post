@@ -345,6 +345,18 @@ var migrations = []string{
 	);
 	ALTER TABLE mock_interviews ADD COLUMN plan_id TEXT NOT NULL DEFAULT '';
 	CREATE INDEX idx_mock_interviews_plan ON mock_interviews(plan_id, started_at);`,
+	// 10: match scores for Discover postings, one per posting (see match.go).
+	`CREATE TABLE posting_scores (
+		posting_id TEXT PRIMARY KEY REFERENCES postings(id) ON DELETE CASCADE,
+		overall INTEGER NOT NULL,
+		factors TEXT NOT NULL,
+		strengths TEXT NOT NULL,
+		gaps TEXT NOT NULL,
+		fingerprint TEXT NOT NULL,
+		provider TEXT NOT NULL,
+		model TEXT NOT NULL DEFAULT '',
+		scored_at TEXT NOT NULL
+	);`,
 }
 
 func openDB(path string) (*sql.DB, error) {

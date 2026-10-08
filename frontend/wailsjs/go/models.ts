@@ -670,6 +670,102 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class MatchFactor {
+	    applicable: boolean;
+	    score: number;
+	    note: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MatchFactor(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.applicable = source["applicable"];
+	        this.score = source["score"];
+	        this.note = source["note"];
+	    }
+	}
+	export class MatchFactors {
+	    resumeFit: MatchFactor;
+	    seniority: MatchFactor;
+	    location: MatchFactor;
+	    salary: MatchFactor;
+	
+	    static createFrom(source: any = {}) {
+	        return new MatchFactors(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.resumeFit = this.convertValues(source["resumeFit"], MatchFactor);
+	        this.seniority = this.convertValues(source["seniority"], MatchFactor);
+	        this.location = this.convertValues(source["location"], MatchFactor);
+	        this.salary = this.convertValues(source["salary"], MatchFactor);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class MatchScore {
+	    overall: number;
+	    factors: MatchFactors;
+	    strengths: string[];
+	    gaps: string[];
+	    provider: string;
+	    model: string;
+	    scoredAt: string;
+	    outdated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MatchScore(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.overall = source["overall"];
+	        this.factors = this.convertValues(source["factors"], MatchFactors);
+	        this.strengths = source["strengths"];
+	        this.gaps = source["gaps"];
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	        this.scoredAt = source["scoredAt"];
+	        this.outdated = source["outdated"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class NextUp {
 	    interview: Interview;
 	    company: string;
@@ -1050,6 +1146,7 @@ export namespace app {
 	    firstSeen: string;
 	    lastSeen: string;
 	    dismissedAt: string;
+	    match?: MatchScore;
 	
 	    static createFrom(source: any = {}) {
 	        return new Posting(source);
@@ -1078,7 +1175,26 @@ export namespace app {
 	        this.firstSeen = source["firstSeen"];
 	        this.lastSeen = source["lastSeen"];
 	        this.dismissedAt = source["dismissedAt"];
+	        this.match = this.convertValues(source["match"], MatchScore);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class PostingFilter {
 	    tab: string;

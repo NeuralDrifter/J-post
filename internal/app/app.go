@@ -250,8 +250,32 @@ func (a *App) RefreshSearch(q SearchQuery) (SearchRun, error) {
 	return RefreshSearch(context.Background(), a.repo, q, fetcher.fetch)
 }
 
+// ListPostings returns a tab's postings, with each match score flagged if it
+// was graded against an older resume or preferences.
 func (a *App) ListPostings(f PostingFilter) ([]Posting, error) {
-	return a.repo.ListPostings(f)
+	postings, err := a.repo.ListPostings(f)
+	if err != nil {
+		return nil, err
+	}
+	fingerprint, err := a.currentMatchFingerprint()
+	if err != nil {
+		return nil, err
+	}
+	markOutdated(postings, fingerprint)
+	return postings, nil
+}
+
+// currentMatchFingerprint identifies the resume and preferences new scores are graded against.
+func (a *App) currentMatchFingerprint() (string, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return "", err
+	}
+	profile, err := a.repo.GetProfile()
+	if err != nil {
+		return "", err
+	}
+	return matchFingerprint(profile.ResumeText, s), nil
 }
 
 func (a *App) InboxCounts() (InboxCounts, error) {

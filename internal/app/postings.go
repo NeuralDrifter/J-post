@@ -24,27 +24,28 @@ const (
 
 // Posting is a job listing found by Discover and kept in the inbox.
 type Posting struct {
-	ID          string   `json:"id"`
-	DedupeKey   string   `json:"dedupeKey"`
-	URL         string   `json:"url"`
-	Title       string   `json:"title"`
-	Company     string   `json:"company"`
-	Location    string   `json:"location"`
-	WorkMode    string   `json:"workMode"`
-	SalaryMin   *int64   `json:"salaryMin,omitempty"`
-	SalaryMax   *int64   `json:"salaryMax,omitempty"`
-	SalaryText  string   `json:"salaryText"`
-	Annualized  bool     `json:"annualized"`
-	Description string   `json:"description"`
-	DatePosted  string   `json:"datePosted"`
-	Sources     []string `json:"sources"`
-	State       string   `json:"state"`
-	JobID       string   `json:"jobId"`
-	JobStatus   string   `json:"jobStatus"`
-	SearchID    string   `json:"searchId"`
-	FirstSeen   string   `json:"firstSeen"`
-	LastSeen    string   `json:"lastSeen"`
-	DismissedAt string   `json:"dismissedAt"`
+	ID          string      `json:"id"`
+	DedupeKey   string      `json:"dedupeKey"`
+	URL         string      `json:"url"`
+	Title       string      `json:"title"`
+	Company     string      `json:"company"`
+	Location    string      `json:"location"`
+	WorkMode    string      `json:"workMode"`
+	SalaryMin   *int64      `json:"salaryMin,omitempty"`
+	SalaryMax   *int64      `json:"salaryMax,omitempty"`
+	SalaryText  string      `json:"salaryText"`
+	Annualized  bool        `json:"annualized"`
+	Description string      `json:"description"`
+	DatePosted  string      `json:"datePosted"`
+	Sources     []string    `json:"sources"`
+	State       string      `json:"state"`
+	JobID       string      `json:"jobId"`
+	JobStatus   string      `json:"jobStatus"`
+	SearchID    string      `json:"searchId"`
+	FirstSeen   string      `json:"firstSeen"`
+	LastSeen    string      `json:"lastSeen"`
+	DismissedAt string      `json:"dismissedAt"`
+	Match       *MatchScore `json:"match,omitempty"` // nil until scored
 }
 
 type PostingFilter struct {
@@ -63,18 +64,19 @@ type InboxCounts struct {
 
 const postingColumns = `p.id, p.dedupe_key, p.url, p.title, p.company, p.location, p.work_mode, p.salary_min, p.salary_max,
 	p.salary_text, p.annualized, p.description, p.date_posted, p.sources, p.state, p.job_id, p.search_id,
-	p.first_seen, p.last_seen, p.dismissed_at, COALESCE(j.status, '')`
+	p.first_seen, p.last_seen, p.dismissed_at, COALESCE(j.status, '')` + matchColumns
 
-const postingFrom = ` FROM postings p LEFT JOIN jobs j ON j.id = p.job_id `
+const postingFrom = ` FROM postings p LEFT JOIN jobs j ON j.id = p.job_id LEFT JOIN posting_scores ms ON ms.posting_id = p.id `
 
 func scanPosting(s rowScanner) (Posting, error) {
 	var p Posting
 	var lo, hi sql.NullInt64
 	var sources string
 	var jobID, searchID sql.NullString
-	err := s.Scan(&p.ID, &p.DedupeKey, &p.URL, &p.Title, &p.Company, &p.Location, &p.WorkMode, &lo, &hi,
+	var match matchCells
+	err := s.Scan(append([]any{&p.ID, &p.DedupeKey, &p.URL, &p.Title, &p.Company, &p.Location, &p.WorkMode, &lo, &hi,
 		&p.SalaryText, &p.Annualized, &p.Description, &p.DatePosted, &sources, &p.State, &jobID, &searchID,
-		&p.FirstSeen, &p.LastSeen, &p.DismissedAt, &p.JobStatus)
+		&p.FirstSeen, &p.LastSeen, &p.DismissedAt, &p.JobStatus}, match.dests()...)...)
 	if lo.Valid {
 		p.SalaryMin = &lo.Int64
 	}
@@ -83,6 +85,7 @@ func scanPosting(s rowScanner) (Posting, error) {
 	}
 	p.Sources = splitSources(sources)
 	p.JobID, p.SearchID = jobID.String, searchID.String
+	p.Match = match.score()
 	return p, err
 }
 
