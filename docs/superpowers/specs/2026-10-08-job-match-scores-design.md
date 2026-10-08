@@ -1,6 +1,6 @@
 # Job match scores on Discover — Design Spec
 
-**Date:** 2026-10-08 · **Status:** Approved design, not built yet · **Builds on:** [AI providers](2026-10-07-ai-providers-design.md) (the task/provider layer, now `internal/ai`), [Discover inbox](2026-10-01-discover-inbox-design.md)
+**Date:** 2026-10-08 · **Status:** Implemented (branch feature/job-match-scores); live run pending · **Builds on:** [AI providers](2026-10-07-ai-providers-design.md) (the task/provider layer, now `internal/ai`), [Discover inbox](2026-10-01-discover-inbox-design.md)
 
 ## Goal
 

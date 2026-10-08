@@ -16,6 +16,7 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
   - Add each one to **Interested** or mark it **Not interested**, which hides it for good. A Not interested tab lets you move postings back.
   - Searches are saved. Re-running one within the cache window (default 12 hours, set in Settings) reuses stored results; later runs only fetch postings newer than the last run.
   - Results per board are adjustable.
+  - **Match scores:** an AI provider of your choice grades each posting against your resume and preferences (salary floor, work mode and location, seniority, goals). Postings go in groups, so a normal search costs one request; click a badge for the breakdown. Off by default (Settings → Job matching).
   - Sources:
 
     | Source | Type | Setup | Notes |
