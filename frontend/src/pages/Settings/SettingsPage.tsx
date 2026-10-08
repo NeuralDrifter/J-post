@@ -15,6 +15,7 @@ import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { AIProvidersSection } from './AIProvidersSection'
+import { JobMatchingSection } from './JobMatchingSection'
 import { Section } from './Section'
 
 // Category names exactly as The Muse's API documents them.
@@ -93,7 +94,12 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
     e.preventDefault()
     setSaving(true)
     const ok = await apiOk(
-      SaveSettings({ ...s, followUpDays: Math.round(Number(s.followUpDays)) || 7, discoverCacheHours: Math.round(Number(s.discoverCacheHours)) || 12 }),
+      SaveSettings({
+        ...s,
+        followUpDays: Math.round(Number(s.followUpDays)) || 7,
+        discoverCacheHours: Math.round(Number(s.discoverCacheHours)) || 12,
+        matchPerRequest: Math.round(Number(s.matchPerRequest)) || 25,
+      }),
     )
     setSaving(false)
     if (!ok) return
@@ -243,6 +249,8 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
       </Section>
 
       <AIProvidersSection s={s} setS={setS} />
+
+      <JobMatchingSection s={s} setS={setS} />
 
       <ResumeSection />
 
