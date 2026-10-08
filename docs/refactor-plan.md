@@ -52,7 +52,8 @@ internal/
   marketdata/  BLS/BEA wage and cost-of-living lookups (+ embedded data)
   taxes/       2026 federal and state income tax calculation (+ embedded data)
   settings/    load, validate and save user settings and window state
-  gemini/      Gemini API calls, Live audio sessions and interviewer voices
+  gemini/      Gemini REST calls, Live sessions and voice samples
+    geminitest/  fake Gemini servers for other packages' tests
   ai/          AI task runner and its providers
   comp/        the offer package type and its pure evaluation
   discover/    job-site fetchers (JobSpy, Adzuna, Muse, USAJobs, Himalayas, Jobicy)
@@ -75,7 +76,8 @@ Each line is one commit, green before the next.
 - [x] extract-leaf-module: taxes -> internal/taxes (+ data file, build script path)
 - [x] prep: provider IDs and answer modes move to settings.go (break settings <-> ai); Save checks a fixed ID list, guarded by TestProviderIDsMatchRegistry
 - [x] extract-data-types: settings and window state store -> internal/settings
-- [ ] extract-leaf-module: Gemini API, Live, voices -> internal/gemini
+- [x] prep: voice sampling (voice_sample.go) splits from the voice catalog; interview-typed Live tests move to interviews_ai_test.go
+- [ ] extract-leaf-module: Gemini REST, Live sessions, voice sampling -> internal/gemini (+ geminitest helpers)
 - [ ] extract-leaf-module: AI task runner and providers -> internal/ai (+ testdata/fakeclaude)
 - [ ] prep: split the CompPackage type from its Repo persistence in comp.go
 - [ ] extract-pure-core: CompPackage + Evaluate -> internal/comp
@@ -100,6 +102,12 @@ Each line is one commit, green before the next.
   (`main`, `marketdata`, ...); lib/backend.ts re-exports each one.
 - 2026-10-08: compcalc_test.go has its own copy of the `testMarket` fixture
   (it builds a MarketData from exported fields), so tests in two packages can use it.
+- 2026-10-08: the voice catalog and interviewer names are interview logic and
+  stay with app; only the Live voice-sample recorder moves to gemini.
+- 2026-10-08: tests outside gemini redirect it to fake servers through
+  `gemini.SetTestEndpoints` and the `gemini/geminitest` helpers (the
+  net/http/httptest pattern). gemini's own tests keep their small unexported
+  copies of those helpers, since gemini cannot import geminitest.
 
 ## Deferred: hand off to the next campaign
 - [ ] Split `Repo` into a `store` package plus feature packages (jobs,

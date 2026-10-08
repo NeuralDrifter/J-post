@@ -4,7 +4,6 @@
 package main
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -50,52 +49,5 @@ func replyWithToolCall(t *testing.T, args map[string]any, sawPrompt *string) fun
 			map[string]any{"id": "call-1", "name": liveResultTool, "args": args},
 		}}})
 		c.ReadMessage() // wait for the client to close
-	}
-}
-
-func TestLiveStructuredReturnsToolCallArgs(t *testing.T) {
-	var prompt string
-	var declared map[string]any
-	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
-		if setup["model"] != "models/gemini-3.8-live" {
-			t.Errorf("model = %v", setup["model"])
-		}
-		tools := setup["tools"].([]any)[0].(map[string]any)["functionDeclarations"].([]any)
-		declared = tools[0].(map[string]any)
-		replyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, &prompt)(c, setup)
-	})
-	var n Nudge
-	err := liveStructured(context.Background(), "k3y", jsonPrompt{model: "gemini-3.8-live", system: "coach", parts: []geminiPart{{Text: "the answer"}}, schema: geminiSchema(nudgeSchema)}, &n)
-	if err != nil || n.Nudge != "Lead with the result" || n.Kind != "tip" {
-		t.Fatalf("n = %+v, err = %v", n, err)
-	}
-	if declared["name"] != liveResultTool || declared["parameters"] == nil || prompt != "the answer" {
-		t.Fatalf("declared = %v, prompt = %q", declared, prompt)
-	}
-}
-
-func TestLiveStructuredWithoutToolCallFails(t *testing.T) {
-	fakeLiveServer(t, func(c *websocket.Conn, setup map[string]any) {
-		c.WriteJSON(map[string]any{"setupComplete": map[string]any{}})
-		c.ReadMessage()
-		c.WriteJSON(map[string]any{"serverContent": map[string]any{"turnComplete": true}})
-		c.ReadMessage()
-	})
-	var n Nudge
-	if err := liveStructured(context.Background(), "k", jsonPrompt{model: "m", parts: []geminiPart{{Text: "x"}}, schema: geminiSchema(nudgeSchema)}, &n); err == nil {
-		t.Fatal("a turn with no tool call should fail")
-	}
-}
-
-func TestLiveStructuredErrors(t *testing.T) {
-	var n Nudge
-	if err := liveStructured(context.Background(), "", jsonPrompt{model: "m"}, &n); err != errNoGeminiKey {
-		t.Fatalf("no key: %v", err)
-	}
-	old := geminiLiveWSBase
-	geminiLiveWSBase = "ws://127.0.0.1:1"
-	t.Cleanup(func() { geminiLiveWSBase = old })
-	if err := liveStructured(context.Background(), "s3cretkey", jsonPrompt{model: "m"}, &n); err == nil || strings.Contains(err.Error(), "s3cretkey") {
-		t.Fatalf("unreachable: %v", err)
 	}
 }
