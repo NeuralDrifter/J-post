@@ -9,6 +9,7 @@ import { BrowserOpenURL, type app } from '../../lib/backend'
 import { formatDate, formatSalary, labelFor, STATUS_LABEL, timeAgo } from '../../lib/format'
 import { sourceLabel, useJobSources } from '../../lib/jobSources'
 import { openMenu, type MenuEntry } from '../../lib/menu'
+import { MatchBadge } from './MatchBadge'
 
 export type PostingActions = {
   save: (p: app.Posting) => void
@@ -21,9 +22,12 @@ type Props = {
   selectedId: string | null
   onSelect: (p: app.Posting) => void
   actions: PostingActions
+  scoring: boolean
+  onOpenMatch: (p: app.Posting) => void
+  onScore: (p: app.Posting) => void
 }
 
-export function PostingList({ postings, selectedId, onSelect, actions }: Props) {
+export function PostingList({ postings, selectedId, onSelect, actions, scoring, onOpenMatch, onScore }: Props) {
   const navigate = useNavigate()
   const sources = useJobSources()
 
@@ -67,9 +71,17 @@ export function PostingList({ postings, selectedId, onSelect, actions }: Props) 
                   <p className="truncate font-mono text-[11px] text-ink-2">{p.company || 'Unknown company'}</p>
                   <p className={`text-sm leading-snug ${p.state === 'new' ? 'font-bold' : 'font-semibold'}`}>{p.title}</p>
                 </div>
-                {p.state === 'new' && <Chip tone="info">New</Chip>}
-                {p.state === 'saved' && <Chip tone="accent">{p.jobStatus ? labelFor(STATUS_LABEL, p.jobStatus) : 'Job deleted'}</Chip>}
-                {p.state === 'dismissed' && <Chip>{timeAgo(p.dismissedAt)}</Chip>}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <MatchBadge
+                    match={p.match}
+                    scoring={scoring}
+                    onOpen={() => onOpenMatch(p)}
+                    onScore={p.state === 'dismissed' ? undefined : () => onScore(p)}
+                  />
+                  {p.state === 'new' && <Chip tone="info">New</Chip>}
+                  {p.state === 'saved' && <Chip tone="accent">{p.jobStatus ? labelFor(STATUS_LABEL, p.jobStatus) : 'Job deleted'}</Chip>}
+                  {p.state === 'dismissed' && <Chip>{timeAgo(p.dismissedAt)}</Chip>}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {salary && (

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useMemo, useState } from 'react'
-import { Inbox, Search, Telescope, TriangleAlert, X } from 'lucide-react'
+import { Inbox, LoaderCircle, Search, Telescope, TriangleAlert, X } from 'lucide-react'
 import { confirmDialog } from '../../components/ConfirmDialog'
 import { PageTitle } from '../../components/PageTitle'
 import { api, apiOk } from '../../lib/api'
@@ -10,15 +10,21 @@ import {
   ClearDismissed,
   DeleteSearch,
   DismissPosting,
+  EventsOn,
+  GetSettings,
   InboxCounts,
+  ListAIProviders,
   ListJobSources,
   ListPostings,
   ListRecentSearches,
   MarkPostingSeen,
   RefreshSearch,
+  RescoreOutdated,
   RestorePosting,
   RunSearch,
   SavePosting,
+  ScoreInbox,
+  ScorePosting,
   type app,
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
@@ -27,6 +33,8 @@ import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
 import { readPref, readSessionValue, writePref, writeSessionValue } from '../../lib/prefs'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import { outdatedCount, scoringStatus, searchStatus, shouldAutoScore, sortByMatch } from '../../lib/match'
+import { MatchDialog } from './MatchDialog'
 import { PostingList, type PostingActions } from './PostingList'
 import { PreviewPane } from './PreviewPane'
 import { RecentSearches } from './RecentSearches'
@@ -40,6 +48,7 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 const QUERY_PREF = 'discoverQuery'
+const SORT_PREF = 'discoverSort'
 
 /** The last query, or an empty one (its boards are filled in once the list loads). */
 function loadQuery(): app.SearchQuery {
@@ -72,6 +81,27 @@ export default function DiscoverPage() {
   const [searching, setSearching] = useState(false)
   const [busy, setBusy] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  type Status = { phase: 'searching'; boards: string[]; done: number; total: number } | { phase: 'scoring'; done: number; total: number }
+  const [status, setStatus] = useState<Status | null>(null)
+  const [statusError, setStatusError] = useState('')
+  const [sort, setSort] = useState(() => readPref(SORT_PREF, 'newest'))
+  const [matchFor, setMatchFor] = useState<string | null>(null)
+  const { data: appSettings } = useLoad(() => api(GetSettings()), [])
+  const { data: providers } = useLoad(() => api(ListAIProviders()), [])
+
+  useEffect(() => {
+    const offSearch = EventsOn('search:progress', (p: { done: number; total: number }) =>
+      setStatus((s) => (s?.phase === 'searching' ? { ...s, done: p.done, total: p.total } : s)),
+    )
+    const offMatch = EventsOn('match:progress', (p: { done: number; total: number }) => {
+      setStatus({ phase: 'scoring', done: p.done, total: p.total })
+      notifyDataChanged() // badges fill in request by request
+    })
+    return () => {
+      offSearch()
+      offMatch()
+    }
+  }, [])
 
   const { data: postings } = useLoad(
     () => api(ListPostings({ tab, query: filter.query, source: filter.source, onlyNew: tab === 'inbox' && filter.onlyNew })),
@@ -89,19 +119,34 @@ export default function DiscoverPage() {
     if (sources) writePref(QUERY_PREF, JSON.stringify(query))
   }, [query, sources])
 
-  const selected = useMemo(() => postings?.find((p) => p.id === selectedId), [postings, selectedId])
+  const shown = useMemo(() => (sort === 'match' && postings ? sortByMatch(postings) : postings), [postings, sort])
+  const selected = useMemo(() => shown?.find((p) => p.id === selectedId), [shown, selectedId])
+  const matchPosting = shown?.find((p) => p.id === matchFor && p.match)
+
+  const score = async (call: () => Promise<app.MatchRun>) => {
+    setStatusError('')
+    setStatus({ phase: 'scoring', done: 0, total: 0 })
+    const r = await api(call())
+    setStatus(null)
+    notifyDataChanged()
+    if (r?.error) setStatusError(r.error)
+  }
 
   const search = async (call: SearchCall, q: app.SearchQuery = query) => {
     setSearching(true)
     setShowErrors(true)
+    setStatusError('')
     const ready = q.sources.filter((id) => sources?.some((s) => s.id === id && !s.unavailable))
+    setStatus({ phase: 'searching', boards: ready.map((id) => sourceLabel(sources ?? [], id)), done: 0, total: ready.length })
     const r = await api(call({ ...q, sources: ready }))
     setSearching(false)
+    setStatus(null)
     if (!r) return
     writeSessionValue(LAST_RUN_KEY, r)
     setRun(r)
     setTab('inbox')
     notifyDataChanged()
+    if (shouldAutoScore(appSettings, r)) await score(ScoreInbox)
   }
 
   const runSaved = (s: app.SavedSearch, call: SearchCall) => {
@@ -121,9 +166,9 @@ export default function DiscoverPage() {
 
   // After an action the posting usually leaves this tab, so move to the next one.
   const advance = (p: app.Posting) => {
-    if (!postings || selectedId !== p.id) return
-    const i = postings.findIndex((x) => x.id === p.id)
-    const next = postings[i + 1] ?? postings[i - 1]
+    if (!shown || selectedId !== p.id) return
+    const i = shown.findIndex((x) => x.id === p.id)
+    const next = shown[i + 1] ?? shown[i - 1]
     setSelectedId(next && isWide() ? next.id : null)
   }
 
@@ -178,6 +223,25 @@ export default function DiscoverPage() {
         onRefresh={(s) => runSaved(s, RefreshSearch)}
         onRemove={removeSearch}
       />
+
+      {status ? (
+        <p className="flex items-center gap-2 font-mono text-[11px] text-ink-2">
+          <LoaderCircle size={12} className="animate-spin" />
+          {status.phase === 'searching' ? searchStatus(status.boards, status.done, status.total) : scoringStatus(status.done, status.total)}
+        </p>
+      ) : statusError ? (
+        <p className="flex items-center gap-2 font-mono text-[11px] text-amber-300">
+          <TriangleAlert size={12} />
+          {statusError}
+          <button onClick={() => setStatusError('')} aria-label="Dismiss" className="opacity-70 hover:opacity-100">
+            <X size={12} />
+          </button>
+        </p>
+      ) : outdatedCount(postings) > 0 ? (
+        <button className="self-start font-mono text-[11px] text-ink-2 underline-offset-2 hover:text-ink hover:underline" onClick={() => score(RescoreOutdated)}>
+          Re-score outdated ({outdatedCount(postings)})
+        </button>
+      ) : null}
 
       {run && (
         <p className="font-mono text-[11px] text-ink-3">
@@ -241,6 +305,18 @@ export default function DiscoverPage() {
             </option>
           ))}
         </select>
+        <select
+          className="field w-auto py-1 text-xs"
+          value={sort}
+          onChange={(e) => {
+            setSort(e.target.value)
+            writePref(SORT_PREF, e.target.value)
+          }}
+          aria-label="Sort"
+        >
+          <option value="newest">Newest</option>
+          <option value="match">Best match</option>
+        </select>
         {tab === 'inbox' && (
           <label className="flex items-center gap-1.5 text-xs text-ink-2">
             <input
@@ -261,10 +337,18 @@ export default function DiscoverPage() {
 
       <div className="grid min-h-0 flex-1 gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="min-h-0 overflow-y-auto pr-1">
-          {!postings ? null : postings.length === 0 ? (
+          {!shown ? null : shown.length === 0 ? (
             <EmptyState tab={tab} filtered={!!(filter.query || filter.source || filter.onlyNew)} />
           ) : (
-            <PostingList postings={postings} selectedId={selectedId} onSelect={select} actions={actions} />
+            <PostingList
+              postings={shown}
+              selectedId={selectedId}
+              onSelect={select}
+              actions={actions}
+              scoring={status?.phase === 'scoring'}
+              onOpenMatch={(p) => setMatchFor(p.id)}
+              onScore={(p) => void score(() => ScorePosting(p.id))}
+            />
           )}
         </div>
         {selected ? (
@@ -275,6 +359,15 @@ export default function DiscoverPage() {
           </div>
         )}
       </div>
+      {matchPosting?.match && (
+        <MatchDialog
+          posting={matchPosting}
+          match={matchPosting.match}
+          providers={providers ?? []}
+          onClose={() => setMatchFor(null)}
+          onRescore={() => void score(() => ScorePosting(matchPosting.id))}
+        />
+      )}
     </div>
   )
 }
