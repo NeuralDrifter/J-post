@@ -34,6 +34,7 @@ import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
 import { readPref, readSessionValue, writePref, writeSessionValue } from '../../lib/prefs'
 import { settingsLink } from '../../lib/settingsNav'
 import { toast } from '../../lib/toast'
+import { visiblePostings } from '../../lib/inbox'
 import { useLoad } from '../../lib/useLoad'
 import { outdatedCount, scoringStatus, searchStatus, shouldAutoScore, sortByMatch } from '../../lib/match'
 import { MatchDialog } from './MatchDialog'
@@ -106,9 +107,14 @@ export default function DiscoverPage() {
   }, [])
 
   const { data: postings } = useLoad(
-    () => api(ListPostings({ tab, query: filter.query, source: filter.source, onlyNew: tab === 'inbox' && filter.onlyNew })),
-    [tab, filter.query, filter.source, filter.onlyNew],
+    // Only new is applied below (visiblePostings), so opening a posting doesn't drop it from the list.
+    () => api(ListPostings({ tab, query: filter.query, source: filter.source, onlyNew: false })),
+    [tab, filter.query, filter.source],
   )
+  const [opened, setOpened] = useState<ReadonlySet<string>>(new Set())
+  useEffect(() => {
+    setOpened(new Set())
+  }, [tab, filter.query, filter.source, filter.onlyNew])
   const { data: counts } = useLoad(() => api(InboxCounts()), [])
   const { data: recent } = useLoad(() => api(ListRecentSearches()), [])
 
@@ -121,7 +127,11 @@ export default function DiscoverPage() {
     if (sources) writePref(QUERY_PREF, JSON.stringify(query))
   }, [query, sources])
 
-  const shown = useMemo(() => (sort === 'match' && postings ? sortByMatch(postings) : postings), [postings, sort])
+  const shown = useMemo(() => {
+    if (!postings) return postings
+    const listed = visiblePostings(postings, tab === 'inbox' && filter.onlyNew, opened)
+    return sort === 'match' ? sortByMatch(listed) : listed
+  }, [postings, tab, filter.onlyNew, opened, sort])
   const selected = useMemo(() => shown?.find((p) => p.id === selectedId), [shown, selectedId])
   const matchPosting = shown?.find((p) => p.id === matchFor && p.match)
 
@@ -138,6 +148,7 @@ export default function DiscoverPage() {
     setSearching(true)
     setShowErrors(true)
     setStatusError('')
+    setOpened(new Set())
     const ready = q.sources.filter((id) => sources?.some((s) => s.id === id && !s.unavailable))
     setStatus({ phase: 'searching', boards: ready.map((id) => sourceLabel(sources ?? [], id)), done: 0, total: ready.length })
     const r = await api(call({ ...q, sources: ready }))
@@ -163,6 +174,7 @@ export default function DiscoverPage() {
 
   const select = (p: app.Posting) => {
     setSelectedId(p.id)
+    setOpened((ids) => new Set(ids).add(p.id))
     if (p.state === 'new') void apiOk(MarkPostingSeen(p.id)).then((ok) => ok && notifyDataChanged())
   }
 
