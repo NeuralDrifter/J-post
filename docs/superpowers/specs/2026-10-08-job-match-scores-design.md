@@ -2,6 +2,20 @@
 
 **Date:** 2026-10-08 · **Status:** Implemented (branch feature/job-match-scores); live run pending · **Builds on:** [AI providers](2026-10-07-ai-providers-design.md) (the task/provider layer, now `internal/ai`), [Discover inbox](2026-10-01-discover-inbox-design.md)
 
+**Changed after the first hands-on try (2026-10-09):**
+- Scoring looked broken but wasn't: the user set the *interview grading*
+  provider to Claude Code, while job matching had its own picker in a separate
+  section (still Gemini Live) and its switch was still off. Fixes: Settings is
+  now a side menu (Profile & resume, AI providers, Job matching, Job search,
+  Pipeline, Compensation, Data & about) with one pinned Save bar ("Unsaved
+  changes" / Discard); unsaved edits survive leaving the page. The job-matching
+  provider moved into AI providers' table, whose jobs are now named "Interview
+  grading", "Coaching tips", "Question plan" and "Job matching". Discover says
+  when scores are off and links to the switch.
+- While scoring is on, **every** search now scores leftover unscored postings
+  (including ones from earlier searches), not only searches that found new
+  ones. With nothing unscored, no request is sent.
+
 ## Goal
 
 Every posting in the Discover inbox can show a **match %**: how well the job

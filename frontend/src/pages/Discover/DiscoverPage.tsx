@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { Inbox, LoaderCircle, Search, Telescope, TriangleAlert, X } from 'lucide-react'
 import { confirmDialog } from '../../components/ConfirmDialog'
 import { PageTitle } from '../../components/PageTitle'
@@ -31,6 +32,7 @@ import { notifyDataChanged } from '../../lib/events'
 import { timeAgo } from '../../lib/format'
 import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
 import { readPref, readSessionValue, writePref, writeSessionValue } from '../../lib/prefs'
+import { settingsLink } from '../../lib/settingsNav'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { outdatedCount, scoringStatus, searchStatus, shouldAutoScore, sortByMatch } from '../../lib/match'
@@ -146,7 +148,7 @@ export default function DiscoverPage() {
     setRun(r)
     setTab('inbox')
     notifyDataChanged()
-    if (shouldAutoScore(appSettings, r)) await score(ScoreInbox)
+    if (shouldAutoScore(appSettings)) await score(ScoreInbox)
   }
 
   const runSaved = (s: app.SavedSearch, call: SearchCall) => {
@@ -241,6 +243,13 @@ export default function DiscoverPage() {
         <button className="self-start font-mono text-[11px] text-ink-2 underline-offset-2 hover:text-ink hover:underline" onClick={() => score(RescoreOutdated)}>
           Re-score outdated ({outdatedCount(postings)})
         </button>
+      ) : appSettings && !appSettings.matchEnabled ? (
+        <p className="font-mono text-[11px] text-ink-3">
+          Match scores are off.{' '}
+          <Link to={settingsLink('matching')} className="text-indigo-300 hover:underline">
+            Turn them on in Settings → Job matching
+          </Link>
+        </p>
       ) : null}
 
       {run && (

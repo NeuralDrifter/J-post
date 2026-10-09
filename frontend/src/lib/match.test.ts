@@ -51,14 +51,10 @@ describe('sortByMatch', () => {
 })
 
 describe('shouldAutoScore', () => {
-  const on = { matchEnabled: true } as settings.Settings
-  const run = (cached: boolean, newCount: number) => ({ cached, newCount }) as app.SearchRun
-  it('scores only after a real search that found new postings, with scoring on', () => {
-    expect(shouldAutoScore(on, run(false, 3))).toBe(true)
-    expect(shouldAutoScore(on, run(true, 3))).toBe(false)
-    expect(shouldAutoScore(on, run(false, 0))).toBe(false)
-    expect(shouldAutoScore({ matchEnabled: false } as settings.Settings, run(false, 3))).toBe(false)
-    expect(shouldAutoScore(undefined, run(false, 3))).toBe(false)
+  it('scores after every search while scoring is on, so leftover unscored postings get scored too', () => {
+    expect(shouldAutoScore({ matchEnabled: true } as settings.Settings)).toBe(true)
+    expect(shouldAutoScore({ matchEnabled: false } as settings.Settings)).toBe(false)
+    expect(shouldAutoScore(undefined)).toBe(false)
   })
 })
 

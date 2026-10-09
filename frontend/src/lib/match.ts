@@ -39,9 +39,12 @@ export function sortByMatch(postings: app.Posting[]): app.Posting[] {
     .map((x) => x.p)
 }
 
-/** A search starts scoring only when scoring is on and it actually brought in new postings. */
-export function shouldAutoScore(s: settings.Settings | undefined, run: app.SearchRun): boolean {
-  return !!s?.matchEnabled && !run.cached && run.newCount > 0
+/**
+ * While scoring is on, every search scores whatever is still unscored, including
+ * postings from earlier searches. With nothing unscored, no request is sent.
+ */
+export function shouldAutoScore(s: settings.Settings | undefined): boolean {
+  return !!s?.matchEnabled
 }
 
 export function searchStatus(boards: string[], done: number, total: number): string {
