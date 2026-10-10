@@ -59,3 +59,9 @@ export function scoringStatus(done: number, total: number): string {
 export function outdatedCount(postings: app.Posting[] | undefined): number {
   return postings?.filter((p) => p.match?.outdated && p.state !== 'dismissed').length ?? 0
 }
+
+/** Which resume a score was graded against, in words ("" means the default at the time). */
+export function gradedAgainst(resumeId: string, resumes: { id: string; name: string }[]): string {
+  if (!resumeId) return 'your default resume'
+  return resumes.find((r) => r.id === resumeId)?.name ?? 'a resume that has since been deleted'
+}

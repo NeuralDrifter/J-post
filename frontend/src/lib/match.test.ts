@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { app, settings } from './backend'
-import { factorRows, matchBand, outdatedCount, scoringStatus, searchStatus, shouldAutoScore, sortByMatch } from './match'
+import { factorRows, gradedAgainst, matchBand, outdatedCount, scoringStatus, searchStatus, shouldAutoScore, sortByMatch } from './match'
 
 const f = (applicable: boolean, score: number, note = '') => ({ applicable, score, note })
 const score = (overall: number, outdated = false) =>
@@ -74,5 +74,18 @@ describe('outdatedCount', () => {
   it('ignores Not interested postings, which re-scoring skips', () => {
     const dismissed = { ...posting('d', 70, true), state: 'dismissed' } as app.Posting
     expect(outdatedCount([dismissed, posting('a', 70, true)])).toBe(1)
+  })
+})
+
+describe('gradedAgainst', () => {
+  const resumes = [{ id: 'r1', name: 'Backend' }]
+
+  it('names the resume a score was graded against', () => {
+    expect(gradedAgainst('r1', resumes)).toBe('Backend')
+  })
+
+  it('describes scores graded against the default, and resumes since deleted', () => {
+    expect(gradedAgainst('', resumes)).toBe('your default resume')
+    expect(gradedAgainst('gone', resumes)).toBe('a resume that has since been deleted')
   })
 })

@@ -26,11 +26,3 @@ export function templateOf(doc: LibraryDocument): string {
 export function templateLabel(template: string): string {
   return template.charAt(0).toUpperCase() + template.slice(1)
 }
-
-/** Characters Windows doesn't allow in file names. */
-const UNSAFE_FILE_CHARS = /[<>:"/\\|?*\u0000-\u001f]+/g
-
-export function exportFileName(name: string, extension: 'pdf' | 'json' | 'docx'): string {
-  const safe = name.replace(UNSAFE_FILE_CHARS, ' ').replace(/\s+/g, ' ').trim()
-  return `${safe || 'Resume'}.${extension}`
-}

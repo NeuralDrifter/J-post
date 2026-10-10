@@ -8,7 +8,7 @@ import { DeleteDocumentForever, DuplicateDocument, RenameDocument, RestoreDocume
 import { notifyDataChanged } from '../../lib/events'
 import type { MenuEntry } from '../../lib/menu'
 import { exportStoredDocument, setDefaultResume } from '../../lib/resumes/actions'
-import { RESUME_KIND } from '../../lib/resumes/stored'
+import { RESUME_KIND } from '../../lib/resumes/paths'
 import { toast } from '../../lib/toast'
 import { exportMenuItems } from '../ResumeBuilder/exportMenu'
 

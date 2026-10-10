@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import { exportFileName, libraryOrder, templateLabel, templateOf, type LibraryDocument } from './library'
+import { libraryOrder, templateLabel, templateOf, type LibraryDocument } from './library'
 
 const doc = (id: string, name: string, data = '{}'): LibraryDocument => ({ id, kind: 'resume', name, data, updatedAt: '2026-10-01T12:00:00Z' })
 
@@ -41,12 +41,5 @@ describe('templateLabel', () => {
   it('capitalises the template id', () => {
     expect(templateLabel('chikorita')).toBe('Chikorita')
     expect(templateLabel('')).toBe('')
-  })
-})
-
-describe('exportFileName', () => {
-  it('turns the document name into a safe file name', () => {
-    expect(exportFileName('Backend: Acme / 2026', 'pdf')).toBe('Backend Acme 2026.pdf')
-    expect(exportFileName('   ', 'json')).toBe('Resume.json')
   })
 })

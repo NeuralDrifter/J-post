@@ -6,11 +6,11 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
 
 - **Pipeline board**: Interested → Applied → Interviewing → Offer → Closed, with drag-and-drop. Closing a job asks why (not selected, I withdrew, no response, I declined) so your history stays honest without being a wall of rejections.
 - **Live metrics**: active applications, response rate, interviews this week, and follow-ups due. These are computed from real data; nothing is faked.
-- **Table view and filters**: sortable table, plus work mode, source and quick search filters.
+- **Table view and filters**: sortable table, plus work mode, source and quick search filters. **Export CSV** saves the jobs shown as a spreadsheet.
 - **Job detail page**:
   - automatic stage history timeline
   - job description and autosaving markdown notes
-  - contacts, scheduled interviews, and attached files (copies of the exact resume or cover letter you sent)
+  - contacts, scheduled interviews (add one or all upcoming to your calendar as .ics), and attached files (copies of the exact resume or cover letter you sent)
 - **Discover**: searches several job boards at once and files every posting in a persistent **inbox**.
   - New postings are badged.
   - Add each one to **Interested** or mark it **Not interested**, which hides it for good. A Not interested tab lets you move postings back.
@@ -32,6 +32,8 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
   - 17 templates, layout across pages and columns, fonts, colours, margins and spacing, custom CSS, and a photo you can crop.
   - Edits save as you type; undo and redo with Ctrl+Z and Ctrl+Shift+Z. Export a PDF (Ctrl+S), a Word document or Reactive Resume JSON.
   - **Import** a PDF, a Word file (.docx), a LinkedIn data export (.zip), JSON Resume, or Reactive Resume JSON (resumes and letters). Files are read on this computer; only a photo linked from the web is downloaded, and never from a private or local address. Older Reactive Resume exports that carry cover letters come in as a resume plus its letters.
+  - **On each job** (Resume & letter panel), choose the resume and cover letter you sent, or **tailor a copy** of a resume for that job. Mock interviews and their scorecards read the job's resume.
+  - In Discover, right-click a posting → **Score with** to grade it against any resume; the score's breakdown says which resume it used, and Re-score outdated keeps each posting on its own resume.
   - **Cover letters** sit in their own tab. A new letter copies a resume's sender details and design, then is independent. Fill in who it's to and the body; the greeting, date and sign-off are added (or switch to writing it exactly as it should read). Letters use the same templates, type, colours and page settings as resumes.
   - The **default resume** (set on its card, in the builder or in Settings) is what match scores and mock interviews read. With none set, they read the resume uploaded in Settings.
   - Template fonts download once and are kept in `%USERPROFILE%\.jobtrack\fonts`, so PDFs render offline afterwards.

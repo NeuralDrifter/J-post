@@ -8,7 +8,7 @@ import { api } from '../../lib/api'
 import { ListDocuments, type app } from '../../lib/backend'
 import { createLetter } from '../../lib/resumes/actions'
 import { parseStoredResume } from '../../lib/resumes/document'
-import { RESUME_KIND } from '../../lib/resumes/stored'
+import { RESUME_KIND } from '../../lib/resumes/paths'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 

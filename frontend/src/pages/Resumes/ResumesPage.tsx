@@ -7,11 +7,11 @@ import { FileText, FileUp, Mail, Plus, Trash2, type LucideIcon } from 'lucide-re
 import { confirmThen } from '../../components/ConfirmDialog'
 import { PageTitle } from '../../components/PageTitle'
 import { api } from '../../lib/api'
-import { EmptyTrash, GetSettings, ListDocuments, type app } from '../../lib/backend'
+import { EmptyTrash, GetSettings, ListDocuments, ListJobSummaries, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { openMenu } from '../../lib/menu'
 import { libraryOrder } from '../../lib/resumes/library'
-import { LETTER_KIND, RESUME_KIND } from '../../lib/resumes/stored'
+import { documentPath, LETTER_KIND, RESUME_KIND } from '../../lib/resumes/paths'
 import { useLoad } from '../../lib/useLoad'
 import { DocumentCard } from './DocumentCard'
 import { kindNoun, liveDocumentMenu, trashedDocumentMenu } from './documentMenu'
@@ -27,11 +27,6 @@ const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'trash', label: 'Trash', icon: Trash2 },
 ]
 
-/** Where a document opens: resumes in the builder, letters in the writer. */
-export function documentPath(doc: Pick<app.Document, 'id' | 'kind'>): string {
-  return doc.kind === LETTER_KIND ? `/letters/${doc.id}` : `/resumes/${doc.id}`
-}
-
 /** Every resume and cover letter, as cards: open one to edit it, right-click for the rest. */
 export default function ResumesPage() {
   const navigate = useNavigate()
@@ -42,6 +37,8 @@ export default function ResumesPage() {
   const [importing, setImporting] = useState(false)
   const { data: docs } = useLoad(() => loadTab(tab), [tab])
   const { data: settings } = useLoad(() => api(GetSettings()), [])
+  const { data: summaries } = useLoad(() => api(ListJobSummaries()), [])
+  const jobFor = (doc: app.Document) => summaries?.find((s) => s.job.id === doc.jobId)?.job
   const defaultId = settings?.defaultResumeId ?? ''
   const shown = libraryOrder(docs ?? [], defaultId, query)
   const open = (doc: app.Document) => navigate(documentPath(doc))
@@ -89,6 +86,7 @@ export default function ResumesPage() {
                 key={doc.id}
                 doc={doc}
                 isDefault={doc.id === defaultId}
+                tailoredFor={jobFor(doc)}
                 onOpen={() => open(doc)}
                 onContextMenu={(e) => openMenu(e, liveDocumentMenu(doc, doc.id === defaultId, () => open(doc)))}
               />

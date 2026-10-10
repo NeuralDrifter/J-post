@@ -13,6 +13,7 @@ import {
   GetSettings,
   InboxCounts,
   ListAIProviders,
+  ListDocuments,
   ListJobSources,
   ListPostings,
   ListRecentSearches,
@@ -24,6 +25,7 @@ import {
   SavePosting,
   ScoreInbox,
   ScorePosting,
+  ScorePostingWith,
   type app,
 } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
@@ -32,11 +34,12 @@ import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
 import { readPref, readSessionValue, writePref, writeSessionValue } from '../../lib/prefs'
 import { toast } from '../../lib/toast'
 import { visiblePostings } from '../../lib/inbox'
+import { RESUME_KIND } from '../../lib/resumes/paths'
 import { useLoad } from '../../lib/useLoad'
 import { outdatedCount, shouldAutoScore, sortByMatch } from '../../lib/match'
 import { CLEAR_DISMISSED_DAYS, InboxToolbar, type Tab } from './InboxToolbar'
 import { MatchDialog } from './MatchDialog'
-import { PostingList, type PostingActions } from './PostingList'
+import { PostingList, type PostingActions, type ScoreWith } from './PostingList'
 import { PreviewPane } from './PreviewPane'
 import { RecentSearches } from './RecentSearches'
 import { SearchForm } from './SearchForm'
@@ -120,6 +123,13 @@ export default function DiscoverPage() {
     setStatus(null)
     notifyDataChanged()
     if (r?.error) setStatusError(r.error)
+  }
+
+  const { data: resumes } = useLoad(() => api(ListDocuments(RESUME_KIND, false)), [])
+  const scoreWith: ScoreWith = {
+    resumes: resumes ?? [],
+    defaultResumeId: appSettings?.defaultResumeId ?? '',
+    score: (p, resumeId) => void score(() => ScorePostingWith(p.id, resumeId)),
   }
 
   const search = async (call: SearchCall, q: app.SearchQuery = query) => {
@@ -279,6 +289,7 @@ export default function DiscoverPage() {
               scoring={status?.phase === 'scoring'}
               onOpenMatch={(p) => setMatchFor(p.id)}
               onScore={(p) => void score(() => ScorePosting(p.id))}
+              scoreWith={scoreWith}
             />
           )}
         </div>
@@ -295,6 +306,7 @@ export default function DiscoverPage() {
           posting={matchPosting}
           match={matchPosting.match}
           providers={providers ?? []}
+          resumes={scoreWith.resumes}
           onClose={() => setMatchFor(null)}
           onRescore={() => void score(() => ScorePosting(matchPosting.id))}
         />

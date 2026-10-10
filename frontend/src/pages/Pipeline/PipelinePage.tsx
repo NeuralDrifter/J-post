@@ -14,6 +14,7 @@ import type { Status } from '../../lib/format'
 import { readPref, writePref } from '../../lib/prefs'
 import { useLoad } from '../../lib/useLoad'
 import { Board } from './Board'
+import { exportJobsCsv } from '../../lib/exportFiles'
 import { FilterBar, type PipelineFilters, type PipelineView } from './FilterBar'
 import { MetricsRow } from './MetricsRow'
 import { NextUpBanner } from './NextUpBanner'
@@ -75,6 +76,7 @@ export default function PipelinePage() {
         onChange={setFilters}
         shown={visible.length}
         total={summaries?.length ?? 0}
+        onExport={() => void exportJobsCsv(visible.map((s) => s.job))}
       />
       <div className="min-h-0 flex-1">
         {view === 'board' ? (

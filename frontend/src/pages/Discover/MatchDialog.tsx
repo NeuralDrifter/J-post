@@ -4,7 +4,7 @@
 import { Modal } from '../../components/Modal'
 import type { ai, app } from '../../lib/backend'
 import { formatDateTime } from '../../lib/format'
-import { factorRows, matchBand } from '../../lib/match'
+import { factorRows, gradedAgainst, matchBand } from '../../lib/match'
 
 const RING: Record<string, string> = { good: 'text-emerald-300', fair: 'text-amber-300', low: 'text-ink-2' }
 const BAR: Record<string, string> = { good: 'bg-success', fair: 'bg-warn', low: 'bg-ink-3' }
@@ -13,11 +13,12 @@ type Props = {
   posting: app.Posting
   match: app.MatchScore
   providers: ai.AIProvider[]
+  resumes: { id: string; name: string }[]
   onClose: () => void
   onRescore: () => void
 }
 
-export function MatchDialog({ posting, match: m, providers, onClose, onRescore }: Props) {
+export function MatchDialog({ posting, match: m, providers, resumes, onClose, onRescore }: Props) {
   const provider = providers.find((p) => p.id === m.provider)?.label ?? m.provider
   return (
     <Modal title={`${posting.title}${posting.company ? ` · ${posting.company}` : ''}`} onClose={onClose}>
@@ -60,7 +61,7 @@ export function MatchDialog({ posting, match: m, providers, onClose, onRescore }
       </div>
 
       <p className="mt-5 font-mono text-[11px] text-ink-3">
-        Scored by {m.model || 'an unknown model'} ({provider}), {formatDateTime(m.scoredAt)}
+        Graded against {gradedAgainst(m.resumeId, resumes)} by {m.model || 'an unknown model'} ({provider}), {formatDateTime(m.scoredAt)}
       </p>
     </Modal>
   )

@@ -5,9 +5,7 @@
 import type { ResumeRenderOptions } from '@reactive-resume/pdf/context'
 import { parseStoredResume, type ResumeData } from './document'
 import { LETTER_RENDER_OPTIONS, letterPageData, parseStoredLetter, type LetterData } from './letter'
-
-export const RESUME_KIND = 'resume'
-export const LETTER_KIND = 'letter'
+import { LETTER_KIND } from './paths'
 
 /** What a document prints as: a resume-shaped page and how to render it. */
 export type PrintablePage = { data: ResumeData; renderOptions?: ResumeRenderOptions }

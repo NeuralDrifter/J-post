@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { Bookmark, Copy, ExternalLink, EyeOff, SquareKanban, Undo2 } from 'lucide-react'
+import { Bookmark, Copy, ExternalLink, EyeOff, FileText, Gauge, SquareKanban, Star, Undo2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Chip } from '../../components/Chip'
 import { copyText } from '../../components/ContextMenu'
@@ -17,6 +17,9 @@ export type PostingActions = {
   restore: (p: app.Posting) => void
 }
 
+/** The resumes a posting can be scored against, and how to score it. */
+export type ScoreWith = { resumes: { id: string; name: string }[]; defaultResumeId: string; score: (p: app.Posting, resumeId: string) => void }
+
 type Props = {
   postings: app.Posting[]
   selectedId: string | null
@@ -25,9 +28,23 @@ type Props = {
   scoring: boolean
   onOpenMatch: (p: app.Posting) => void
   onScore: (p: app.Posting) => void
+  scoreWith: ScoreWith
 }
 
-export function PostingList({ postings, selectedId, onSelect, actions, scoring, onOpenMatch, onScore }: Props) {
+/** "Score with ▸": the default resume, then every resume by name (the default one starred). */
+function scoreWithEntry(p: app.Posting, { resumes, defaultResumeId, score }: ScoreWith): MenuEntry {
+  return {
+    label: 'Score with',
+    icon: Gauge,
+    submenu: [
+      { label: 'Default resume', icon: Star, onSelect: () => score(p, '') },
+      ...(resumes.length ? (['separator'] as const) : []),
+      ...resumes.map((r) => ({ label: r.id === defaultResumeId ? `${r.name} (default)` : r.name, icon: FileText, onSelect: () => score(p, r.id) })),
+    ],
+  }
+}
+
+export function PostingList({ postings, selectedId, onSelect, actions, scoring, onOpenMatch, onScore, scoreWith }: Props) {
   const navigate = useNavigate()
   const sources = useJobSources()
 
@@ -37,7 +54,12 @@ export function PostingList({ postings, selectedId, onSelect, actions, scoring, 
       { label: 'Copy link', icon: Copy, disabled: !p.url, onSelect: () => copyText(p.url, 'Link copied') },
     ]
     if (p.state === 'saved') {
-      return [{ label: 'Open job', icon: SquareKanban, disabled: !p.jobId, onSelect: () => navigate(`/jobs/${p.jobId}`) }, 'separator', ...link]
+      return [
+        { label: 'Open job', icon: SquareKanban, disabled: !p.jobId, onSelect: () => navigate(`/jobs/${p.jobId}`) },
+        scoreWithEntry(p, scoreWith),
+        'separator',
+        ...link,
+      ]
     }
     if (p.state === 'dismissed') {
       return [
@@ -50,6 +72,7 @@ export function PostingList({ postings, selectedId, onSelect, actions, scoring, 
     return [
       { label: 'Add to Interested', icon: Bookmark, onSelect: () => actions.save(p) },
       { label: 'Not interested', icon: EyeOff, onSelect: () => actions.dismiss(p) },
+      scoreWithEntry(p, scoreWith),
       'separator',
       ...link,
     ]

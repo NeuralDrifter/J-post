@@ -12,6 +12,7 @@ import { useLoad } from '../../lib/useLoad'
 import { CompPanel } from './CompPanel'
 import { ContactsPanel } from './ContactsPanel'
 import { DescriptionCard } from './DescriptionCard'
+import { DocumentsPanel } from './DocumentsPanel'
 import { EditJobModal } from './EditJobModal'
 import { FilesPanel } from './FilesPanel'
 import { InterviewsPanel } from './InterviewsPanel'
@@ -50,8 +51,9 @@ export default function JobDetailPage({ id }: { id: string }) {
           <NotesPad jobId={job.id} initial={job.notes} />
         </div>
         <aside className="col-start-2 space-y-4 min-[1200px]:col-start-3 min-[1200px]:row-start-1">
+          <DocumentsPanel job={job} />
           <MockInterviewsPanel job={job} />
-          <InterviewsPanel jobId={job.id} />
+          <InterviewsPanel job={job} />
           <CompPanel jobId={job.id} />
           <ContactsPanel jobId={job.id} />
           <FilesPanel jobId={job.id} />

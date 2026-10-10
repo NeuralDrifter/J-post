@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useState, type SubmitEvent } from 'react'
-import { Circle, CircleCheck, Copy, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarPlus, Circle, CircleCheck, Copy, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { copyText } from '../../components/ContextMenu'
 import { openMenu } from '../../lib/menu'
 import { confirmThen } from '../../components/ConfirmDialog'
@@ -14,6 +14,7 @@ import { Panel } from '../../components/Panel'
 import { api } from '../../lib/api'
 import { BrowserOpenURL, DeleteInterview, ListInterviews, SaveInterview, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
+import { exportInterviews } from '../../lib/exportFiles'
 import { formatDateTime, fromLocalInputValue, INTERVIEW_KIND_LABEL, labelFor, toLocalInputValue } from '../../lib/format'
 import { useLoad } from '../../lib/useLoad'
 
@@ -28,8 +29,12 @@ const blankInterview = (jobId: string): app.Interview => ({
   completed: false,
 })
 
-export function InterviewsPanel({ jobId }: { jobId: string }) {
+const kindLabel = (kind: string) => labelFor(INTERVIEW_KIND_LABEL, kind)
+
+export function InterviewsPanel({ job }: { job: app.Job }) {
+  const jobId = job.id
   const { data: interviews } = useLoad(() => api(ListInterviews(jobId)), [jobId])
+  const upcoming = (interviews ?? []).filter((iv) => !iv.completed && new Date(iv.scheduledAt).getTime() > Date.now())
   const [editing, setEditing] = useState<app.Interview | null>(null)
 
   const toggle = async (iv: app.Interview) => {
@@ -49,9 +54,16 @@ export function InterviewsPanel({ jobId }: { jobId: string }) {
     <Panel
       title="Interviews"
       action={
-        <IconButton label="Schedule interview" onClick={() => setEditing(blankInterview(jobId))}>
-          <Plus size={15} />
-        </IconButton>
+        <div className="flex gap-0.5">
+          {upcoming.length > 0 && (
+            <IconButton label="Add the upcoming interviews to your calendar (.ics)" onClick={() => void exportInterviews(upcoming, job, kindLabel)}>
+              <CalendarPlus size={15} />
+            </IconButton>
+          )}
+          <IconButton label="Schedule interview" onClick={() => setEditing(blankInterview(jobId))}>
+            <Plus size={15} />
+          </IconButton>
+        </div>
       }
     >
       {interviews?.length ? (
@@ -65,6 +77,7 @@ export function InterviewsPanel({ jobId }: { jobId: string }) {
                 openMenu(e, [
                   { label: 'Edit', icon: Pencil, onSelect: () => setEditing(iv) },
                   { label: iv.completed ? 'Mark not done' : 'Mark done', icon: iv.completed ? Circle : CircleCheck, onSelect: () => toggle(iv) },
+                  { label: 'Add to calendar (.ics)', icon: CalendarPlus, onSelect: () => exportInterviews([iv], job, kindLabel) },
                   'separator',
                   { label: 'Open meeting link', icon: ExternalLink, disabled: !isLink, onSelect: () => BrowserOpenURL(iv.locationOrLink) },
                   { label: isLink ? 'Copy link' : 'Copy location', icon: Copy, disabled: !iv.locationOrLink, onSelect: () => copyText(iv.locationOrLink) },

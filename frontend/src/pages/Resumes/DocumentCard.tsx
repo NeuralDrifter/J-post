@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import type { MouseEvent } from 'react'
-import { Star } from 'lucide-react'
+import { useNavigate } from 'react-router'
+import { Briefcase, Star } from 'lucide-react'
 import { Chip } from '../../components/Chip'
 import type { app } from '../../lib/backend'
 import { timeAgo } from '../../lib/format'
@@ -16,12 +17,15 @@ type Props = {
   dimmed?: boolean
   /** Shown before the template, e.g. which kind of document it is in Trash. */
   label?: string
+  /** The job a tailored copy was made for. */
+  tailoredFor?: app.Job
   onOpen?: () => void
   onContextMenu: (e: MouseEvent) => void
 }
 
 /** A resume or letter in the library: its first page, name, template and when it last changed. */
-export function DocumentCard({ doc, isDefault, dimmed = false, label, onOpen, onContextMenu }: Props) {
+export function DocumentCard({ doc, isDefault, dimmed = false, label, tailoredFor, onOpen, onContextMenu }: Props) {
+  const navigate = useNavigate()
   const template = templateOf(doc)
   return (
     <article
@@ -45,6 +49,13 @@ export function DocumentCard({ doc, isDefault, dimmed = false, label, onOpen, on
         <p className="truncate font-mono text-[11px] text-ink-3">
           {[label, templateLabel(template), `edited ${timeAgo(doc.updatedAt)}`].filter(Boolean).join(' · ')}
         </p>
+        {tailoredFor && (
+          <button type="button" className="mt-1.5 block max-w-full" onClick={() => navigate(`/jobs/${tailoredFor.id}`)} title="Open the job this copy was tailored for">
+            <Chip tone="accent">
+              <Briefcase size={11} /> Tailored · {tailoredFor.company} — {tailoredFor.position}
+            </Chip>
+          </button>
+        )}
       </div>
     </article>
   )
