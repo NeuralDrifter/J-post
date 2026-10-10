@@ -10,6 +10,10 @@ export function ClearDismissed(arg1) {
   return window['go']['app']['App']['ClearDismissed'](arg1);
 }
 
+export function CreateDocument(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['CreateDocument'](arg1, arg2, arg3, arg4);
+}
+
 export function CreateJob(arg1) {
   return window['go']['app']['App']['CreateJob'](arg1);
 }
@@ -28,6 +32,10 @@ export function DeleteCompPackage(arg1) {
 
 export function DeleteContact(arg1) {
   return window['go']['app']['App']['DeleteContact'](arg1);
+}
+
+export function DeleteDocumentForever(arg1) {
+  return window['go']['app']['App']['DeleteDocumentForever'](arg1);
 }
 
 export function DeleteInterview(arg1) {
@@ -70,8 +78,20 @@ export function DraftCounter(arg1) {
   return window['go']['app']['App']['DraftCounter'](arg1);
 }
 
+export function DuplicateDocument(arg1) {
+  return window['go']['app']['App']['DuplicateDocument'](arg1);
+}
+
+export function EmptyTrash(arg1) {
+  return window['go']['app']['App']['EmptyTrash'](arg1);
+}
+
 export function GetCurrentComp() {
   return window['go']['app']['App']['GetCurrentComp']();
+}
+
+export function GetDocument(arg1) {
+  return window['go']['app']['App']['GetDocument'](arg1);
 }
 
 export function GetInterviewRecording(arg1) {
@@ -132,6 +152,10 @@ export function ListComparisons() {
 
 export function ListContacts(arg1) {
   return window['go']['app']['App']['ListContacts'](arg1);
+}
+
+export function ListDocuments(arg1, arg2) {
+  return window['go']['app']['App']['ListDocuments'](arg1, arg2);
 }
 
 export function ListInterviewOptions() {
@@ -222,8 +246,16 @@ export function RenameAttachment(arg1, arg2) {
   return window['go']['app']['App']['RenameAttachment'](arg1, arg2);
 }
 
+export function RenameDocument(arg1, arg2) {
+  return window['go']['app']['App']['RenameDocument'](arg1, arg2);
+}
+
 export function RescoreOutdated() {
   return window['go']['app']['App']['RescoreOutdated']();
+}
+
+export function RestoreDocument(arg1) {
+  return window['go']['app']['App']['RestoreDocument'](arg1);
 }
 
 export function RestorePosting(arg1) {
@@ -240,6 +272,14 @@ export function SaveCompPackage(arg1) {
 
 export function SaveContact(arg1) {
   return window['go']['app']['App']['SaveContact'](arg1);
+}
+
+export function SaveDocument(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SaveDocument'](arg1, arg2, arg3);
+}
+
+export function SaveExportedFile(arg1, arg2) {
+  return window['go']['app']['App']['SaveExportedFile'](arg1, arg2);
 }
 
 export function SaveInterview(arg1) {
@@ -282,6 +322,10 @@ export function SearchOccupations(arg1) {
   return window['go']['app']['App']['SearchOccupations'](arg1);
 }
 
+export function SetDefaultResume(arg1) {
+  return window['go']['app']['App']['SetDefaultResume'](arg1);
+}
+
 export function ShowAttachmentInFolder(arg1) {
   return window['go']['app']['App']['ShowAttachmentInFolder'](arg1);
 }
@@ -296,6 +340,10 @@ export function TestClaudeCode(arg1) {
 
 export function TestPython(arg1) {
   return window['go']['app']['App']['TestPython'](arg1);
+}
+
+export function TrashDocument(arg1) {
+  return window['go']['app']['App']['TrashDocument'](arg1);
 }
 
 export function UpdateJob(arg1) {

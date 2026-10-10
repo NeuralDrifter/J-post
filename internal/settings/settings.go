@@ -107,6 +107,8 @@ type Settings struct {
 	MatchLocations  string   `json:"matchLocations"`
 	MatchSeniority  string   `json:"matchSeniority"` // a MatchSeniorityOptions value; "" = no target
 	MatchGoals      string   `json:"matchGoals"`     // free text: wants, must-haves, deal-breakers
+	// The resume AI features read when no other is chosen (a documents row id); "" = the uploaded resume text.
+	DefaultResumeID string `json:"defaultResumeId"`
 }
 
 // AnthropicEfforts are the effort levels the Anthropic API accepts.

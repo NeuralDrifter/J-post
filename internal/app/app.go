@@ -305,16 +305,16 @@ func (a *App) scoreMatches(want func(p Posting, fingerprint string) bool) (Match
 	if err != nil {
 		return MatchRun{}, err
 	}
-	profile, err := a.repo.GetProfile()
+	resume, err := a.repo.resumeTextFor(s, "")
 	if err != nil {
 		return MatchRun{}, err
 	}
-	fingerprint := matchFingerprint(profile.ResumeText, s)
+	fingerprint := matchFingerprint(resume, s)
 	postings, err := a.repo.matchCandidates(func(p Posting) bool { return want(p, fingerprint) })
 	if err != nil {
 		return MatchRun{}, err
 	}
-	return runMatch(a.lifetimeContext(), a.repo, s, profile.ResumeText, postings, a.reportProgress("match:progress"))
+	return runMatch(a.lifetimeContext(), a.repo, s, resume, postings, a.reportProgress("match:progress"))
 }
 
 // currentMatchFingerprint identifies the resume and preferences new scores are graded against.
@@ -323,11 +323,11 @@ func (a *App) currentMatchFingerprint() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	profile, err := a.repo.GetProfile()
+	resume, err := a.repo.resumeTextFor(s, "")
 	if err != nil {
 		return "", err
 	}
-	return matchFingerprint(profile.ResumeText, s), nil
+	return matchFingerprint(resume, s), nil
 }
 
 func (a *App) InboxCounts() (InboxCounts, error) {

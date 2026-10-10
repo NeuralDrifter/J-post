@@ -460,7 +460,7 @@ func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID s
 	if err := validateInterviewSetup(&setup); err != nil {
 		return LiveSession{}, err
 	}
-	ic, err := r.loadInterviewContext(jobID)
+	ic, err := r.loadInterviewContext(s, jobID)
 	if err != nil {
 		return LiveSession{}, err
 	}
@@ -516,7 +516,7 @@ type interviewContext struct {
 	resume   string
 }
 
-func (r *Repo) loadInterviewContext(jobID string) (interviewContext, error) {
+func (r *Repo) loadInterviewContext(s settings.Settings, jobID string) (interviewContext, error) {
 	job, err := r.GetJob(jobID)
 	if err != nil {
 		return interviewContext{}, err
@@ -525,11 +525,11 @@ func (r *Repo) loadInterviewContext(jobID string) (interviewContext, error) {
 	if err != nil {
 		return interviewContext{}, err
 	}
-	profile, err := r.GetProfile()
+	resume, err := r.resumeTextFor(s, "")
 	if err != nil {
 		return interviewContext{}, err
 	}
-	return interviewContext{job: job, contacts: contacts, resume: profile.ResumeText}, nil
+	return interviewContext{job: job, contacts: contacts, resume: resume}, nil
 }
 
 // planOf is the record's plan, or nil when the interview has none.
@@ -621,11 +621,11 @@ func requestScorecard(ctx context.Context, r *Repo, s settings.Settings, provide
 	if err != nil {
 		return card, "", err
 	}
-	profile, err := r.GetProfile()
+	resume, err := r.resumeTextFor(s, "")
 	if err != nil {
 		return card, "", err
 	}
-	model, err := ai.RunTask(ctx, s, provider, scorecardTask(job, mi, profile.ResumeText), &card)
+	model, err := ai.RunTask(ctx, s, provider, scorecardTask(job, mi, resume), &card)
 	if err != nil {
 		return card, "", err
 	}

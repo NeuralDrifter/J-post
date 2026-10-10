@@ -10,6 +10,8 @@ export function ChangeStatus(arg1:string,arg2:string,arg3:string,arg4:string):Pr
 
 export function ClearDismissed(arg1:number):Promise<number>;
 
+export function CreateDocument(arg1:string,arg2:string,arg3:string,arg4:string):Promise<app.Document>;
+
 export function CreateJob(arg1:app.Job):Promise<app.Job>;
 
 export function DataDir():Promise<string>;
@@ -19,6 +21,8 @@ export function DeleteAttachment(arg1:string):Promise<void>;
 export function DeleteCompPackage(arg1:string):Promise<void>;
 
 export function DeleteContact(arg1:string):Promise<void>;
+
+export function DeleteDocumentForever(arg1:string):Promise<void>;
 
 export function DeleteInterview(arg1:string):Promise<void>;
 
@@ -40,7 +44,13 @@ export function DismissPosting(arg1:string):Promise<void>;
 
 export function DraftCounter(arg1:string):Promise<comp.CompPackage>;
 
+export function DuplicateDocument(arg1:string):Promise<app.Document>;
+
+export function EmptyTrash(arg1:string):Promise<void>;
+
 export function GetCurrentComp():Promise<comp.CompPackage>;
+
+export function GetDocument(arg1:string):Promise<app.Document>;
 
 export function GetInterviewRecording(arg1:string):Promise<string>;
 
@@ -71,6 +81,8 @@ export function ListCompForJob(arg1:string):Promise<Array<app.ComparisonItem>>;
 export function ListComparisons():Promise<Array<app.ComparisonItem>>;
 
 export function ListContacts(arg1:string):Promise<Array<app.Contact>>;
+
+export function ListDocuments(arg1:string,arg2:boolean):Promise<Array<app.Document>>;
 
 export function ListInterviewOptions():Promise<app.InterviewOptions>;
 
@@ -116,7 +128,11 @@ export function RegradeInterview(arg1:string,arg2:string):Promise<app.MockInterv
 
 export function RenameAttachment(arg1:string,arg2:string):Promise<void>;
 
+export function RenameDocument(arg1:string,arg2:string):Promise<void>;
+
 export function RescoreOutdated():Promise<app.MatchRun>;
+
+export function RestoreDocument(arg1:string):Promise<void>;
 
 export function RestorePosting(arg1:string):Promise<void>;
 
@@ -125,6 +141,10 @@ export function RunSearch(arg1:app.SearchQuery):Promise<app.SearchRun>;
 export function SaveCompPackage(arg1:comp.CompPackage):Promise<comp.CompPackage>;
 
 export function SaveContact(arg1:app.Contact):Promise<app.Contact>;
+
+export function SaveDocument(arg1:string,arg2:string,arg3:string):Promise<app.Document>;
+
+export function SaveExportedFile(arg1:string,arg2:string):Promise<string>;
 
 export function SaveInterview(arg1:app.Interview):Promise<app.Interview>;
 
@@ -146,6 +166,8 @@ export function SearchAreas(arg1:string):Promise<Array<marketdata.Option>>;
 
 export function SearchOccupations(arg1:string):Promise<Array<marketdata.Option>>;
 
+export function SetDefaultResume(arg1:string):Promise<void>;
+
 export function ShowAttachmentInFolder(arg1:string):Promise<void>;
 
 export function TestAIProvider(arg1:string,arg2:settings.Settings):Promise<ai.AIProviderTest>;
@@ -153,6 +175,8 @@ export function TestAIProvider(arg1:string,arg2:settings.Settings):Promise<ai.AI
 export function TestClaudeCode(arg1:string):Promise<string>;
 
 export function TestPython(arg1:string):Promise<string>;
+
+export function TrashDocument(arg1:string):Promise<void>;
 
 export function UpdateJob(arg1:app.Job):Promise<app.Job>;
 

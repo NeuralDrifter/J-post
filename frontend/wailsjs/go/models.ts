@@ -225,6 +225,36 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class Document {
+	    id: string;
+	    kind: string;
+	    name: string;
+	    data: string;
+	    plainText: string;
+	    sourceId: string;
+	    jobId: string;
+	    createdAt: string;
+	    updatedAt: string;
+	    deletedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Document(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.data = source["data"];
+	        this.plainText = source["plainText"];
+	        this.sourceId = source["sourceId"];
+	        this.jobId = source["jobId"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	        this.deletedAt = source["deletedAt"];
+	    }
+	}
 	export class InboxCounts {
 	    new: number;
 	    inbox: number;
@@ -1702,6 +1732,7 @@ export namespace settings {
 	    matchLocations: string;
 	    matchSeniority: string;
 	    matchGoals: string;
+	    defaultResumeId: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1752,6 +1783,7 @@ export namespace settings {
 	        this.matchLocations = source["matchLocations"];
 	        this.matchSeniority = source["matchSeniority"];
 	        this.matchGoals = source["matchGoals"];
+	        this.defaultResumeId = source["defaultResumeId"];
 	    }
 	}
 

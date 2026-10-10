@@ -360,6 +360,24 @@ var migrations = []string{
 		model TEXT NOT NULL DEFAULT '',
 		scored_at TEXT NOT NULL
 	);`,
+	// 11: resumes and cover letters (Reactive Resume documents, see resumes.go),
+	// the ones a job was sent with, and the resume a match score was graded against.
+	`CREATE TABLE documents (
+		id TEXT PRIMARY KEY,
+		kind TEXT NOT NULL CHECK (kind IN ('resume', 'letter')),
+		name TEXT NOT NULL,
+		data TEXT NOT NULL,
+		plain_text TEXT NOT NULL DEFAULT '',
+		source_id TEXT NOT NULL DEFAULT '',
+		job_id TEXT REFERENCES jobs(id) ON DELETE SET NULL,
+		created_at TEXT NOT NULL,
+		updated_at TEXT NOT NULL,
+		deleted_at TEXT NOT NULL DEFAULT ''
+	);
+	CREATE INDEX idx_documents_kind ON documents(kind, deleted_at, updated_at);
+	ALTER TABLE jobs ADD COLUMN resume_id TEXT NOT NULL DEFAULT '';
+	ALTER TABLE jobs ADD COLUMN letter_id TEXT NOT NULL DEFAULT '';
+	ALTER TABLE posting_scores ADD COLUMN resume_id TEXT NOT NULL DEFAULT '';`,
 }
 
 func openDB(path string) (*sql.DB, error) {
