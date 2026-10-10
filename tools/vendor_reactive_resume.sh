@@ -8,6 +8,7 @@
 # from vendor_reactive_resume.patch (see UPSTREAM.md for what each one is for).
 #
 # Usage: bash tools/vendor_reactive_resume.sh <reactive-resume checkout>
+# VENDOR_PRISTINE=1 leaves out Job Track's changes (to regenerate the patch).
 set -euo pipefail
 
 upstream=$(cd "$1" && pwd)
@@ -20,6 +21,8 @@ web_files=(
 	features/resume/editor/write/model.test.ts
 	features/resume/editor/design/presets.ts
 	features/resume/editor/design/presets.test.ts
+	features/ats-checker/extract-client.ts
+	features/ats-checker/run-ats-check.ts
 )
 commit=$(git -C "$upstream" rev-parse --short=7 HEAD)
 header="// Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit $commit.
@@ -67,5 +70,5 @@ apply_local_changes() {
 copy_packages
 drop_excluded
 add_headers
-apply_local_changes
+[ "${VENDOR_PRISTINE:-}" = 1 ] || apply_local_changes
 echo "vendored Reactive Resume $commit into $dest"

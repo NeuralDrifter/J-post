@@ -27,6 +27,8 @@ the aliases in `frontend/vite.config.ts` and `paths` in `frontend/tsconfig.json`
 | `fixtures/` | `packages/pdf/fixtures` | PDFs the ATS extraction tests read |
 | `web/features/resume/editor/write/model.ts` | `apps/web` | The editor's section and entry model: outline order, add/move/remove sections, new entries, drafts |
 | `web/features/resume/editor/design/presets.ts` | `apps/web` | Design presets: font pairings, density, margins, text size, accents, Fit to one page |
+| `web/features/ats-checker/extract-client.ts` | `apps/web` | Reads a PDF's text layer with pdf.js, for importing PDFs and the ATS check |
+| `web/features/ats-checker/run-ats-check.ts` | `apps/web` | Runs the ATS analysis on a PDF, optionally against a job description |
 | `web/templates/*.jpg` | `apps/web/public/templates/jpg` | Template preview images |
 
 Not taken: `ai`, `api`, `auth`, `db`, `email`, `env`, `mcp`, `dsh-plugin`, `ui`,
@@ -58,12 +60,14 @@ Each changed file also carries `// Modified by Michael P. Burgus, 2026.`
 |---|---|---|
 | `resume/stylesheet/values.ts` | `border` shorthand expansion returns `[string, string]` tuples instead of `as const` | TypeScript 5.9 (Job Track) infers a readonly tuple there that upstream's TypeScript 7 accepts |
 | `pdf/forme/fonts.ts` | Font files are fetched from `/rr-fonts?src=<url>` instead of the URL itself | Job Track's Go side (`internal/resumes`) downloads each listed font once and serves it offline afterwards |
+| `web/features/ats-checker/extract-client.ts` | The pdf.js worker URL comes from a `?url` import | Vite doesn't resolve `new URL('pdfjs-dist/…', import.meta.url)`; the import gives the same worker the preview uses |
 
 ## Re-syncing
 
 1. Update `reference/3rd_party/reactive-resume` to the new upstream commit.
 2. `bash tools/vendor_reactive_resume.sh reference/3rd_party/reactive-resume`
    (copies, drops the excluded files, adds headers, applies the patch).
-3. If the patch no longer applies, redo each change above by hand and regenerate
-   the patch with `git diff` over the vendored files.
+3. If the patch no longer applies, redo each change above by hand, then run
+   `bash tools/vendor_reactive_resume_patch.sh reference/3rd_party/reactive-resume`
+   to rebuild the patch from the vendored tree.
 4. Update the commit above, then run `go generate ./...` and `bash tools/verify.sh`.
