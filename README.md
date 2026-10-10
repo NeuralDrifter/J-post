@@ -78,6 +78,7 @@ internal/
   gemini/            Gemini REST calls, Live sessions and voice samples
   discover/          job-board fetchers (JobSpy, Adzuna, The Muse, USAJobs, Himalayas, Jobicy)
   comp/              offer packages and their evaluation
+  resumes/           the resume builder's font cache
   settings/          user settings and window state
   taxes/             2026 federal and state income tax (embedded tables)
   marketdata/        BLS/BEA wage and cost-of-living data (embedded)

@@ -18,3 +18,30 @@ index bdf276f..d2f1834 100644
  				) ?? null
  			);
  		}
+diff --git a/frontend/src/vendor/reactive-resume/pdf/forme/fonts.ts b/frontend/src/vendor/reactive-resume/pdf/forme/fonts.ts
+index b4a815e..092accb 100644
+--- a/frontend/src/vendor/reactive-resume/pdf/forme/fonts.ts
++++ b/frontend/src/vendor/reactive-resume/pdf/forme/fonts.ts
+@@ -1,16 +1,21 @@
+ // Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit b3d8266.
+ // Copyright (c) 2026 Amruth Pillai. SPDX-License-Identifier: MIT
++// Modified by Michael P. Burgus, 2026.
+ import type { PdfFontRequest } from "../hooks/use-register-fonts";
+ import type { FormeFont } from "@formepdf/react";
+ import { prepareFontBytes } from "./font-bytes";
+ 
++// Job Track: fonts come through the app's own cache (internal/resumes), which
++// downloads each listed file once and serves it offline afterwards.
++const viaAppCache = (src: string) => `/rr-fonts?src=${encodeURIComponent(src)}`;
++
+ // One download per font file for the life of the page or server process.
+ const cache = new Map<string, Promise<Uint8Array>>();
+ 
+ const load = (src: string) => {
+ 	let bytes = cache.get(src);
+ 	if (!bytes) {
+-		bytes = fetch(src)
++		bytes = fetch(viaAppCache(src))
+ 			.then((response) => {
+ 				if (!response.ok) throw new Error(`Font ${src}: HTTP ${response.status}`);
+ 				return response.arrayBuffer();

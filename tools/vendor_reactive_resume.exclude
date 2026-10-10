@@ -18,3 +18,4 @@ utils/rate-limit.test.ts
 pdf/templates/gengar/gengar-skills.test.tsx
 pdf/templates/shared/page-margins.test.tsx
 pdf/templates/shared/skill-level-alignment.test.tsx
+pdf/unicode-spaces.integration.test.tsx

@@ -41,6 +41,8 @@ Listed in `tools/vendor_reactive_resume.exclude`.
   `pdf/paragraph-indent`, `pdf/special-characters`, `pdf/templates/shared/picture-border`,
   `picture-fit`, `page-margins`, `skill-level-alignment`, `pdf/templates/gengar/gengar-skills`,
   and the helper `pdf/semantic/test/rasterize-pdf.ts`.
+- Tests that download real fonts from Google Fonts over the network:
+  `pdf/unicode-spaces.integration`.
 
 ## Local changes
 
@@ -50,6 +52,7 @@ Each changed file also carries `// Modified by Michael P. Burgus, 2026.`
 | File | Change | Why |
 |---|---|---|
 | `resume/stylesheet/values.ts` | `border` shorthand expansion returns `[string, string]` tuples instead of `as const` | TypeScript 5.9 (Job Track) infers a readonly tuple there that upstream's TypeScript 7 accepts |
+| `pdf/forme/fonts.ts` | Font files are fetched from `/rr-fonts?src=<url>` instead of the URL itself | Job Track's Go side (`internal/resumes`) downloads each listed font once and serves it offline afterwards |
 
 ## Re-syncing
 
