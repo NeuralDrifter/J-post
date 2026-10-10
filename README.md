@@ -86,12 +86,21 @@ internal/
   osproc/            starting, stopping and opening things in the OS
   licensegen/        builds the open-source licenses list
 frontend/            React + TypeScript UI; lib/backend.ts is its only door to the Go side
-tools/               data build scripts, the licenses generator and verify.sh
+  src/vendor/        third-party source copied in (Reactive Resume; see its UPSTREAM.md)
+tools/               data build scripts, the licenses and vendoring scripts, and verify.sh
 ```
 
 A package only imports packages listed below it, and nothing imports `app`.
 Tests sit next to the code they test, as Go requires. `ai/aitest` and
 `gemini/geminitest` provide fake servers for tests in other packages.
+
+## Included code
+
+The resume engine (data model, templates, PDF and Word export, importers and ATS checks) is
+[Reactive Resume](https://github.com/reactive-resume/reactive-resume) by Amruth Pillai, MIT
+licensed, copied into `frontend/src/vendor/reactive-resume/`. Its `UPSTREAM.md` records the
+upstream commit and every local change; `bash tools/vendor_reactive_resume.sh <checkout>`
+re-syncs it.
 
 ## Data sources for Offers
 

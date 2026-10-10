@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 // Command licenses regenerates frontend/src/generated/licenses.json from the
-// Go modules compiled into Job Track and the frontend's production packages.
+// Go modules compiled into Job Track, the frontend's production packages and
+// the third-party source vendored into the frontend.
 // Run it from the repository root: go generate ./...
 package main
 
@@ -20,6 +21,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	vendored, err := licensegen.CollectVendored(licensegen.VendorRoot)
+	if err != nil {
+		log.Fatal(err)
+	}
 	goEntries, err := licensegen.CollectGo(".")
 	if err != nil {
 		log.Fatal(err)
@@ -28,8 +33,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := licensegen.Write(out, app, goEntries, npmEntries); err != nil {
+	file := licensegen.File{App: app, Vendored: vendored, Go: goEntries, Npm: npmEntries}
+	if err := licensegen.Write(out, file); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("wrote %s: %d Go modules, %d npm packages\n", out, len(goEntries), len(npmEntries))
+	fmt.Printf("wrote %s: %d vendored, %d Go modules, %d npm packages\n", out, len(vendored), len(goEntries), len(npmEntries))
 }

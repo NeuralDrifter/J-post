@@ -11,12 +11,12 @@ import licenses from '../../generated/licenses.json'
 import { BUILT_WITH, DATA, SERVICES, THANKS, type Credit } from './credits'
 import { filterLicenses, type LicenseEntry } from './filter'
 
-const GROUPS = { npm: 'App interface', go: 'App core' } as const
+const GROUPS = { vendored: 'Included source', npm: 'App interface', go: 'App core' } as const
 type Group = keyof typeof GROUPS
 
 /** Everything Job Track is built on or draws from, with each license's full text. */
 export default function LicensesPage() {
-  const [group, setGroup] = useState<Group>('npm')
+  const [group, setGroup] = useState<Group>('vendored')
   const [query, setQuery] = useState('')
   const shown = filterLicenses(licenses[group] as LicenseEntry[], query)
 
@@ -29,7 +29,7 @@ export default function LicensesPage() {
 
       <Panel title="Job Track" action={<OpenLink url={licenses.app.url} />}>
         <p className="mb-2 text-xs text-ink-2">
-          Job Track is open source under the {licenses.app.license} license. Third-party libraries, fonts and data below keep their own licenses.
+          Job Track is open source under the {licenses.app.license} license. Third-party source code, libraries, fonts and data below keep their own licenses.
         </p>
         <pre className="max-h-80 overflow-auto rounded-xl bg-black/30 p-3 text-[11px] leading-relaxed whitespace-pre-wrap text-ink-2">{licenses.app.text}</pre>
       </Panel>

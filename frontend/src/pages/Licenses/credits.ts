@@ -69,12 +69,6 @@ export const SERVICES: Credit[] = [
 /** Projects whose ideas or research shaped Job Track, without their code being copied. */
 export const THANKS: Credit[] = [
   {
-    name: 'Reactive Resume',
-    detail: 'Its tolerant JSON parsing and provider list informed the AI providers.',
-    license: 'MIT',
-    url: 'https://github.com/reactive-resume/reactive-resume',
-  },
-  {
     name: 'ATS Screener',
     detail: 'Its research notes on how applicant tracking systems parse and rank resumes.',
     license: 'MIT',

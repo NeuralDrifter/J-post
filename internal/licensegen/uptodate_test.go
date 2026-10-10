@@ -15,14 +15,14 @@ const generatedFile = "../../frontend/src/generated/licenses.json"
 func TestWriteRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "out", "licenses.json")
 	goEntries := []Entry{{Name: "b", Version: "v1"}, {Name: "a", Version: "v2"}}
-	if err := Write(path, Entry{Name: "Job Track"}, goEntries, nil); err != nil {
+	if err := Write(path, File{App: Entry{Name: "Job Track"}, Go: goEntries}); err != nil {
 		t.Fatal(err)
 	}
 	f, err := Read(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(f.Go) != 2 || f.Go[0].Name != "a" || f.Npm == nil || f.App.Name != "Job Track" {
+	if len(f.Go) != 2 || f.Go[0].Name != "a" || f.Npm == nil || f.Vendored == nil || f.App.Name != "Job Track" {
 		t.Fatalf("file = %+v", f)
 	}
 }
@@ -60,6 +60,13 @@ func TestLicensesUpToDate(t *testing.T) {
 	}
 	if committed.App != app {
 		t.Error("Job Track's own license changed — run go generate ./...")
+	}
+	vendoredNow, err := CollectVendored("../../" + VendorRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if added, removed := diffEntries(committed.Vendored, vendoredNow); len(added)+len(removed) > 0 {
+		t.Errorf("vendored licenses are stale (new %v, gone %v) — run go generate ./...", added, removed)
 	}
 	goNow, err := CollectGo("../..")
 	if err != nil {

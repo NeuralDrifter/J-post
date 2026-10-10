@@ -23,3 +23,8 @@ SOFTWARE.
 Third-party libraries, fonts, data and the Wails project template files in
 build/ keep their own licenses. They are listed with their full license texts
 in the app under Settings → About → Open-source licenses.
+
+frontend/src/vendor/reactive-resume/ contains code derived from Reactive Resume
+(https://github.com/reactive-resume/reactive-resume), Copyright (c) 2026 Amruth
+Pillai, used under the MIT License. Its license is in that directory and in the
+app's Open-source licenses list.

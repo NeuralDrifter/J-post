@@ -16,9 +16,10 @@ var ShippedBuildTools = []string{"tailwindcss", "vite"}
 
 // File is the generated licenses.json the frontend imports.
 type File struct {
-	App Entry   `json:"app"` // Job Track's own license
-	Go  []Entry `json:"go"`
-	Npm []Entry `json:"npm"`
+	App      Entry   `json:"app"`      // Job Track's own license
+	Vendored []Entry `json:"vendored"` // third-party source copied into the repo
+	Go       []Entry `json:"go"`
+	Npm      []Entry `json:"npm"`
 }
 
 // CollectApp reads Job Track's own LICENSE at the repository root.
@@ -30,17 +31,14 @@ func CollectApp(repoRoot string) (Entry, error) {
 	return Entry{Name: "Job Track", License: DetectLicense(text), URL: "https://github.com/NeuralDrifter", Text: text}, nil
 }
 
-// Write saves Job Track's license and both library lists, sorted, as indented JSON.
-func Write(path string, app Entry, goEntries, npmEntries []Entry) error {
-	f := File{App: app, Go: goEntries, Npm: npmEntries}
-	if f.Go == nil {
-		f.Go = []Entry{}
+// Write saves f with every list sorted (and present, even when empty) as indented JSON.
+func Write(path string, f File) error {
+	for _, list := range []*[]Entry{&f.Vendored, &f.Go, &f.Npm} {
+		if *list == nil {
+			*list = []Entry{}
+		}
+		sortEntries(*list)
 	}
-	if f.Npm == nil {
-		f.Npm = []Entry{}
-	}
-	sortEntries(f.Go)
-	sortEntries(f.Npm)
 	data, err := json.MarshalIndent(f, "", "  ")
 	if err != nil {
 		return err

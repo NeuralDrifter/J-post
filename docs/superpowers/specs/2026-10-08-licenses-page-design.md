@@ -36,6 +36,7 @@ Job Track lists everything it is built on or draws from, with each license's ful
    - AI providers: Gemini, Anthropic, Claude Code, OpenAI, DeepSeek, Ollama, LM Studio.
 4. **Thanks:** fixed entries.
    - Reactive Resume (MIT): the tolerant JSON parsing approach and provider list informed the AI providers. If its ATS scanner code is ported later, it moves to Libraries with its full license.
+     *Update 2026-10-10:* its code is now vendored (see `2026-10-10-reactive-resume-integration-design.md`), so it moved from Thanks to Libraries → Included source, generated from `frontend/src/vendor/*/{LICENSE,UPSTREAM.md}`.
    - ATS Screener (MIT): its research notes on applicant tracking systems.
 
 ## Generation
