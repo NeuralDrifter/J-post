@@ -38,6 +38,9 @@
       ],
       "@reactive-resume/*": [
         "./src/vendor/reactive-resume/*"
+      ],
+      "@lingui/core/macro": [
+        "./src/vendor/linguiMacro.ts"
       ]
     }
   },

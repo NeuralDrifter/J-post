@@ -1,6 +1,6 @@
 # Reactive Resume integration — Design Spec
 
-**Date:** 2026-10-10 · **Status:** Phases 0–1 implemented (branch feature/reactive-resume)
+**Date:** 2026-10-10 · **Status:** Phases 0–5 implemented (branch feature/reactive-resume); the LLM phase is future work
 
 **Deviations found while building (phases 0–1):**
 - Reactive Resume has 17 templates (the 18th folder is shared code).
@@ -11,6 +11,15 @@
 - The default resume picker lives in Settings → Profile & resume (above the uploaded resume, now labelled the fallback), not a new menu item.
 - Layout is edited with move buttons (other column, up, down, page) instead of drag between columns; entries still reorder by drag.
 - Icon fields take a Phosphor icon name as text; no icon picker yet.
+
+**Deviations found while building (phases 2–5):**
+- Letters, resumes and the shared editor frame: the editor store is generic, the design sections edit metadata through a context, and the letter writer reuses the builder's preview, top bar and design panels.
+- Word files are imported by reading their text locally (upstream sends them to an AI provider); the AI phase may add a better reader.
+- Reactive Resume's next-step hints are not ported: Job Track already shows days in stage, stale jobs, follow-up flags and a Next up banner.
+- Match scores remember the resume they were graded against; "outdated" compares against that resume, and re-scoring keeps each posting on its resume.
+- The interview calendar export is Job Track's own (several events per file); upstream's builds one event per file.
+- The ATS findings' wording is upstream's messages.ts, vendored unchanged with an English-only shim for its Lingui `t` macro.
+- The ATS analysis runs on the main thread (about 0.4 s); the PDF render it checks runs in the worker.
 
 ## Goal
 

@@ -29,7 +29,12 @@ the aliases in `frontend/vite.config.ts` and `paths` in `frontend/tsconfig.json`
 | `web/features/resume/editor/design/presets.ts` | `apps/web` | Design presets: font pairings, density, margins, text size, accents, Fit to one page |
 | `web/features/ats-checker/extract-client.ts` | `apps/web` | Reads a PDF's text layer with pdf.js, for importing PDFs and the ATS check |
 | `web/features/ats-checker/run-ats-check.ts` | `apps/web` | Runs the ATS analysis on a PDF, optionally against a job description |
+| `web/features/ats-checker/messages.ts` | `apps/web` | The ATS findings, categories and severities in words |
 | `web/templates/*.jpg` | `apps/web/public/templates/jpg` | Template preview images |
+
+Upstream writes its messages with Lingui's `t` macro. Job Track is English-only, so
+`@lingui/core/macro` resolves to `frontend/src/vendor/linguiMacro.ts`, which reads each
+message as written; the vendored files stay unchanged.
 
 Not taken: `ai`, `api`, `auth`, `db`, `email`, `env`, `mcp`, `dsh-plugin`, `ui`,
 `config`, `apps/server`, and the rest of `apps/web`, which is a behavioural reference

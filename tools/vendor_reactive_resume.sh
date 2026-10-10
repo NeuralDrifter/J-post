@@ -23,6 +23,7 @@ web_files=(
 	features/resume/editor/design/presets.test.ts
 	features/ats-checker/extract-client.ts
 	features/ats-checker/run-ats-check.ts
+	features/ats-checker/messages.ts
 )
 commit=$(git -C "$upstream" rev-parse --short=7 HEAD)
 header="// Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit $commit.

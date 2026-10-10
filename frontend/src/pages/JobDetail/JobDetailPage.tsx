@@ -9,6 +9,7 @@ import { api } from '../../lib/api'
 import { GetJob, ListStageEvents } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { useLoad } from '../../lib/useLoad'
+import { AtsCheckPanel } from './AtsCheckPanel'
 import { CompPanel } from './CompPanel'
 import { ContactsPanel } from './ContactsPanel'
 import { DescriptionCard } from './DescriptionCard'
@@ -49,6 +50,7 @@ export default function JobDetailPage({ id }: { id: string }) {
         <div className="col-start-2 space-y-4">
           <DescriptionCard text={job.description} />
           <NotesPad jobId={job.id} initial={job.notes} />
+          <AtsCheckPanel job={job} />
         </div>
         <aside className="col-start-2 space-y-4 min-[1200px]:col-start-3 min-[1200px]:row-start-1">
           <DocumentsPanel job={job} />
