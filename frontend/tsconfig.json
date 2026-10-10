@@ -18,7 +18,28 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@reactive-resume/resume/stylesheet/types": [
+        "./src/vendor/reactive-resume/resume/stylesheet/semantic-types.ts"
+      ],
+      "@reactive-resume/pdf/semantic-legacy": [
+        "./src/vendor/reactive-resume/pdf/semantic/legacy-converter.ts"
+      ],
+      "@reactive-resume/pdf/semantic-tree": [
+        "./src/vendor/reactive-resume/pdf/semantic/tree.ts"
+      ],
+      "@reactive-resume/pdf/primitives": [
+        "./src/vendor/reactive-resume/pdf/forme/primitives.tsx"
+      ],
+      "#react-pdf-renderer": [
+        "./src/vendor/reactive-resume/pdf/forme/primitives.tsx"
+      ],
+      "@reactive-resume/*": [
+        "./src/vendor/reactive-resume/*"
+      ]
+    }
   },
   "include": [
     "src"

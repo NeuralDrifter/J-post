@@ -1,0 +1,20 @@
+// Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit b3d8266.
+// Copyright (c) 2026 Amruth Pillai. SPDX-License-Identifier: MIT
+import { describe, expect, it } from "vitest";
+import { parseStylesheet } from "./parse";
+
+describe("parseStylesheet", () => {
+	it("returns exact ranges for malformed declarations and keeps a recoverable parse tree", () => {
+		const source = "@version 1;\nsection { color red; }\nitem { opacity: .5; }";
+		const result = parseStylesheet(source);
+
+		expect(result.diagnostics[0]?.range).toEqual({
+			start: { line: 2, column: 17, offset: 28 },
+			end: { line: 2, column: 17, offset: 28 },
+		});
+		// Anchor the offset to the source it must point at, so a parser change that shifts it fails
+		// loudly instead of leaving line/column and offset disagreeing.
+		expect(source.slice(28, 31)).toBe("red");
+		expect(result.rules).toHaveLength(2);
+	});
+});

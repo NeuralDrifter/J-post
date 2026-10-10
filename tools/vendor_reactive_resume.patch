@@ -1,0 +1,20 @@
+diff --git a/frontend/src/vendor/reactive-resume/resume/stylesheet/values.ts b/frontend/src/vendor/reactive-resume/resume/stylesheet/values.ts
+index bdf276f..d2f1834 100644
+--- a/frontend/src/vendor/reactive-resume/resume/stylesheet/values.ts
++++ b/frontend/src/vendor/reactive-resume/resume/stylesheet/values.ts
+@@ -1,5 +1,6 @@
+ // Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit b3d8266.
+ // Copyright (c) 2026 Amruth Pillai. SPDX-License-Identifier: MIT
++// Modified by Michael P. Burgus, 2026.
+ import type { SemanticCssCompilerDiagnosticCode } from "./diagnostics";
+ import type {
+ 	CompiledDeclaration,
+@@ -329,7 +330,7 @@ export function expandShorthand(property: string, value: string): readonly [prop
+ 			const components = borderComponents(value);
+ 			return (
+ 				components?.flatMap(([component, componentValue]) =>
+-					sides.map((side) => [`border-${side}-${component}`, componentValue] as const),
++					sides.map((side): [string, string] => [`border-${side}-${component}`, componentValue]),
+ 				) ?? null
+ 			);
+ 		}
