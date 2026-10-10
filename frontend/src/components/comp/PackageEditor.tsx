@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type SubmitEvent, type ReactNode } from 'react'
 import { labelFor } from '../../lib/format'
 import { TriangleAlert } from 'lucide-react'
 import { NATIONAL_AREA } from '../../generated/choices'
@@ -67,7 +67,7 @@ export function PackageEditor({ initial, onClose }: { initial: comp.CompPackage;
     .map((s) => Number(s.trim()) || 0)
     .reduce((a, b) => a + b, 0)
 
-  const submit = async (e: FormEvent) => {
+  const submit = async (e: SubmitEvent) => {
     e.preventDefault()
     setSaving(true)
     const saved = await api(SaveCompPackage(p))

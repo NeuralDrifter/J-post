@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { api } from '../lib/api'
 import { CreateJob } from '../lib/backend'
@@ -20,7 +20,7 @@ export function QuickAddModal({ onClose, initialStatus }: { onClose: () => void;
   }))
   const [saving, setSaving] = useState(false)
 
-  const submit = async (e: FormEvent) => {
+  const submit = async (e: SubmitEvent) => {
     e.preventDefault()
     setSaving(true)
     const job = await api(CreateJob(jobFromDraft(draft)))

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { CircleCheck, CircleDot, FolderOpen, LoaderCircle, Scale } from 'lucide-react'
 import { PackageEditor } from '../../components/comp/PackageEditor'
@@ -98,7 +98,7 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
     writeSessionValue(DRAFT_KEY, next)
   }
 
-  const save = async (e?: FormEvent) => {
+  const save = async (e?: SubmitEvent) => {
     e?.preventDefault()
     // A blank or invalid number goes as 0, which the backend replaces with its default.
     const wholeOrZero = (n: number) => Math.round(Number(n)) || 0

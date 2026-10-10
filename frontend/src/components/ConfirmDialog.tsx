@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, useSyncExternalStore, type FormEvent } from 'react'
+import { useState, useSyncExternalStore, type SubmitEvent } from 'react'
 import { apiOk } from '../lib/api'
 import { Modal } from './Modal'
 
@@ -94,7 +94,7 @@ export function ConfirmHost() {
 
 function PromptModal({ options, onDone }: { options: PromptOptions; onDone: (value: string | null) => void }) {
   const [value, setValue] = useState(options.initial ?? '')
-  const submit = (e: FormEvent) => {
+  const submit = (e: SubmitEvent) => {
     e.preventDefault()
     if (value.trim()) onDone(value.trim())
   }

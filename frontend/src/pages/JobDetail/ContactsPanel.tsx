@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { Copy, Link2, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import { openMenu } from '../../lib/menu'
 import { confirmThen } from '../../components/ConfirmDialog'
@@ -118,7 +118,7 @@ function ContactModal({ contact, onClose }: { contact: app.Contact; onClose: () 
   const [c, setC] = useState(contact)
   const set = (key: keyof app.Contact) => (e: { target: { value: string } }) => setC({ ...c, [key]: e.target.value })
 
-  const submit = async (e: FormEvent) => {
+  const submit = async (e: SubmitEvent) => {
     e.preventDefault()
     if (await api(SaveContact(c))) {
       notifyDataChanged()

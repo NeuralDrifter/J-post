@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { LoaderCircle, Mic, TriangleAlert } from 'lucide-react'
 import { NO_PLAN_PROVIDER } from '../../generated/choices'
@@ -53,7 +53,7 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onC
     }
   }
 
-  const start = (e: FormEvent) => {
+  const start = (e: SubmitEvent) => {
     e.preventDefault()
     void begin(setup)
   }

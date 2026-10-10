@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, type FormEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
 import { Circle, CircleCheck, Copy, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { copyText } from '../../components/ContextMenu'
 import { openMenu } from '../../lib/menu'
@@ -125,7 +125,7 @@ function InterviewModal({ interview, onClose }: { interview: app.Interview; onCl
   const [iv, setIv] = useState(interview)
   const [when, setWhen] = useState(() => toLocalInputValue(interview.scheduledAt))
 
-  const submit = async (e: FormEvent) => {
+  const submit = async (e: SubmitEvent) => {
     e.preventDefault()
     if (await api(SaveInterview({ ...iv, scheduledAt: fromLocalInputValue(when) }))) {
       notifyDataChanged()
