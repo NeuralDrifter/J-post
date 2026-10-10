@@ -3,6 +3,7 @@
 
 // Renders resumes to PDF in a Web Worker (render.worker.ts); if the worker
 // can't start, on the main thread instead.
+import type { ResumeRenderOptions } from '@reactive-resume/pdf/context'
 import type { ResumeData } from './document'
 import type { RenderedPdf, RenderRequest } from './renderCore'
 import type { WorkerRequest, WorkerResponse } from './render.worker'
@@ -18,14 +19,14 @@ let nextId = 0
 let worker: Worker | null | undefined
 
 /** The PDF to export or send: refuses to finish if a font is missing or text was lost. */
-export async function renderResumePdf(data: ResumeData): Promise<Blob> {
-  const { pdf } = await render({ data, strict: true })
+export async function renderResumePdf(data: ResumeData, renderOptions?: ResumeRenderOptions): Promise<Blob> {
+  const { pdf } = await render({ data, strict: true, renderOptions })
   return new Blob([pdf], { type: PDF_TYPE })
 }
 
 /** The PDF for the live preview and thumbnails, which should render offline too. */
-export async function renderResumePreview(data: ResumeData): Promise<ResumePreview> {
-  const { pdf, missingFonts } = await render({ data, strict: false })
+export async function renderResumePreview(data: ResumeData, renderOptions?: ResumeRenderOptions): Promise<ResumePreview> {
+  const { pdf, missingFonts } = await render({ data, strict: false, renderOptions })
   return { pdf: new Blob([pdf], { type: PDF_TYPE }), missingFonts }
 }
 

@@ -5,7 +5,7 @@ import { dateFormatSchema, type DateFormat } from '@reactive-resume/schema/resum
 import { localeSchema } from '@reactive-resume/utils/locale'
 import { applyDensity, applyMargins, matchDensity, matchMargins, type DensityId, type MarginId } from '@reactive-resume/web/features/resume/editor/design/presets'
 import { Field } from '../../../components/Field'
-import { useResume, useUpdate } from '../editorContext'
+import { useDesign } from './designContext'
 import { Segmented, Toggle } from '../ui/controls'
 
 type Format = 'a4' | 'letter' | 'free-form'
@@ -31,10 +31,9 @@ const languageName = new Intl.DisplayNames(['en'], { type: 'language' })
 
 /** Paper size, margins and spacing, the resume's language and how dates and icons print. */
 export function PageSection() {
-  const metadata = useResume().metadata
+  const { metadata, updateMetadata } = useDesign()
   const page = metadata.page
-  const update = useUpdate()
-  const set = <K extends keyof typeof page>(key: K, value: (typeof page)[K]) => update((d) => void (d.metadata.page[key] = value))
+  const set = <K extends keyof typeof page>(key: K, value: (typeof page)[K]) => updateMetadata((m) => void (m.page[key] = value))
 
   return (
     <div className="space-y-4">
@@ -42,10 +41,10 @@ export function PageSection() {
         <Segmented<Format> label="Paper" options={FORMATS} value={page.format} onChange={(v) => set('format', v)} />
       </Labelled>
       <Labelled label="Margins">
-        <Segmented<MarginId> label="Margins" options={MARGINS} value={matchMargins(metadata)} onChange={(id) => update((d) => applyMargins(d.metadata, id))} />
+        <Segmented<MarginId> label="Margins" options={MARGINS} value={matchMargins(metadata)} onChange={(id) => updateMetadata((m) => applyMargins(m, id))} />
       </Labelled>
       <Labelled label="Spacing">
-        <Segmented<DensityId> label="Spacing" options={DENSITIES} value={matchDensity(metadata)} onChange={(id) => update((d) => applyDensity(d.metadata, id))} />
+        <Segmented<DensityId> label="Spacing" options={DENSITIES} value={matchDensity(metadata)} onChange={(id) => updateMetadata((m) => applyDensity(m, id))} />
       </Labelled>
       <Field label="Language of headings and dates">
         <select className="field" value={page.locale} onChange={(e) => set('locale', e.target.value)}>

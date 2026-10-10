@@ -1,93 +1,98 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, type MouseEvent } from 'react'
+import { useState, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, Download, FileDown, FileJson, Minus, PanelLeft, PanelRight, Plus, Redo2, Star, Undo2 } from 'lucide-react'
+import { useStore, type StoreApi } from 'zustand'
+import { ArrowLeft, Download, Minus, PanelLeft, PanelRight, Plus, Redo2, Undo2 } from 'lucide-react'
 import { IconButton } from '../../components/IconButton'
 import { apiOk } from '../../lib/api'
 import { RenameDocument } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
-import { openMenu } from '../../lib/menu'
-import { exportResumeJson, exportResumePdf, setDefaultResume } from '../../lib/resumes/actions'
-import { useEditor } from './editorContext'
-import type { SaveState } from './editorStore'
+import { openMenu, type MenuEntry } from '../../lib/menu'
+import type { EditorState, SaveState } from './editorStore'
 import { zoomIn, zoomLabel, zoomOut, type Zoom } from './zoom'
 
 const SAVE_LABEL: Record<SaveState, string> = { saved: 'Saved', unsaved: 'Unsaved', saving: 'Saving…', error: 'Not saved' }
 const SAVE_TONE: Record<SaveState, string> = { saved: 'text-success', unsaved: 'text-ink-3', saving: 'text-ink-3', error: 'text-danger' }
 
+/** What the top bar needs from an open document's editor, whatever the document is. */
+export type EditorControls = Pick<EditorState<unknown>, 'saveState' | 'saveNow' | 'undo' | 'redo'> & { canUndo: boolean; canRedo: boolean }
+
+export function useEditorControls<T>(store: StoreApi<EditorState<T>>): EditorControls {
+  return {
+    saveState: useStore(store, (s) => s.saveState),
+    saveNow: useStore(store, (s) => s.saveNow),
+    undo: useStore(store, (s) => s.undo),
+    redo: useStore(store, (s) => s.redo),
+    canUndo: useStore(store, (s) => s.canUndo()),
+    canRedo: useStore(store, (s) => s.canRedo()),
+  }
+}
+
 type Props = {
   docId: string
   name: string
-  isDefault: boolean
+  back: { to: string; label: string }
+  controls: EditorControls
+  exportItems: MenuEntry[]
+  /** Extra buttons before Export, e.g. the resume's Set as default. */
+  actions?: ReactNode
   zoom: Zoom
   onZoom: (zoom: Zoom) => void
-  onTogglePanel: (panel: 'content' | 'design') => void
+  onTogglePanel: (panel: 'left' | 'right') => void
 }
 
-/** Back, name, save state, undo/redo, zoom, default and export. */
-export function BuilderTopBar({ docId, name, isDefault, zoom, onZoom, onTogglePanel }: Props) {
-  const data = useEditor((s) => s.data)
-  const undo = useEditor((s) => s.undo)
-  const redo = useEditor((s) => s.redo)
-  const canUndo = useEditor((s) => s.canUndo())
-  const canRedo = useEditor((s) => s.canRedo())
-
-  const exportMenu = (e: MouseEvent) =>
-    openMenu(e, [
-      { label: 'PDF', icon: FileDown, shortcut: 'Ctrl+S', onSelect: () => exportResumePdf(name, data) },
-      { label: 'JSON (Reactive Resume)', icon: FileJson, onSelect: () => exportResumeJson(name, data) },
-    ])
-
+/** Back, name, save state, undo/redo, zoom, extra actions and export. */
+export function BuilderTopBar({ docId, name, back, controls, exportItems, actions, zoom, onZoom, onTogglePanel }: Props) {
+  const exportMenu = (e: MouseEvent) => openMenu(e, exportItems)
   return (
     <div className="flex items-center gap-2 border-b border-line bg-base/60 px-3 py-2">
-      <Link to="/resumes" className="flex shrink-0 items-center gap-1 text-xs text-ink-3 hover:text-ink">
-        <ArrowLeft size={13} /> Resumes
+      <Link to={back.to} className="flex shrink-0 items-center gap-1 text-xs text-ink-3 hover:text-ink">
+        <ArrowLeft size={13} /> {back.label}
       </Link>
       <span className="text-line-strong">/</span>
       <NameInput docId={docId} name={name} />
-      <SaveIndicator />
+      <SaveIndicator state={controls.saveState} onRetry={() => void controls.saveNow()} />
       <div className="ml-auto flex items-center gap-1">
         <span className="min-[1100px]:hidden">
-          <IconButton label="Content" onClick={() => onTogglePanel('content')}>
+          <IconButton label="Show the left panel" onClick={() => onTogglePanel('left')}>
             <PanelLeft size={15} />
           </IconButton>
         </span>
-        <IconButton label="Undo (Ctrl+Z)" onClick={undo} disabled={!canUndo}>
+        <IconButton label="Undo (Ctrl+Z)" onClick={controls.undo} disabled={!controls.canUndo}>
           <Undo2 size={15} />
         </IconButton>
-        <IconButton label="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!canRedo}>
+        <IconButton label="Redo (Ctrl+Shift+Z)" onClick={controls.redo} disabled={!controls.canRedo}>
           <Redo2 size={15} />
         </IconButton>
-        <div className="mx-1 flex items-center rounded-lg border border-line bg-black/20">
-          <IconButton label="Zoom out" onClick={() => onZoom(zoomOut(zoom))}>
-            <Minus size={13} />
-          </IconButton>
-          <button type="button" className="w-12 font-mono text-[11px] text-ink-2 hover:text-ink" onClick={() => onZoom('fit')} title="Fit to width">
-            {zoomLabel(zoom)}
-          </button>
-          <IconButton label="Zoom in" onClick={() => onZoom(zoomIn(zoom))}>
-            <Plus size={13} />
-          </IconButton>
-        </div>
-        <button
-          type="button"
-          className={`btn py-1 text-xs ${isDefault ? 'btn-ghost text-indigo-200' : 'btn-ghost'}`}
-          onClick={() => setDefaultResume(isDefault ? '' : docId)}
-          title={isDefault ? 'Match scores and mock interviews read this resume' : 'Use this resume for match scores and mock interviews'}
-        >
-          <Star size={13} className={isDefault ? 'fill-current' : ''} /> {isDefault ? 'Default' : 'Set as default'}
-        </button>
+        <ZoomControl zoom={zoom} onZoom={onZoom} />
+        {actions}
         <button type="button" className="btn btn-primary py-1 text-xs" onClick={exportMenu}>
           <Download size={13} /> Export
         </button>
         <span className="min-[1100px]:hidden">
-          <IconButton label="Design" onClick={() => onTogglePanel('design')}>
+          <IconButton label="Show the right panel" onClick={() => onTogglePanel('right')}>
             <PanelRight size={15} />
           </IconButton>
         </span>
       </div>
+    </div>
+  )
+}
+
+function ZoomControl({ zoom, onZoom }: { zoom: Zoom; onZoom: (zoom: Zoom) => void }) {
+  return (
+    <div className="mx-1 flex items-center rounded-lg border border-line bg-black/20">
+      <IconButton label="Zoom out" onClick={() => onZoom(zoomOut(zoom))}>
+        <Minus size={13} />
+      </IconButton>
+      <button type="button" className="w-12 font-mono text-[11px] text-ink-2 hover:text-ink" onClick={() => onZoom('fit')} title="Fit to width">
+        {zoomLabel(zoom)}
+      </button>
+      <IconButton label="Zoom in" onClick={() => onZoom(zoomIn(zoom))}>
+        <Plus size={13} />
+      </IconButton>
     </div>
   )
 }
@@ -107,19 +112,17 @@ function NameInput({ docId, name }: { docId: string; name: string }) {
       onChange={(e) => setTyped(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      aria-label="Resume name"
+      aria-label="Name"
     />
   )
 }
 
-function SaveIndicator() {
-  const saveState = useEditor((s) => s.saveState)
-  const saveNow = useEditor((s) => s.saveNow)
+function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
   return (
-    <span className={`flex shrink-0 items-center gap-1.5 font-mono text-[11px] ${SAVE_TONE[saveState]}`} role="status">
-      {SAVE_LABEL[saveState]}
-      {saveState === 'error' && (
-        <button type="button" className="text-indigo-300 underline underline-offset-2" onClick={() => void saveNow()}>
+    <span className={`flex shrink-0 items-center gap-1.5 font-mono text-[11px] ${SAVE_TONE[state]}`} role="status">
+      {SAVE_LABEL[state]}
+      {state === 'error' && (
+        <button type="button" className="text-indigo-300 underline underline-offset-2" onClick={onRetry}>
           Retry
         </button>
       )}

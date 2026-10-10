@@ -2,23 +2,24 @@
 // SPDX-License-Identifier: MIT
 
 import { produce, type Draft } from 'immer'
-import { syncResumeDates } from '@reactive-resume/schema/resume/dates'
 import { createStore, type StoreApi } from 'zustand/vanilla'
-import type { ResumeData } from '../../lib/resumes/document'
 
 export const AUTOSAVE_DELAY_MS = 800
 export const MAX_HISTORY = 100
 
 export type SaveState = 'saved' | 'unsaved' | 'saving' | 'error'
 
-/** Saves a version of the resume; resolves false if it failed (the caller already said why). */
-export type SaveResume = (data: ResumeData) => Promise<boolean>
+/** Saves a version of the document; resolves false if it failed (the caller already said why). */
+export type SaveDocument<T> = (data: T) => Promise<boolean>
 
-export type EditorState = {
-  data: ResumeData
+/** Runs after every edit, inside it, to keep derived fields in step (resumes: the printed date text). */
+export type Normalize<T> = (draft: Draft<T>) => void
+
+export type EditorState<T> = {
+  data: T
   saveState: SaveState
   /** Applies an edit (an immer recipe); it can be undone, and it autosaves after a pause. */
-  update: (recipe: (draft: Draft<ResumeData>) => void) => void
+  update: (recipe: (draft: Draft<T>) => void) => void
   undo: () => void
   redo: () => void
   canUndo: () => boolean
@@ -30,28 +31,28 @@ export type EditorState = {
 }
 
 /**
- * The builder's document: the resume being edited, its undo history and its
+ * An open document (a resume or a letter): its content, undo history and
  * autosave. Only one save runs at a time; edits made meanwhile are saved after it.
  */
-export function createEditorStore(initial: ResumeData, save: SaveResume): StoreApi<EditorState> {
-  let past: ResumeData[] = []
-  let future: ResumeData[] = []
+export function createEditorStore<T>(initial: T, save: SaveDocument<T>, normalize?: Normalize<T>): StoreApi<EditorState<T>> {
+  let past: T[] = []
+  let future: T[] = []
   let savedData = initial
   let saving = false
   let timer: ReturnType<typeof setTimeout> | undefined
 
-  return createStore<EditorState>()((set, get) => {
+  return createStore<EditorState<T>>()((set, get) => {
     const scheduleSave = () => {
       clearTimeout(timer)
       timer = setTimeout(() => void get().saveNow(), AUTOSAVE_DELAY_MS)
     }
 
-    const show = (data: ResumeData) => {
+    const show = (data: T) => {
       set({ data, saveState: 'unsaved' })
       scheduleSave()
     }
 
-    const finishSave = (saved: ResumeData, ok: boolean) => {
+    const finishSave = (saved: T, ok: boolean) => {
       saving = false
       if (!ok) {
         set({ saveState: 'error' })
@@ -70,8 +71,7 @@ export function createEditorStore(initial: ResumeData, save: SaveResume): StoreA
         const current = get().data
         const next = produce(current, (draft) => {
           recipe(draft)
-          // The printed date text ("Mar 2022 – Present") follows the structured dates, as upstream keeps it.
-          syncResumeDates(draft as ResumeData)
+          normalize?.(draft)
         })
         if (next === current) return
         past = [...past, current].slice(-MAX_HISTORY)

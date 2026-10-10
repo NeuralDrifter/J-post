@@ -10,7 +10,7 @@ import { EditorView, keymap, placeholder } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { compileStylesheet, isFatalStylesheetDiagnostic } from '@reactive-resume/resume/stylesheet'
 import { BrowserOpenURL } from '../../../lib/backend'
-import { useResume, useUpdate } from '../editorContext'
+import { useDesign } from './designContext'
 
 const STYLESHEET_LANGUAGE_VERSION = 1
 const DOCS_URL = 'https://docs.rxresu.me/applying-custom-styles'
@@ -38,13 +38,13 @@ const highlight = HighlightStyle.define([
 
 /** Reactive Resume's PDF-safe CSS, for styling beyond the design controls. */
 export function CustomCssSection() {
-  const stylesheet = useResume().metadata.stylesheet
-  const update = useUpdate()
+  const { metadata, updateMetadata } = useDesign()
+  const stylesheet = metadata.stylesheet
   const text = stylesheet?.source.text ?? ''
   const errors = useMemo(() => fatalErrors(text), [text])
 
   const setText = (next: string) =>
-    update((d) => void (d.metadata.stylesheet = { mode: 'semantic', source: { languageVersion: STYLESHEET_LANGUAGE_VERSION, text: next } }))
+    updateMetadata((m) => void (m.stylesheet = { mode: 'semantic', source: { languageVersion: STYLESHEET_LANGUAGE_VERSION, text: next } }))
 
   return (
     <div className="space-y-2">
@@ -71,7 +71,7 @@ export function CustomCssSection() {
 
 function fatalErrors(text: string): string[] {
   if (!text.trim()) return []
-  return compileStylesheet({ languageVersion: STYLESHEET_LANGUAGE_VERSION, text }).diagnostics.filter(isFatalStylesheetDiagnostic).map((d) => d.message)
+  return compileStylesheet({ languageVersion: STYLESHEET_LANGUAGE_VERSION, text }).diagnostics.filter(isFatalStylesheetDiagnostic).map((diagnostic) => diagnostic.message)
 }
 
 /** A CodeMirror CSS editor; outside changes (undo) replace its text unless it already shows them. */

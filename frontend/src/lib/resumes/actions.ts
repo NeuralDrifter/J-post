@@ -36,6 +36,16 @@ export async function exportResumePdf(name: string, data: ResumeData): Promise<b
   }
 }
 
+export async function exportResumeDocx(name: string, data: ResumeData): Promise<boolean> {
+  try {
+    const { buildDocx } = await import('@reactive-resume/docx')
+    return await saveFile(exportFileName(name, 'docx'), await buildDocx(data))
+  } catch (err) {
+    toast.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`)
+    return false
+  }
+}
+
 export function exportResumeJson(name: string, data: ResumeData): Promise<boolean> {
   return saveFile(exportFileName(name, 'json'), new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
 }

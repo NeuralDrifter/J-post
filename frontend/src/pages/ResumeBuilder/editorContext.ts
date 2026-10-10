@@ -3,15 +3,23 @@
 
 import { createContext, useContext } from 'react'
 import { useStore, type StoreApi } from 'zustand'
+import type { ResumeData } from '../../lib/resumes/document'
 import type { EditorState } from './editorStore'
 
-export const EditorContext = createContext<StoreApi<EditorState> | null>(null)
+export type ResumeEditorState = EditorState<ResumeData>
 
-/** Reads from the open resume's editor store; re-renders only when the selected value changes. */
-export function useEditor<T>(selector: (state: EditorState) => T): T {
+export const EditorContext = createContext<StoreApi<ResumeEditorState> | null>(null)
+
+/** The open resume's editor store itself. */
+export function useEditorStore(): StoreApi<ResumeEditorState> {
   const store = useContext(EditorContext)
   if (!store) throw new Error('useEditor is only usable inside the resume builder')
-  return useStore(store, selector)
+  return store
+}
+
+/** Reads from the open resume's editor store; re-renders only when the selected value changes. */
+export function useEditor<T>(selector: (state: ResumeEditorState) => T): T {
+  return useStore(useEditorStore(), selector)
 }
 
 export const useResume = () => useEditor((s) => s.data)

@@ -5,7 +5,7 @@ import { useId, useState } from 'react'
 import { fontList, getFont, type FontWeight } from '@reactive-resume/fonts'
 import { applyFontPairing, applyTextSize, FONT_PAIRINGS, matchFontPairing, TEXT_SIZE, type FontPairingId } from '@reactive-resume/web/features/resume/editor/design/presets'
 import { Field } from '../../../components/Field'
-import { useResume, useUpdate } from '../editorContext'
+import { useDesign } from './designContext'
 import { Segmented, Slider, Toggle } from '../ui/controls'
 
 type Role = 'body' | 'heading'
@@ -22,21 +22,21 @@ function defaultWeights(family: string, role: Role): FontWeight[] {
 
 /** Font pairing presets, then each family, the text size and line spacing. */
 export function TypographySection() {
-  const typography = useResume().metadata.typography
-  const update = useUpdate()
+  const { metadata, updateMetadata } = useDesign()
+  const typography = metadata.typography
   const pairing = matchFontPairing({ typography })
 
   const setFamily = (role: Role, family: string) =>
-    update((d) => {
-      d.metadata.typography[role].fontFamily = family
-      d.metadata.typography[role].fontWeights = defaultWeights(family, role)
+    updateMetadata((m) => {
+      m.typography[role].fontFamily = family
+      m.typography[role].fontWeights = defaultWeights(family, role)
     })
 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <span className="label-mono">Pairing</span>
-        <Segmented<FontPairingId> label="Font pairing" options={PAIRING_OPTIONS} value={pairing} onChange={(id) => update((d) => applyFontPairing(d.metadata, id))} />
+        <Segmented<FontPairingId> label="Font pairing" options={PAIRING_OPTIONS} value={pairing} onChange={(id) => updateMetadata((m) => applyFontPairing(m, id))} />
       </div>
       <FontPicker label="Headings" family={typography.heading.fontFamily} onChange={(f) => setFamily('heading', f)} />
       <FontPicker label="Text" family={typography.body.fontFamily} onChange={(f) => setFamily('body', f)} />
@@ -47,10 +47,10 @@ export function TypographySection() {
         max={TEXT_SIZE.max}
         step={TEXT_SIZE.step}
         unit=" pt"
-        onChange={(size) => update((d) => applyTextSize(d.metadata, size))}
+        onChange={(size) => updateMetadata((m) => applyTextSize(m, size))}
       />
-      <Slider label="Line spacing" value={typography.body.lineHeight} min={1} max={2.2} step={0.05} unit="×" onChange={(v) => update((d) => void (d.metadata.typography.body.lineHeight = v))} />
-      <Toggle label="Hyphenate long words" checked={typography.hyphenation ?? false} onChange={(v) => update((d) => void (d.metadata.typography.hyphenation = v))} />
+      <Slider label="Line spacing" value={typography.body.lineHeight} min={1} max={2.2} step={0.05} unit="×" onChange={(v) => updateMetadata((m) => void (m.typography.body.lineHeight = v))} />
+      <Toggle label="Hyphenate long words" checked={typography.hyphenation ?? false} onChange={(v) => updateMetadata((m) => void (m.typography.hyphenation = v))} />
     </div>
   )
 }

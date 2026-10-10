@@ -5,7 +5,7 @@ import { Check } from 'lucide-react'
 import { levelDesignSchema } from '@reactive-resume/schema/resume/data'
 import { ACCENTS, hexToRgba, rgbaToHex } from '@reactive-resume/web/features/resume/editor/design/presets'
 import { Field } from '../../../components/Field'
-import { useResume, useUpdate } from '../editorContext'
+import { useDesign } from './designContext'
 import { ColorField } from '../ui/ColorField'
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -20,10 +20,10 @@ const LEVEL_LABELS: Record<string, string> = {
 
 /** The accent colour (presets that read on white, or any), text and background, and how levels draw. */
 export function ColorsSection() {
-  const design = useResume().metadata.design
-  const update = useUpdate()
+  const { metadata, updateMetadata } = useDesign()
+  const design = metadata.design
   const primaryHex = rgbaToHex(design.colors.primary)
-  const setColor = (key: keyof typeof design.colors, rgba: string) => update((d) => void (d.metadata.design.colors[key] = rgba))
+  const setColor = (key: keyof typeof design.colors, rgba: string) => updateMetadata((m) => void (m.design.colors[key] = rgba))
 
   return (
     <div className="space-y-4">
@@ -52,7 +52,7 @@ export function ColorsSection() {
         <ColorField label="Background" value={design.colors.background} onChange={(v) => setColor('background', v)} />
       </div>
       <Field label="Skill and language levels">
-        <select className="field" value={design.level.type} onChange={(e) => update((d) => void (d.metadata.design.level.type = e.target.value as typeof design.level.type))}>
+        <select className="field" value={design.level.type} onChange={(e) => updateMetadata((m) => void (m.design.level.type = e.target.value as typeof design.level.type))}>
           {levelDesignSchema.shape.type.options.map((type) => (
             <option key={type} value={type}>
               {LEVEL_LABELS[type] ?? type}

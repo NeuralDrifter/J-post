@@ -4,10 +4,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Loader2, Type } from 'lucide-react'
 import { Chip } from '../../components/Chip'
+import type { ResumeRenderOptions } from '@reactive-resume/pdf/context'
 import type { ResumeData } from '../../lib/resumes/document'
 import { closePdf, drawPage, openPdf, pageSize, type PdfDocument } from '../../lib/resumes/pdfjs'
 import { renderResumePreview } from '../../lib/resumes/render'
-import { useResume } from './editorContext'
 import type { Zoom } from './zoom'
 
 /** Re-render this long after the last change, so typing isn't slowed by rendering. */
@@ -17,10 +17,9 @@ const CANVAS_PADDING_PX = 32
 
 type Rendered = { doc: PdfDocument; pageCount: number; width: number; height: number; missingFonts: string[] }
 
-/** The resume's pages as they will print, re-rendered as it changes. */
-export function PreviewCanvas({ zoom }: { zoom: Zoom }) {
-  const data = useResume()
-  const { rendered, error, rendering } = useRenderedPdf(data)
+/** A document's pages as they will print, re-rendered as it changes. */
+export function PreviewCanvas({ zoom, data, renderOptions }: { zoom: Zoom; data: ResumeData; renderOptions?: ResumeRenderOptions }) {
+  const { rendered, error, rendering } = useRenderedPdf(data, renderOptions)
   const container = useRef<HTMLDivElement>(null)
   const width = useWidth(container)
   const scale = !rendered ? 1 : zoom === 'fit' ? Math.max(0.2, (width - CANVAS_PADDING_PX * 2) / rendered.width) : zoom
@@ -75,7 +74,7 @@ function PdfPage({ doc, pageNumber, pageCount, width, height, scale }: { doc: Pd
 }
 
 /** Renders the resume after each pause in editing; a failed render keeps the previous one on screen. */
-function useRenderedPdf(data: ResumeData) {
+function useRenderedPdf(data: ResumeData, renderOptions: ResumeRenderOptions | undefined) {
   const [rendered, setRendered] = useState<Rendered>()
   const [error, setError] = useState<string | null>(null)
   const [rendering, setRendering] = useState(false)
@@ -90,7 +89,7 @@ function useRenderedPdf(data: ResumeData) {
     const timer = setTimeout(async () => {
       setRendering(true)
       try {
-        const next = await renderToDocument(data)
+        const next = await renderToDocument(data, renderOptions)
         if (id !== latest.current) return closePdf(next.doc)
         if (shown.current) closePdf(shown.current)
         shown.current = next.doc
@@ -103,13 +102,13 @@ function useRenderedPdf(data: ResumeData) {
       }
     }, RENDER_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [data])
+  }, [data, renderOptions])
 
   return { rendered, error, rendering }
 }
 
-async function renderToDocument(data: ResumeData): Promise<Rendered> {
-  const { pdf, missingFonts } = await renderResumePreview(data)
+async function renderToDocument(data: ResumeData, renderOptions: ResumeRenderOptions | undefined): Promise<Rendered> {
+  const { pdf, missingFonts } = await renderResumePreview(data, renderOptions)
   const doc = await openPdf(pdf)
   const { width, height } = await pageSize(doc, 1)
   return { doc, pageCount: doc.numPages, width, height, missingFonts }
