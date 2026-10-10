@@ -31,6 +31,7 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
   - Keep any number of resumes. Each opens in a builder: content on the left, the live page in the middle, design on the right.
   - 17 templates, layout across pages and columns, fonts, colours, margins and spacing, custom CSS, and a photo you can crop.
   - Edits save as you type; undo and redo with Ctrl+Z and Ctrl+Shift+Z. Export a PDF (Ctrl+S), a Word document or Reactive Resume JSON.
+  - **Import** a PDF, a Word file (.docx), a LinkedIn data export (.zip), JSON Resume, or Reactive Resume JSON (resumes and letters). Files are read on this computer; only a photo linked from the web is downloaded, and never from a private or local address. Older Reactive Resume exports that carry cover letters come in as a resume plus its letters.
   - **Cover letters** sit in their own tab. A new letter copies a resume's sender details and design, then is independent. Fill in who it's to and the body; the greeting, date and sign-off are added (or switch to writing it exactly as it should read). Letters use the same templates, type, colours and page settings as resumes.
   - The **default resume** (set on its card, in the builder or in Settings) is what match scores and mock interviews read. With none set, they read the resume uploaded in Settings.
   - Template fonts download once and are kept in `%USERPROFILE%\.jobtrack\fonts`, so PDFs render offline afterwards.

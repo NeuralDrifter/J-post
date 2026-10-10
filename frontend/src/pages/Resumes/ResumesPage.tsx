@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { FileText, Mail, Plus, Trash2, type LucideIcon } from 'lucide-react'
+import { FileText, FileUp, Mail, Plus, Trash2, type LucideIcon } from 'lucide-react'
 import { confirmThen } from '../../components/ConfirmDialog'
 import { PageTitle } from '../../components/PageTitle'
 import { api } from '../../lib/api'
@@ -15,6 +15,7 @@ import { LETTER_KIND, RESUME_KIND } from '../../lib/resumes/stored'
 import { useLoad } from '../../lib/useLoad'
 import { DocumentCard } from './DocumentCard'
 import { kindNoun, liveDocumentMenu, trashedDocumentMenu } from './documentMenu'
+import { ImportModal } from './ImportModal'
 import { NewLetterModal } from './NewLetterModal'
 import { NewResumeModal } from './NewResumeModal'
 
@@ -38,6 +39,7 @@ export default function ResumesPage() {
   const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'resumes') as Tab
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
   const { data: docs } = useLoad(() => loadTab(tab), [tab])
   const { data: settings } = useLoad(() => api(GetSettings()), [])
   const defaultId = settings?.defaultResumeId ?? ''
@@ -45,6 +47,7 @@ export default function ResumesPage() {
   const open = (doc: app.Document) => navigate(documentPath(doc))
   const created = (doc: app.Document) => {
     setCreating(false)
+    setImporting(false)
     notifyDataChanged()
     open(doc)
   }
@@ -53,9 +56,14 @@ export default function ResumesPage() {
     <div className="space-y-4">
       <PageTitle title="Resumes" subtitle="Your default resume is the one match scores and mock interviews read.">
         {tab !== 'trash' && (
-          <button className="btn btn-primary" onClick={() => setCreating(true)}>
-            <Plus size={16} /> {tab === 'letters' ? 'New cover letter' : 'New resume'}
-          </button>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost" onClick={() => setImporting(true)}>
+              <FileUp size={16} /> Import
+            </button>
+            <button className="btn btn-primary" onClick={() => setCreating(true)}>
+              <Plus size={16} /> {tab === 'letters' ? 'New cover letter' : 'New resume'}
+            </button>
+          </div>
         )}
       </PageTitle>
 
@@ -91,6 +99,7 @@ export default function ResumesPage() {
 
       {creating && tab === 'resumes' && <NewResumeModal onClose={() => setCreating(false)} onCreated={created} />}
       {creating && tab === 'letters' && <NewLetterModal defaultResumeId={defaultId} onClose={() => setCreating(false)} onCreated={created} />}
+      {importing && <ImportModal onClose={() => setImporting(false)} onImported={created} />}
     </div>
   )
 }

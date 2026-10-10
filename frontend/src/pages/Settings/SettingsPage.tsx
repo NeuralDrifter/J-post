@@ -60,7 +60,10 @@ function ResumeSection() {
   }
 
   return (
-    <Section title="Uploaded resume" hint="Used by the AI features when no default resume is set above. Review the extracted text and fix anything that came out wrong.">
+    <Section
+      title="Uploaded resume"
+      hint="Used by the AI features when no default resume is set above. Review the extracted text and fix anything that came out wrong. To edit it in the builder, import the same file on the Resumes page."
+    >
       <div className="mb-3 flex items-center gap-3">
         <button type="button" className="btn btn-ghost" onClick={upload} disabled={busy}>
           {busy ? <LoaderCircle size={15} className="animate-spin" /> : null} {profile?.resumeFileName ? 'Replace resume' : 'Upload resume'}

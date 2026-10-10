@@ -4,11 +4,12 @@
 // Document actions shared by the library and the editors. Each reports failures
 // as toasts (through api/apiOk) and resolves to whether it succeeded.
 import { api, apiOk } from '../api'
-import { CreateDocument, SaveExportedFile, SetDefaultResume, type app } from '../backend'
+import { CreateDocument, FetchPicture, SaveExportedFile, SetDefaultResume, type app } from '../backend'
 import { notifyDataChanged } from '../events'
 import { toast } from '../toast'
 import { newResumeData, resumePlainText, serializeResume, type ResumeData, type ResumeStart, type Template } from './document'
-import { letterPlainText, newLetterData, serializeLetter } from './letter'
+import type { ImportResult } from './importFile'
+import { letterPlainText, newLetterData, serializeLetter, type LetterData } from './letter'
 import { exportFileName } from './library'
 import { renderResumePdf } from './render'
 import { LETTER_KIND, readStoredDocument, RESUME_KIND, type Exportable, type PrintablePage } from './stored'
@@ -21,9 +22,35 @@ export async function createResume(name: string, start: ResumeStart, template: T
 }
 
 /** A new letter carrying the sender details and design of `source` (or blank). */
-export async function createLetter(name: string, source: ResumeData | null): Promise<app.Document | undefined> {
-  const letter = newLetterData(source)
+export function createLetter(name: string, source: ResumeData | null): Promise<app.Document | undefined> {
+  return saveLetter(name, newLetterData(source))
+}
+
+function saveLetter(name: string, letter: LetterData): Promise<app.Document | undefined> {
   return api(CreateDocument(LETTER_KIND, name, serializeLetter(letter), letterPlainText(letter)))
+}
+
+/**
+ * Saves what an import read: the resume (with its photo stored inside it) and any letters it carried, or the
+ * letter. Resolves to the main document created, or undefined if it failed.
+ */
+export async function saveImport(result: ImportResult, name: string): Promise<app.Document | undefined> {
+  if (result.kind === 'letter') return saveLetter(name, result.letter)
+  const data = await withLocalPicture(result.data)
+  const resume = await api(CreateDocument(RESUME_KIND, name, serializeResume(data), resumePlainText(data)))
+  if (resume) for (const letter of result.letters) await saveLetter(`${name} — ${letter.name}`, letter)
+  return resume
+}
+
+/** A photo linked from the web is downloaded into the resume; one that can't be is left out, with a note. */
+async function withLocalPicture(data: ResumeData): Promise<ResumeData> {
+  if (!/^https?:\/\//i.test(data.picture.url)) return data
+  try {
+    return { ...data, picture: { ...data.picture, url: await FetchPicture(data.picture.url) } }
+  } catch (err) {
+    toast.info(`The photo couldn't be downloaded (${err instanceof Error ? err.message : String(err)}), so it was left out.`)
+    return { ...data, picture: { ...data.picture, url: '' } }
+  }
 }
 
 export async function setDefaultResume(id: string): Promise<boolean> {
