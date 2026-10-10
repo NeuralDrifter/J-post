@@ -29,6 +29,9 @@ export const VESTINGS = ['standard', 'backloaded', 'monthly', 'custom'] as const
 /** Federal filing statuses. */
 export const FILING_STATUSES = ['single', 'married', 'head'] as const
 
+/** Every AI provider a setting may name, in display order. */
+export const AI_PROVIDER_IDS = ['gemini-live', 'anthropic', 'claude-code', 'openai', 'deepseek', 'ollama', 'lmstudio', 'openai-compatible'] as const
+
 /** Effort levels the Anthropic API accepts. */
 export const ANTHROPIC_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 

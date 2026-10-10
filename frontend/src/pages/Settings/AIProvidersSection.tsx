@@ -6,10 +6,11 @@ import { ExternalLink, LoaderCircle } from 'lucide-react'
 import { Field } from '../../components/JobForm'
 import { ANSWER_MODES, ANTHROPIC_EFFORTS } from '../../generated/choices'
 import { api } from '../../lib/api'
-import { BrowserOpenURL, ListAIProviders, TestClaudeCode, type settings } from '../../lib/backend'
+import { BrowserOpenURL, ListAIProviders, TestClaudeCode, type ai, type settings } from '../../lib/backend'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { ModelPicker, TestProviderButton } from './ModelPicker'
+import { initialProvider, PROVIDER_GROUPS, type ProviderGroup, type ProviderId } from './providerGroups'
 import { Section } from './Section'
 
 type Props = { s: settings.Settings; setS: (s: settings.Settings) => void }
@@ -47,29 +48,11 @@ export function AIProvidersSection(props: Props) {
     </select>
   )
 
-  return (
-    <Section title="AI providers" hint="Pick which provider does each AI job. Set each provider up below.">
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Interview grading (mock interview scorecards)">{providerSelect('gradingProvider', 'Interview grading provider')}</Field>
-        <Field label="Coaching tips (during interviews)">{providerSelect('tipsProvider', 'Coaching tips provider')}</Field>
-        <Field label="Question plan (before interviews)">{providerSelect('planProvider', 'Question plan provider')}</Field>
-        <Field label="Job matching (Discover match scores)">{providerSelect('matchProvider', 'Job matching provider')}</Field>
-      </div>
-      <p className="mt-2 text-[11px] text-ink-3">
-        Recommended for tips: Gemini Live — it answers in about a second. Claude Code takes several seconds just to start. Any interview can also be
-        re-graded with another provider from its review page.
-      </p>
-      <p className="mt-1 text-[11px] text-ink-3">
-        Question plan: Gemini Live is fastest; Claude Code and the Anthropic API usually write deeper questions but take up to a minute.
-      </p>
-      <p className="mt-1 text-[11px] text-ink-3">
-        Job matching sends many postings per request, so a provider with a large context works best (Claude Code, the Anthropic API, OpenAI).
-      </p>
-      <p className="mt-1 text-[11px] text-ink-3">
-        OpenAI, DeepSeek, Ollama or LM Studio on your own PC, or any OpenAI-compatible service can also do any of these jobs. Set them up below.
-      </p>
-
-      <ProviderBlock title="Gemini Live" note="Runs the interview itself, so it's always needed for the voice.">
+  // The setup fields of each provider, shown when it's picked in its group's
+  // dropdown. A Record, so a new backend provider without setup here fails to compile.
+  const setups: Record<ProviderId, () => ReactNode> = {
+    'gemini-live': () => (
+      <ProviderBlock note="Runs the interview itself, so it's always needed for the voice.">
         <Field label="Gemini API key" wide>
           <SecretInput {...bindText(props, 'geminiKey')} />
         </Field>
@@ -82,8 +65,9 @@ export function AIProvidersSection(props: Props) {
           tier doesn't.
         </PrivacyNote>
       </ProviderBlock>
-
-      <ProviderBlock title="Anthropic API" note="Pay-as-you-go with your own API key.">
+    ),
+    anthropic: () => (
+      <ProviderBlock note="Pay-as-you-go with your own API key.">
         <Field label="Anthropic API key" wide>
           <SecretInput {...bindText(props, 'anthropicKey')} />
         </Field>
@@ -98,11 +82,9 @@ export function AIProvidersSection(props: Props) {
         </Field>
         <LinkButton url="https://console.anthropic.com/settings/keys">Get an Anthropic API key</LinkButton>
       </ProviderBlock>
-
-      <ProviderBlock
-        title="Claude Code"
-        note="Uses your Claude subscription. Each run is a short private session; nothing is added to your Claude Code setup."
-      >
+    ),
+    'claude-code': () => (
+      <ProviderBlock note="Uses your Claude subscription. Each run is a short private session; nothing is added to your Claude Code setup.">
         <Field label="Path to claude" wide>
           <div className="flex gap-2">
             <input className="field font-mono text-xs" {...bindText(props, 'claudeCodePath')} placeholder="Leave empty to find it automatically" />
@@ -115,22 +97,22 @@ export function AIProvidersSection(props: Props) {
           <input className="field font-mono text-xs" {...bindText(props, 'claudeCodeModel')} placeholder="Your plan's default" />
         </Field>
       </ProviderBlock>
-
+    ),
+    openai: () => (
       <OpenAIStyleBlock
         {...props}
         providerId="openai"
-        title="OpenAI"
         note="Pay-as-you-go with your own API key."
         secret={{ key: 'openaiKey', label: 'OpenAI API key' }}
         modelKey="openaiModel"
         testLabel="OpenAI"
         link={{ url: 'https://platform.openai.com/api-keys', text: 'Get an OpenAI API key' }}
       />
-
+    ),
+    deepseek: () => (
       <OpenAIStyleBlock
         {...props}
         providerId="deepseek"
-        title="DeepSeek"
         note="Pay-as-you-go with your own API key. Low prices; repeated instructions are cached automatically."
         secret={{ key: 'deepseekKey', label: 'DeepSeek API key' }}
         modelKey="deepseekModel"
@@ -143,22 +125,22 @@ export function AIProvidersSection(props: Props) {
           </PrivacyNote>
         }
       />
-
+    ),
+    ollama: () => (
       <OpenAIStyleBlock
         {...props}
         providerId="ollama"
-        title="Ollama (local)"
         note="Runs models on your own computer: free, and nothing leaves your PC. Install Ollama and download a model first."
         serverKey="ollamaURL"
         modelKey="ollamaModel"
         testLabel="Ollama"
         link={{ url: 'https://ollama.com/download', text: 'Download Ollama' }}
       />
-
+    ),
+    lmstudio: () => (
       <OpenAIStyleBlock
         {...props}
         providerId="lmstudio"
-        title="LM Studio (local)"
         note="Runs models on your own computer: free, and nothing leaves your PC. Load a model and start the server in LM Studio's Developer tab."
         serverKey="lmStudioURL"
         secret={{ key: 'lmStudioKey', label: 'API token (only if Require Authentication is on)' }}
@@ -166,11 +148,11 @@ export function AIProvidersSection(props: Props) {
         testLabel="LM Studio"
         link={{ url: 'https://lmstudio.ai/download', text: 'Download LM Studio' }}
       />
-
+    ),
+    'openai-compatible': () => (
       <OpenAIStyleBlock
         {...props}
         providerId="openai-compatible"
-        title="OpenAI-compatible (custom)"
         note="Any other service that speaks OpenAI's format. Not tested by Job Track; use Test to check it."
         serverKey="customAIBaseURL"
         serverPlaceholder="https://example.com/v1"
@@ -189,13 +171,42 @@ export function AIProvidersSection(props: Props) {
         </Field>
         <p className="col-span-2 text-[11px] text-ink-3">Use plain if the server rejects the others.</p>
       </OpenAIStyleBlock>
-    </Section>
+    ),
+  }
+
+  return (
+    <>
+      <Section title="AI providers" hint="Pick which provider does each AI job. Set each provider up below.">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Interview grading (mock interview scorecards)">{providerSelect('gradingProvider', 'Interview grading provider')}</Field>
+          <Field label="Coaching tips (during interviews)">{providerSelect('tipsProvider', 'Coaching tips provider')}</Field>
+          <Field label="Question plan (before interviews)">{providerSelect('planProvider', 'Question plan provider')}</Field>
+          <Field label="Job matching (Discover match scores)">{providerSelect('matchProvider', 'Job matching provider')}</Field>
+        </div>
+        <p className="mt-2 text-[11px] text-ink-3">
+          Recommended for tips: Gemini Live — it answers in about a second. Claude Code takes several seconds just to start. Any interview can also be
+          re-graded with another provider from its review page.
+        </p>
+        <p className="mt-1 text-[11px] text-ink-3">
+          Question plan: Gemini Live is fastest; Claude Code and the Anthropic API usually write deeper questions but take up to a minute.
+        </p>
+        <p className="mt-1 text-[11px] text-ink-3">
+          Job matching sends many postings per request, so a provider with a large context works best (Claude Code, the Anthropic API, OpenAI).
+        </p>
+        <p className="mt-1 text-[11px] text-ink-3">
+          OpenAI, DeepSeek, Ollama or LM Studio on your own PC, or any OpenAI-compatible service can also do any of these jobs. Set them up below.
+        </p>
+      </Section>
+
+      {PROVIDER_GROUPS.map((group) => (
+        <ProviderGroupPicker key={group.id} group={group} providers={providers} initial={initialProvider(group, s)} renderSetup={(id) => setups[id]()} />
+      ))}
+    </>
   )
 }
 
 type OpenAIStyleProps = Props & {
   providerId: string
-  title: string
   note: string
   serverKey?: TextKey // the server address, for local apps and custom servers
   serverPlaceholder?: string
@@ -209,9 +220,9 @@ type OpenAIStyleProps = Props & {
 
 /** A provider reached through OpenAI's API format: server or key, model, Test, and where to get it. */
 function OpenAIStyleBlock(props: OpenAIStyleProps) {
-  const { s, providerId, title, note, serverKey, serverPlaceholder, secret, modelKey, testLabel, link, children, footer } = props
+  const { s, providerId, note, serverKey, serverPlaceholder, secret, modelKey, testLabel, link, children, footer } = props
   return (
-    <ProviderBlock title={title} note={note}>
+    <ProviderBlock note={note}>
       {serverKey && (
         <Field label="Server address" wide>
           <input className="field font-mono text-xs" {...bindText(props, serverKey)} placeholder={serverPlaceholder} />
@@ -233,10 +244,43 @@ function OpenAIStyleBlock(props: OpenAIStyleProps) {
   )
 }
 
-function ProviderBlock({ title, note, children }: { title: string; note: string; children: ReactNode }) {
+type GroupPickerProps = {
+  group: ProviderGroup
+  providers: ai.AIProvider[] | undefined // labels and readiness, from the backend
+  initial: ProviderId
+  renderSetup: (id: ProviderId) => ReactNode
+}
+
+/** One group of providers, as its own card: its dropdown picks which provider's setup is shown. */
+function ProviderGroupPicker({ group, providers, initial, renderSetup }: GroupPickerProps) {
+  const [selected, setSelected] = useState(initial)
   return (
-    <div className="mt-5 border-t border-line pt-4">
-      <h3 className="text-xs font-semibold">{title}</h3>
+    <Section title={group.title} hint={group.hint}>
+      <select
+        className="field mb-4 w-auto min-w-64"
+        value={selected}
+        onChange={(e) => setSelected(e.target.value as ProviderId)}
+        aria-label={`${group.title}: provider to set up`}
+      >
+        {group.providerIds.map((id) => {
+          const provider = providers?.find((p) => p.id === id)
+          return (
+            <option key={id} value={id}>
+              {provider?.label ?? id}
+              {provider?.unavailable ? ' (setup needed)' : ''}
+            </option>
+          )
+        })}
+      </select>
+      {renderSetup(selected)}
+    </Section>
+  )
+}
+
+/** One provider's setup: what it is, then its fields. */
+function ProviderBlock({ note, children }: { note: string; children: ReactNode }) {
+  return (
+    <div>
       <p className="mb-3 text-[11px] text-ink-3">{note}</p>
       <div className="grid grid-cols-2 gap-4">{children}</div>
     </div>

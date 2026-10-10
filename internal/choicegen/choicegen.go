@@ -40,6 +40,7 @@ func valueLists() []valueList {
 		{"EQUITY_TYPES", "Equity types in a package.", comp.EquityTypes},
 		{"VESTINGS", "Vesting schedules.", comp.Vestings},
 		{"FILING_STATUSES", "Federal filing statuses.", taxes.FilingStatuses},
+		{"AI_PROVIDER_IDS", "Every AI provider a setting may name, in display order.", settings.AIProviderIDs},
 		{"ANTHROPIC_EFFORTS", "Effort levels the Anthropic API accepts.", settings.AnthropicEfforts},
 		{"MATCH_SENIORITY", "Target levels for job matching.", settings.MatchSeniorityOptions},
 	}
