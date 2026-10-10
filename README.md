@@ -27,6 +27,12 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
     | Jobicy | Official API | none | Remote jobs; at most one request per hour (enforced) |
     | The Muse | Official API | Pick categories in Settings | No keyword search in its API, so category × location slices are copied locally (refreshed daily) and searched locally |
     | Indeed, LinkedIn, ZipRecruiter | Scraped via [JobSpy](https://github.com/speedyapply/JobSpy) | Python venv | Runs locally from your IP; sites may rate-limit or block |
+- **Resumes** (built on [Reactive Resume](https://github.com/reactive-resume/reactive-resume)):
+  - Keep any number of resumes. Each opens in a builder: content on the left, the live page in the middle, design on the right.
+  - 17 templates, layout across pages and columns, fonts, colours, margins and spacing, custom CSS, and a photo you can crop.
+  - Edits save as you type; undo and redo with Ctrl+Z and Ctrl+Shift+Z. Export a PDF (Ctrl+S) or Reactive Resume JSON.
+  - The **default resume** (set on its card, in the builder or in Settings) is what match scores and mock interviews read. With none set, they read the resume uploaded in Settings.
+  - Template fonts download once and are kept in `%USERPROFILE%\.jobtrack\fonts`, so PDFs render offline afterwards.
 - **Offers**:
   - Compare real offers, estimates, counter-offer drafts and your current job side by side.
   - Each one shows 4-year total comp with vesting schedules and raises, after-tax take-home, equity scenarios (0×/1×/3×/10×), where the base sits in the local market for your occupation, what it's worth in your home city's dollars, and, if you have no current job set, how its base compares with the typical (median) pay for your occupation where you live.
@@ -125,6 +131,7 @@ Data lives in `%USERPROFILE%\.jobtrack\`:
 - `jobtrack.db`: SQLite database.
 - `settings.json`: settings, including your API keys.
 - `files\`: attached documents.
+- `fonts\`: fonts the resume templates downloaded.
 
 Back up this folder to keep your history. Before any schema upgrade the app writes `jobtrack.db.bak-vN`. An old `data.json` from earlier versions is imported automatically once and renamed to `data.json.bak`.
 

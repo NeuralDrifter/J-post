@@ -1,6 +1,16 @@
 # Reactive Resume integration — Design Spec
 
-**Date:** 2026-10-10 · **Status:** Draft, awaiting review · **Branch:** feature/reactive-resume
+**Date:** 2026-10-10 · **Status:** Phases 0–1 implemented (branch feature/reactive-resume)
+
+**Deviations found while building (phases 0–1):**
+- Reactive Resume has 17 templates (the 18th folder is shared code).
+- The font allowlist is every URL in the font catalogue, which includes jsDelivr (Computer Modern) as well as fonts.gstatic.com. Requests go to `/rr-fonts?src=<url>` through a Wails asset middleware.
+- PDFs render in a Web Worker (as upstream does); about a second per render on the main thread froze the page.
+- Exports are strict (a missing font fails the export); the preview falls back to standard fonts and shows a chip.
+- Two UI-free files from upstream's web app are vendored rather than rewritten: the editor's section/entry model and the design presets.
+- The default resume picker lives in Settings → Profile & resume (above the uploaded resume, now labelled the fallback), not a new menu item.
+- Layout is edited with move buttons (other column, up, down, page) instead of drag between columns; entries still reorder by drag.
+- Icon fields take a Phosphor icon name as text; no icon picker yet.
 
 ## Goal
 

@@ -16,6 +16,7 @@ import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { AIProvidersSection } from './AIProvidersSection'
 import { CompensationSection } from './CompensationSection'
+import { DefaultResumeSection } from './DefaultResumeSection'
 import { JobMatchingSection } from './JobMatchingSection'
 import { JobSearchSection } from './JobSearchSection'
 import { Section } from './Section'
@@ -59,7 +60,7 @@ function ResumeSection() {
   }
 
   return (
-    <Section title="Resume" hint="Used by every AI feature: interview grading, coaching, question plans and job matching. Review the extracted text and fix anything that came out wrong.">
+    <Section title="Uploaded resume" hint="Used by the AI features when no default resume is set above. Review the extracted text and fix anything that came out wrong.">
       <div className="mb-3 flex items-center gap-3">
         <button type="button" className="btn btn-ghost" onClick={upload} disabled={busy}>
           {busy ? <LoaderCircle size={15} className="animate-spin" /> : null} {profile?.resumeFileName ? 'Replace resume' : 'Upload resume'}
@@ -145,7 +146,12 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
       </nav>
 
       <form onSubmit={save} className="min-w-0 space-y-4">
-        {section === 'profile' && <ResumeSection />}
+        {section === 'profile' && (
+          <>
+            <DefaultResumeSection s={s} setS={setS} />
+            <ResumeSection />
+          </>
+        )}
         {section === 'ai' && <AIProvidersSection s={s} setS={setS} />}
         {section === 'matching' && <JobMatchingSection s={s} setS={setS} />}
         {section === 'search' && <JobSearchSection s={s} setS={setS} />}
