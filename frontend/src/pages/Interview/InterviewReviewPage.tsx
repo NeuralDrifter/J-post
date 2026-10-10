@@ -4,13 +4,13 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { ChevronLeft, LoaderCircle, RefreshCw, Repeat, Trash2 } from 'lucide-react'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { confirmThen } from '../../components/ConfirmDialog'
+import { deleteMockInterview } from '../../components/deleteActions'
 import { InterviewSetupModal } from '../../components/interview/InterviewSetupModal'
 import { Panel } from '../../components/Panel'
-import { api, apiOk } from '../../lib/api'
+import { api } from '../../lib/api'
 import {
   DeleteInterviewRecording,
-  DeleteMockInterview,
   DeleteScorecard,
   GetInterviewRecording,
   GetJob,
@@ -80,7 +80,7 @@ export default function InterviewReviewPage() {
       setParams({}, { replace: true })
       void score()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Not score on purpose: it's a new function every render; the check runs when the interview or URL changes.
   }, [mi, params])
 
   useEffect(() => {
@@ -119,22 +119,21 @@ export default function InterviewReviewPage() {
   const deleteCard = async (provider: string) => {
     const card = mi.scorecards.find((c) => c.provider === provider)
     if (!card) return
-    const ok = await confirmDialog({ title: 'Delete this scorecard?', message: `The ${cardLabel(card, providers)} scorecard will be deleted.`, confirmLabel: 'Delete', danger: true })
-    if (!ok || !(await apiOk(DeleteScorecard(id, provider)))) return
+    const options = { title: 'Delete this scorecard?', message: `The ${cardLabel(card, providers)} scorecard will be deleted.`, confirmLabel: 'Delete' }
+    if (!(await confirmThen(options, () => DeleteScorecard(id, provider)))) return
     setSelected('')
     notifyDataChanged()
   }
 
   const deleteRecording = async () => {
-    const ok = await confirmDialog({ title: 'Delete the recording?', message: 'The audio will be deleted. The transcript, tips and scorecards stay.', confirmLabel: 'Delete', danger: true })
-    if (!ok || !(await apiOk(DeleteInterviewRecording(id)))) return
+    const options = { title: 'Delete the recording?', message: 'The audio will be deleted. The transcript, tips and scorecards stay.', confirmLabel: 'Delete' }
+    if (!(await confirmThen(options, () => DeleteInterviewRecording(id)))) return
     setAudioUrl('')
     notifyDataChanged()
   }
 
   const remove = async () => {
-    const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, tips, scorecards and recording will be deleted.', confirmLabel: 'Delete', danger: true })
-    if (!ok || !(await apiOk(DeleteMockInterview(id)))) return
+    if (!(await deleteMockInterview(id))) return
     navigate(`/jobs/${mi.jobId}`)
     notifyDataChanged()
     toast.success('Mock interview deleted')

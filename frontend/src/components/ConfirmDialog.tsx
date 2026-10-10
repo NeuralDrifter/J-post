@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useState, useSyncExternalStore, type FormEvent } from 'react'
+import { apiOk } from '../lib/api'
 import { Modal } from './Modal'
 
 type ConfirmOptions = { title: string; message: string; confirmLabel?: string; danger?: boolean }
@@ -27,6 +28,14 @@ export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
     pending = { kind: 'confirm', ...options, resolve }
     emit()
   })
+}
+
+/**
+ * Asks before something that can't be undone, then runs action. True only when
+ * the user confirmed and the action succeeded; a failure shows a toast.
+ */
+export async function confirmThen(options: Omit<ConfirmOptions, 'danger'>, action: () => Promise<unknown>): Promise<boolean> {
+  return (await confirmDialog({ ...options, danger: true })) && (await apiOk(action()))
 }
 
 /** In-app replacement for window.prompt(); resolves the trimmed text, or null if cancelled. */

@@ -3,6 +3,8 @@
 
 import { CodePicker } from '../../components/comp/CodePicker'
 import { Field } from '../../components/JobForm'
+import { LabelSelect } from '../../components/LabelSelect'
+import { NATIONAL_AREA } from '../../generated/choices'
 import { DescribeArea, DescribeOccupation, SearchAreas, SearchOccupations, type comp, type settings } from '../../lib/backend'
 import { FILING_LABEL, formatMoneyFull } from '../../lib/comp'
 import { Section } from './Section'
@@ -20,18 +22,12 @@ export function CompensationSection({ s, setS, current, onEditCurrent }: Props) 
     <Section title="Compensation" hint="Used on the Offers page: taxes, cost of living, and market pay for your role.">
       <div className="grid grid-cols-2 gap-4">
         <Field label="Federal filing status">
-          <select className="field" value={s.filingStatus} onChange={(e) => setS({ ...s, filingStatus: e.target.value })}>
-            {Object.entries(FILING_LABEL).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
+          <LabelSelect labels={FILING_LABEL} value={s.filingStatus} onChange={(filingStatus) => setS({ ...s, filingStatus })} />
         </Field>
         <Field label="Home location (for cost of living)">
           <CodePicker
             value={s.homeAreaCode}
-            onChange={(code) => setS({ ...s, homeAreaCode: code || 'US' })}
+            onChange={(code) => setS({ ...s, homeAreaCode: code || NATIONAL_AREA })}
             search={SearchAreas}
             describe={DescribeArea}
             placeholder="Where you live now"

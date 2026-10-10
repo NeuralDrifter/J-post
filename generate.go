@@ -5,3 +5,6 @@ package main
 
 // Regenerates the open-source licenses list shown in Settings → About.
 //go:generate go run ./tools/licenses
+
+// Regenerates the value lists (statuses, work modes, comp options…) the frontend imports.
+//go:generate go run ./tools/choices

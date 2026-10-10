@@ -155,7 +155,7 @@ func TestRunDiscoverPartialFailure(t *testing.T) {
 		}
 		return nil, nil
 	}
-	q := discover.DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin", "indeed", "myspace"}}
+	q := discover.DiscoverQuery{Term: "dev", Sources: []string{"indeed", "linkedin"}}
 	resp := runDiscover(context.Background(), q, fetch, func(string) discover.FetchOptions { return discover.FetchOptions{} })
 	if len(resp.Results) != 1 || resp.Results[0].Company != "Acme" {
 		t.Fatalf("results = %+v", resp.Results)
@@ -164,6 +164,17 @@ func TestRunDiscoverPartialFailure(t *testing.T) {
 		t.Fatalf("errors = %+v", resp.Errors)
 	}
 }
+
+func TestNormalizeSourcesDropsDuplicatesAndUnknownBoards(t *testing.T) {
+	got := normalizeSources([]string{"linkedin", "indeed", "linkedin", "myspace"})
+	if strings.Join(got, ",") != "indeed,linkedin" {
+		t.Fatalf("got %v", got)
+	}
+	if empty := normalizeSources(nil); empty == nil || len(empty) != 0 {
+		t.Fatalf("no sources should be [] not nil: %#v", empty)
+	}
+}
+
 func TestWithProgressCountsFinishedBoards(t *testing.T) {
 	var seen []string
 	fetch := withProgress(func(context.Context, string, discover.DiscoverQuery, discover.FetchOptions) ([]discover.RawJob, error) {

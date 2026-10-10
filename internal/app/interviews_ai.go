@@ -31,7 +31,7 @@ type InterviewSetup struct {
 	InterviewerName string `json:"interviewerName"` // "" = random name matching the voice
 	Focus           string `json:"focus"`
 	// PlanProvider overrides the plan provider setting for this interview: an
-	// aiProvider id, planNone, or "" for the setting.
+	// aiProvider id, PlanNone, or "" for the setting.
 	PlanProvider string `json:"planProvider"`
 	// RetryOf reuses that interview's question plan, type and length.
 	RetryOf string `json:"retryOf"`
@@ -341,27 +341,35 @@ func (r *Repo) GetMockInterview(id string) (MockInterview, error) {
 	if err != nil {
 		return m, err
 	}
-	if err := r.loadReviewData(&m); err != nil {
-		return m, err
-	}
-	return m, r.loadPlanData(&m)
+	return m, r.loadDetails(&m)
 }
 
 func (r *Repo) ListMockInterviews(jobID string) ([]MockInterview, error) {
-	list, err := queryAll(r.db, scanMock, `SELECT `+mockColumns+` FROM mock_interviews m JOIN jobs j ON j.id = m.job_id
-		WHERE m.job_id = ? ORDER BY m.started_at DESC`, jobID)
+	return r.listMockInterviews(`WHERE m.job_id = ? ORDER BY m.started_at DESC`, jobID)
+}
+
+// listMockInterviews lists the interviews matching where (which also orders
+// them), each with its scorecards, tips and plan.
+func (r *Repo) listMockInterviews(where string, args ...any) ([]MockInterview, error) {
+	list, err := queryAll(r.db, scanMock, `SELECT `+mockColumns+` FROM mock_interviews m JOIN jobs j ON j.id = m.job_id `+where, args...)
 	if err != nil {
 		return nil, err
 	}
 	for i := range list {
-		if err := r.loadReviewData(&list[i]); err != nil {
-			return nil, err
-		}
-		if err := r.loadPlanData(&list[i]); err != nil {
+		if err := r.loadDetails(&list[i]); err != nil {
 			return nil, err
 		}
 	}
 	return list, nil
+}
+
+// loadDetails fills in what the interview row doesn't hold: scorecards, tips,
+// the question plan and its attempts.
+func (r *Repo) loadDetails(m *MockInterview) error {
+	if err := r.loadReviewData(m); err != nil {
+		return err
+	}
+	return r.loadPlanData(m)
 }
 
 // recordingPath is "" when the session has no recording.
@@ -445,47 +453,28 @@ func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID s
 	if s.GeminiKey == "" {
 		return LiveSession{}, gemini.ErrNoKey
 	}
-	var reused *InterviewPlanRecord
-	if setup.RetryOf != "" {
-		original, err := r.GetMockInterview(setup.RetryOf)
-		if err != nil {
-			return LiveSession{}, err
-		}
-		if original.Plan == nil || original.JobID != jobID {
-			return LiveSession{}, errNoPlanToRetry
-		}
-		setup.Kind, setup.Minutes = original.Kind, original.Minutes
-		reused = original.Plan
+	setup, reused, err := r.applyRetry(jobID, setup)
+	if err != nil {
+		return LiveSession{}, err
 	}
 	if err := validateInterviewSetup(&setup); err != nil {
 		return LiveSession{}, err
 	}
-	job, err := r.GetJob(jobID)
+	ic, err := r.loadInterviewContext(jobID)
 	if err != nil {
 		return LiveSession{}, err
 	}
-	contacts, err := r.ListContacts(jobID)
-	if err != nil {
-		return LiveSession{}, err
-	}
-	profile, err := r.GetProfile()
-	if err != nil {
-		return LiveSession{}, err
-	}
+	job := ic.job
 	keptKey := ""
-	if provider := cmp.Or(setup.PlanProvider, s.PlanProvider); reused == nil && provider != planNone {
+	if provider := cmp.Or(setup.PlanProvider, s.PlanProvider); reused == nil && provider != PlanNone {
 		keptKey = keptPlanKey(jobID, provider, setup)
 		reused = r.kept.take(keptKey, r.now())
 	}
-	plan, err := interviewPlanFor(ctx, s, job, profile.ResumeText, setup, reused)
+	plan, err := interviewPlanFor(ctx, s, job, ic.resume, setup, reused)
 	if err != nil {
 		return LiveSession{}, err
 	}
-	var brief *InterviewPlan
-	if plan != nil {
-		brief = &plan.Plan
-	}
-	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, contacts, profile.ResumeText, setup, brief))
+	setupMsg := liveSetup(s.GeminiLiveModel, setup.Voice, buildInterviewBrief(job, ic.contacts, ic.resume, setup, planOf(plan)))
 	token, err := gemini.CreateLiveToken(ctx, s.GeminiKey, setupMsg, setup.Minutes, r.now())
 	if err != nil {
 		if keptKey != "" && plan != nil {
@@ -500,6 +489,55 @@ func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID s
 	return LiveSession{SessionID: mi.ID, Token: token, WSURL: gemini.LiveURL, Setup: setupMsg, Minutes: setup.Minutes,
 		Kind: setup.Kind, Company: job.Company, Position: job.Position, Voice: setup.Voice, InterviewerName: setup.InterviewerName,
 		Cues: liveCues(setup.Minutes, plan != nil)}, nil
+}
+
+// applyRetry, when setup retries an interview, copies that interview's type and
+// length into setup and returns its plan to reuse. Otherwise setup comes back
+// unchanged with no plan.
+func (r *Repo) applyRetry(jobID string, setup InterviewSetup) (InterviewSetup, *InterviewPlanRecord, error) {
+	if setup.RetryOf == "" {
+		return setup, nil, nil
+	}
+	original, err := r.GetMockInterview(setup.RetryOf)
+	if err != nil {
+		return setup, nil, err
+	}
+	if original.Plan == nil || original.JobID != jobID {
+		return setup, nil, errNoPlanToRetry
+	}
+	setup.Kind, setup.Minutes = original.Kind, original.Minutes
+	return setup, original.Plan, nil
+}
+
+// interviewContext is what the interviewer and the question planner read.
+type interviewContext struct {
+	job      Job
+	contacts []Contact
+	resume   string
+}
+
+func (r *Repo) loadInterviewContext(jobID string) (interviewContext, error) {
+	job, err := r.GetJob(jobID)
+	if err != nil {
+		return interviewContext{}, err
+	}
+	contacts, err := r.ListContacts(jobID)
+	if err != nil {
+		return interviewContext{}, err
+	}
+	profile, err := r.GetProfile()
+	if err != nil {
+		return interviewContext{}, err
+	}
+	return interviewContext{job: job, contacts: contacts, resume: profile.ResumeText}, nil
+}
+
+// planOf is the record's plan, or nil when the interview has none.
+func planOf(rec *InterviewPlanRecord) *InterviewPlan {
+	if rec == nil {
+		return nil
+	}
+	return &rec.Plan
 }
 
 // nudgeAnswer asks the tips provider for one coaching cue about the answer that

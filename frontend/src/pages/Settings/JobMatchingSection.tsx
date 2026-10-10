@@ -5,16 +5,11 @@ import { Link } from 'react-router'
 import { Field } from '../../components/JobForm'
 import { api } from '../../lib/api'
 import { ListAIProviders, type settings } from '../../lib/backend'
+import { MATCH_SENIORITY } from '../../generated/choices'
+import { WORK_MODE_LABEL, WORK_MODES } from '../../lib/format'
 import { settingsLink } from '../../lib/settingsNav'
 import { useLoad } from '../../lib/useLoad'
 import { Section } from './Section'
-
-const WORK_MODES = [
-  { id: 'remote', label: 'Remote' },
-  { id: 'hybrid', label: 'Hybrid' },
-  { id: 'onsite', label: 'On-site' },
-]
-const SENIORITY = ['entry', 'mid', 'senior', 'staff', 'principal', 'manager']
 
 type Props = { s: settings.Settings; setS: (s: settings.Settings) => void }
 
@@ -77,7 +72,7 @@ export function JobMatchingSection({ s, setS }: Props) {
           <Field label="Target seniority">
             <select className="field" value={s.matchSeniority} onChange={(e) => setS({ ...s, matchSeniority: e.target.value })}>
               <option value="">No target</option>
-              {SENIORITY.map((v) => (
+              {MATCH_SENIORITY.map((v) => (
                 <option key={v} value={v}>
                   {v[0].toUpperCase() + v.slice(1)}
                 </option>
@@ -88,9 +83,9 @@ export function JobMatchingSection({ s, setS }: Props) {
             <span className="label-mono">Work modes</span>
             <div className="flex gap-3 text-sm">
               {WORK_MODES.map((m) => (
-                <label key={m.id} className="flex items-center gap-1.5">
-                  <input type="checkbox" className="accent-indigo-500" checked={s.matchWorkModes.includes(m.id)} onChange={() => toggleMode(m.id)} />
-                  {m.label}
+                <label key={m} className="flex items-center gap-1.5">
+                  <input type="checkbox" className="accent-indigo-500" checked={s.matchWorkModes.includes(m)} onChange={() => toggleMode(m)} />
+                  {WORK_MODE_LABEL[m]}
                 </label>
               ))}
             </div>

@@ -3,7 +3,11 @@
 
 // Labels and pure formatting helpers shared by every page.
 
-export const STATUSES = ['interested', 'applied', 'interviewing', 'offer', 'closed'] as const
+import { CLOSE_REASONS, INTERVIEW_KINDS, STATUSES, WORK_MODES } from '../generated/choices'
+
+// The value lists come from the backend (go generate); the labels live here.
+export { CLOSE_REASONS, INTERVIEW_KINDS, STATUSES, WORK_MODES }
+
 export type Status = (typeof STATUSES)[number]
 
 /**
@@ -36,7 +40,6 @@ export const STATUS_DOT: Record<Status, string> = {
   closed: 'bg-ink-3/50',
 }
 
-export const CLOSE_REASONS = ['rejected', 'withdrawn', 'ghosted', 'declined'] as const
 export type CloseReason = (typeof CLOSE_REASONS)[number]
 
 export const CLOSE_REASON_LABEL: Record<CloseReason, string> = {
@@ -46,12 +49,10 @@ export const CLOSE_REASON_LABEL: Record<CloseReason, string> = {
   declined: 'I declined',
 }
 
-export const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const
 export type WorkMode = (typeof WORK_MODES)[number]
 
 export const WORK_MODE_LABEL: Record<WorkMode, string> = { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }
 
-export const INTERVIEW_KINDS = ['phone_screen', 'technical', 'behavioral', 'onsite', 'panel', 'other'] as const
 export type InterviewKind = (typeof INTERVIEW_KINDS)[number]
 
 export const INTERVIEW_KIND_LABEL: Record<InterviewKind, string> = {

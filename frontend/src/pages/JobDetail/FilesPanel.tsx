@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { FileText, FolderOpen, Paperclip, PenLine, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
-import { confirmDialog, promptDialog } from '../../components/ConfirmDialog'
+import { confirmThen, promptDialog } from '../../components/ConfirmDialog'
 import { openMenu } from '../../lib/menu'
 import { IconButton } from '../../components/IconButton'
 import { Panel } from '../../components/Panel'
@@ -32,13 +32,12 @@ export function FilesPanel({ jobId }: { jobId: string }) {
   }
 
   const remove = async (f: app.Attachment) => {
-    const ok = await confirmDialog({
+    const options = {
       title: 'Remove file?',
       message: `Remove ${f.label}? The copy stored by Job Track is deleted; your original file is not touched.`,
       confirmLabel: 'Remove',
-      danger: true,
-    })
-    if (ok && (await apiOk(DeleteAttachment(f.id)))) notifyDataChanged()
+    }
+    if (await confirmThen(options, () => DeleteAttachment(f.id))) notifyDataChanged()
   }
 
   const rename = async (f: app.Attachment) => {

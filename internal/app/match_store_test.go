@@ -71,6 +71,26 @@ func TestSaveAndListMatchScores(t *testing.T) {
 	}
 }
 
+func TestUnreadableStoredScoreCountsAsUnscored(t *testing.T) {
+	for _, column := range []string{"factors", "strengths", "gaps"} {
+		r := newTestRepo(t)
+		ps := addPostings(t, r, "Go Dev")
+		if err := r.saveMatchScore(ps[0].ID, sampleScore(81), "fp"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := r.db.Exec(`UPDATE posting_scores SET ` + column + ` = 'not json'`); err != nil {
+			t.Fatal(err)
+		}
+		got, err := r.GetPosting(ps[0].ID)
+		if err != nil {
+			t.Fatalf("%s: one bad score must not break the listing: %v", column, err)
+		}
+		if got.Match != nil {
+			t.Errorf("%s unreadable: match = %+v, want unscored so it can be scored again", column, got.Match)
+		}
+	}
+}
+
 func TestSaveMatchScoreSkipsDeletedPosting(t *testing.T) {
 	r := newTestRepo(t)
 	ps := addPostings(t, r, "Go Dev")

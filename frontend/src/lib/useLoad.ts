@@ -24,7 +24,7 @@ export function useLoad<T>(load: () => Promise<T | undefined>, deps: DependencyL
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Not load on purpose: callers pass a new function every render; their deps say when to reload.
   }, [...deps, version])
 
   return { data, loading, setData }

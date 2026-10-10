@@ -6,6 +6,7 @@ package comp
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -70,9 +71,9 @@ type CompPackage struct {
 }
 
 var (
-	validKinds      = map[string]bool{PackageOffer: true, PackageEstimate: true, PackageCounter: true, PackageCurrent: true}
-	validEquity     = map[string]bool{EquityNone: true, EquityRSU: true, EquityOptions: true}
-	validVesting    = map[string]bool{VestingStandard: true, VestingBackloaded: true, VestingMonthly: true, VestingCustom: true}
+	PackageKinds    = []string{PackageOffer, PackageEstimate, PackageCounter, PackageCurrent}
+	EquityTypes     = []string{EquityNone, EquityRSU, EquityOptions}
+	Vestings        = []string{VestingStandard, VestingBackloaded, VestingMonthly, VestingCustom}
 	vestingSchedule = map[string][compYears]float64{
 		VestingStandard:   {25, 25, 25, 25},
 		VestingMonthly:    {25, 25, 25, 25},
@@ -111,7 +112,7 @@ func vestingPercents(p CompPackage) ([compYears]float64, error) {
 
 // ValidateCompPackage checks the rules that don't need the database.
 func ValidateCompPackage(p CompPackage) error {
-	if !validKinds[p.Kind] {
+	if !slices.Contains(PackageKinds, p.Kind) {
 		return fmt.Errorf("invalid package kind %q", p.Kind)
 	}
 	if p.Kind != PackageCurrent && p.JobID == "" {
@@ -120,10 +121,10 @@ func ValidateCompPackage(p CompPackage) error {
 	if p.Kind == PackageCounter && p.ParentID == "" {
 		return errors.New("a counter must be based on an offer")
 	}
-	if !validEquity[p.EquityType] {
+	if !slices.Contains(EquityTypes, p.EquityType) {
 		return fmt.Errorf("invalid equity type %q", p.EquityType)
 	}
-	if !validVesting[p.Vesting] {
+	if !slices.Contains(Vestings, p.Vesting) {
 		return fmt.Errorf("invalid vesting schedule %q", p.Vesting)
 	}
 	if _, err := vestingPercents(p); err != nil {

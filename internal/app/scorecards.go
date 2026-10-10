@@ -185,10 +185,12 @@ func (r *Repo) ListAllMockInterviews() ([]MockInterviewSummary, error) {
 
 func scanMockSummary(s rowScanner) (MockInterviewSummary, error) {
 	m := MockInterviewSummary{Graders: []string{}}
-	err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona,
-		&m.InterviewerName, &m.Status, &m.StartedAt, &m.HasRecording, &m.HasTips, &m.planID)
+	if err := s.Scan(&m.ID, &m.JobID, &m.Company, &m.Position, &m.Kind, &m.Minutes, &m.Persona,
+		&m.InterviewerName, &m.Status, &m.StartedAt, &m.HasRecording, &m.HasTips, &m.planID); err != nil {
+		return m, err
+	}
 	m.HasPlan = m.planID != ""
-	return m, err
+	return m, nil
 }
 
 // numberAttempts sets each planned interview's attempt number. list is newest

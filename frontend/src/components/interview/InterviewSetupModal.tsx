@@ -4,6 +4,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { LoaderCircle, Mic, TriangleAlert } from 'lucide-react'
+import { NO_PLAN_PROVIDER } from '../../generated/choices'
 import { api, errorMessage } from '../../lib/api'
 import { GetProfile, GetSettings, ListAIProviders, PrepareInterview, type app } from '../../lib/backend'
 import { formatDate } from '../../lib/format'
@@ -183,7 +184,12 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onC
                   Try again
                 </button>
                 {!retry && (
-                  <button type="button" className="btn btn-ghost py-1 text-xs" onClick={() => void begin({ ...setup, planProvider: 'none' })} disabled={starting}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost py-1 text-xs"
+                    onClick={() => void begin({ ...setup, planProvider: NO_PLAN_PROVIDER })}
+                    disabled={starting}
+                  >
                     Start without a plan
                   </button>
                 )}

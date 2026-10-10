@@ -11,6 +11,7 @@ import (
 // saveMatchScore stores (or replaces) a posting's score. A posting deleted
 // while it was being scored is skipped, not an error.
 func (r *Repo) saveMatchScore(postingID string, m MatchScore, fingerprint string) error {
+	// Only strings, ints and bools: marshalling can't fail.
 	factors, _ := json.Marshal(m.Factors)
 	strengths, _ := json.Marshal(m.Strengths)
 	gaps, _ := json.Marshal(m.Gaps)
@@ -33,15 +34,22 @@ func (c *matchCells) dests() []any {
 	return []any{&c.overall, &c.factors, &c.strengths, &c.gaps, &c.fingerprint, &c.provider, &c.model, &c.scored}
 }
 
-// score is nil for an unscored posting.
+// score is nil for an unscored posting. A stored score that can't be read also
+// comes back nil, so the posting shows as unscored and can simply be scored
+// again; one bad row never breaks the whole inbox.
 func (c *matchCells) score() *MatchScore {
 	if !c.overall.Valid {
 		return nil
 	}
 	m := &MatchScore{Overall: int(c.overall.Int64), Provider: c.provider.String, Model: c.model.String, ScoredAt: c.scored.String, fingerprint: c.fingerprint.String}
-	json.Unmarshal([]byte(c.factors.String), &m.Factors)
-	json.Unmarshal([]byte(c.strengths.String), &m.Strengths)
-	json.Unmarshal([]byte(c.gaps.String), &m.Gaps)
+	for _, part := range []struct {
+		raw  string
+		dest any
+	}{{c.factors.String, &m.Factors}, {c.strengths.String, &m.Strengths}, {c.gaps.String, &m.Gaps}} {
+		if err := json.Unmarshal([]byte(part.raw), part.dest); err != nil {
+			return nil
+		}
+	}
 	return m
 }
 

@@ -51,7 +51,7 @@ func (r *Repo) freshMuseSlice(key string) (total int, fresh bool, err error) {
 	if err != nil {
 		return 0, false, err
 	}
-	t, err := time.Parse(time.RFC3339, syncedAt)
+	t, err := parseTS(syncedAt)
 	return total, err == nil && r.now().Sub(t) < museSliceTTL, nil
 }
 
@@ -118,9 +118,11 @@ func (r *Repo) museSearch(ctx context.Context, q discover.DiscoverQuery, opts di
 
 func scanMuseJob(s rowScanner) (discover.RawJob, error) {
 	j := discover.RawJob{Site: "themuse"}
-	err := s.Scan(&j.Title, &j.Company, &j.Location, &j.DatePosted, &j.URL, &j.Description)
+	if err := s.Scan(&j.Title, &j.Company, &j.Location, &j.DatePosted, &j.URL, &j.Description); err != nil {
+		return j, err
+	}
 	j.IsRemote = strings.Contains(j.Location, discover.MuseRemote)
-	return j, err
+	return j, nil
 }
 
 // takeSourceSlot enforces "at most one call per interval" for rate-limited
@@ -133,7 +135,7 @@ func (r *Repo) takeSourceSlot(source string, every time.Duration) (time.Time, bo
 		return time.Time{}, false, err
 	}
 	if err == nil {
-		if t, perr := time.Parse(time.RFC3339, last); perr == nil && now.Sub(t) < every {
+		if t, perr := parseTS(last); perr == nil && now.Sub(t) < every {
 			return t.Add(every).In(now.Location()), false, nil
 		}
 	}

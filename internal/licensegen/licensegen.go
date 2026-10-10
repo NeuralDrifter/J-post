@@ -155,60 +155,78 @@ func CollectNpm(frontendDir string, extra ...string) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	seen := map[string]bool{} // package dirs already listed
-	var entries []Entry
-	// withDeps is false for the shipped build tools: only their own output is in
-	// the app, not the tools they run on (which also differ per platform).
-	var visit func(name, fromDir string, optional, withDeps bool) error
-	visit = func(name, fromDir string, optional, withDeps bool) error {
-		dir, ok := resolve(name, fromDir, frontendDir)
-		if !ok {
-			if optional {
-				return nil
-			}
-			return fmt.Errorf("npm package %s (needed from %s) isn't installed; run npm install", name, fromDir)
-		}
-		if seen[dir] {
-			return nil
-		}
-		seen[dir] = true
-		pkg, err := readPackage(filepath.Join(dir, "package.json"))
-		if err != nil {
+	w := npmWalker{root: frontendDir, seen: map[string]bool{}}
+	if err := w.visitAll(slices.Sorted(maps.Keys(root.Dependencies)), frontendDir, npmRequired); err != nil {
+		return nil, err
+	}
+	// The shipped build tools: only their own output is in the app, not the
+	// tools they run on (which also differ per platform).
+	if err := w.visitAll(extra, frontendDir, npmShallow); err != nil {
+		return nil, err
+	}
+	sortEntries(w.entries)
+	return w.entries, nil
+}
+
+// npmVisit says how a package is reached.
+type npmVisit int
+
+const (
+	npmRequired npmVisit = iota // must be installed; its dependencies are listed too
+	npmOptional                 // skipped when not installed (platform-specific builds)
+	npmShallow                  // listed without its dependencies
+)
+
+// npmWalker lists packages and their dependencies, each package folder once.
+type npmWalker struct {
+	root    string          // the frontend folder; resolution stops here
+	seen    map[string]bool // package folders already listed
+	entries []Entry
+}
+
+func (w *npmWalker) visitAll(names []string, fromDir string, how npmVisit) error {
+	for _, name := range names {
+		if err := w.visit(name, fromDir, how); err != nil {
 			return err
 		}
-		text, _ := FindLicenseText(dir)
-		license := npmLicense(pkg.License)
-		if license == "" {
-			license = DetectLicense(text)
-		}
-		entries = append(entries, Entry{Name: pkg.Name, Version: pkg.Version, License: license, URL: npmURL(pkg), Text: text})
-		if !withDeps {
+	}
+	return nil
+}
+
+func (w *npmWalker) visit(name, fromDir string, how npmVisit) error {
+	dir, ok := resolve(name, fromDir, w.root)
+	if !ok {
+		if how == npmOptional {
 			return nil
 		}
-		for _, dep := range slices.Sorted(maps.Keys(pkg.Dependencies)) {
-			if err := visit(dep, dir, false, true); err != nil {
-				return err
-			}
-		}
-		for _, dep := range slices.Sorted(maps.Keys(pkg.OptionalDependencies)) {
-			if err := visit(dep, dir, true, true); err != nil {
-				return err
-			}
-		}
+		return fmt.Errorf("npm package %s (needed from %s) isn't installed; run npm install", name, fromDir)
+	}
+	if w.seen[dir] {
 		return nil
 	}
-	for _, name := range slices.Sorted(maps.Keys(root.Dependencies)) {
-		if err := visit(name, frontendDir, false, true); err != nil {
-			return nil, err
-		}
+	w.seen[dir] = true
+	pkg, err := readPackage(filepath.Join(dir, "package.json"))
+	if err != nil {
+		return err
 	}
-	for _, name := range extra {
-		if err := visit(name, frontendDir, false, false); err != nil {
-			return nil, err
-		}
+	w.entries = append(w.entries, npmEntry(pkg, dir))
+	if how == npmShallow {
+		return nil
 	}
-	sortEntries(entries)
-	return entries, nil
+	if err := w.visitAll(slices.Sorted(maps.Keys(pkg.Dependencies)), dir, npmRequired); err != nil {
+		return err
+	}
+	return w.visitAll(slices.Sorted(maps.Keys(pkg.OptionalDependencies)), dir, npmOptional)
+}
+
+// npmEntry is a package's entry: its declared license, else one detected from its license file.
+func npmEntry(pkg packageJSON, dir string) Entry {
+	text, _ := FindLicenseText(dir)
+	license := npmLicense(pkg.License)
+	if license == "" {
+		license = DetectLicense(text)
+	}
+	return Entry{Name: pkg.Name, Version: pkg.Version, License: license, URL: npmURL(pkg), Text: text}
 }
 
 // resolve finds name's folder from fromDir upward, stopping at root.
@@ -259,7 +277,7 @@ func npmURL(pkg packageJSON) string {
 	var repo string
 	if json.Unmarshal(pkg.Repository, &repo) != nil {
 		var obj struct{ URL string }
-		json.Unmarshal(pkg.Repository, &obj)
+		_ = json.Unmarshal(pkg.Repository, &obj) // neither form: no repository link, so the npm page is used
 		repo = obj.URL
 	}
 	if repo = normaliseRepo(repo); repo != "" {

@@ -24,8 +24,9 @@ var marketDataGz []byte
 var percentilePoints = [5]float64{10, 25, 50, 75, 90}
 
 const (
-	medianPoint  = 2    // percentilePoints[medianPoint] is the 50th percentile
-	NationalArea = "US" // the area code for the whole United States
+	medianPoint      = 2    // percentilePoints[medianPoint] is the 50th percentile
+	NationalArea     = "US" // the area code for the whole United States
+	maxSearchResults = 30   // how many matches a picker search lists
 )
 
 type SourceInfo struct {
@@ -121,17 +122,21 @@ func (md *MarketData) stateAreaCode(state string) string {
 	return ""
 }
 
+// wageArea is an area whose published wages may cover an occupation, and the
+// level (area, state, national) it reports them at.
+type wageArea struct{ code, level string }
+
 // MarketPosition places a base salary on the published percentile curve for an
 // occupation, trying the area, then its state, then the national figures.
 func (md *MarketData) MarketPosition(occ, area string, base int64) MarketResult {
 	res := MarketResult{OccCode: occ, OccTitle: md.Occupations[occ]}
-	candidates := []struct{ code, level string }{{area, "area"}}
+	candidates := []wageArea{{area, "area"}}
 	if a, ok := md.Areas[area]; ok && a.Type != "state" && a.Type != "national" {
-		candidates = append(candidates, struct{ code, level string }{md.stateAreaCode(a.State), "state"})
+		candidates = append(candidates, wageArea{md.stateAreaCode(a.State), "state"})
 	} else if ok && a.Type == "state" {
 		candidates[0].level = "state"
 	}
-	candidates = append(candidates, struct{ code, level string }{NationalArea, "national"})
+	candidates = append(candidates, wageArea{NationalArea, "national"})
 
 	for _, c := range candidates {
 		if c.code == "" {
@@ -217,8 +222,8 @@ func searchOptions(q string, all []Option) []Option {
 	byTitle(prefix)
 	byTitle(contains)
 	out := append(prefix, contains...)
-	if len(out) > 30 {
-		out = out[:30]
+	if len(out) > maxSearchResults {
+		out = out[:maxSearchResults]
 	}
 	if out == nil {
 		out = []Option{}
@@ -237,13 +242,37 @@ func (md *MarketData) SearchOccupations(q string) []Option {
 func (md *MarketData) SearchAreas(q string) []Option {
 	all := make([]Option, 0, len(md.Areas))
 	for code, a := range md.Areas {
-		title := a.Title
-		if a.Type == "national" {
-			title = "Remote / United States"
-		}
-		all = append(all, Option{Code: code, Title: title, State: a.State, Type: a.Type})
+		all = append(all, a.option(code))
 	}
 	return searchOptions(q, all)
+}
+
+// option is the area as pickers show it; the national area reads as remote work.
+func (a MarketArea) option(code string) Option {
+	title := a.Title
+	if a.Type == "national" {
+		title = "Remote / United States"
+	}
+	return Option{Code: code, Title: title, State: a.State, Type: a.Type}
+}
+
+// CodeOnly is the picker option for a code the dataset doesn't know.
+func CodeOnly(code string) Option { return Option{Code: code, Title: code} }
+
+// DescribeArea gives a picker the title for a saved area code.
+func (md *MarketData) DescribeArea(code string) Option {
+	if a, ok := md.Areas[code]; ok {
+		return a.option(code)
+	}
+	return CodeOnly(code)
+}
+
+// DescribeOccupation gives a picker the title for a saved occupation code.
+func (md *MarketData) DescribeOccupation(code string) Option {
+	if title, ok := md.Occupations[code]; ok {
+		return Option{Code: code, Title: title}
+	}
+	return CodeOnly(code)
 }
 
 // GuessArea maps free-text job locations like "Denver, CO" or "Remote" to an area code.

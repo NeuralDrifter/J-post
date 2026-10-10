@@ -100,18 +100,20 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
 
   const save = async (e?: FormEvent) => {
     e?.preventDefault()
+    // A blank or invalid number goes as 0, which the backend replaces with its default.
+    const wholeOrZero = (n: number) => Math.round(Number(n)) || 0
     const next = {
       ...s,
-      followUpDays: Math.round(Number(s.followUpDays)) || 7,
-      discoverCacheHours: Math.round(Number(s.discoverCacheHours)) || 12,
-      matchPerRequest: Math.round(Number(s.matchPerRequest)) || 25,
+      followUpDays: wholeOrZero(s.followUpDays),
+      discoverCacheHours: wholeOrZero(s.discoverCacheHours),
+      matchPerRequest: wholeOrZero(s.matchPerRequest),
     }
     setSaving(true)
-    const ok = await apiOk(SaveSettings(next))
+    const stored = await api(SaveSettings(next))
     setSaving(false)
-    if (!ok) return
-    setSaved(next)
-    setDraft(next)
+    if (!stored) return
+    setSaved(stored)
+    setDraft(stored)
     writeSessionValue(DRAFT_KEY, null)
     toast.success('Settings saved')
     notifyDataChanged()

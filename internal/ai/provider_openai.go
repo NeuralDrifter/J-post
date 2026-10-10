@@ -112,12 +112,42 @@ func openAIInstruction(t Task, mode settings.AnswerMode) string {
 	return t.Instruction + "\n\nReply with only a json object matching this JSON Schema:\n" + string(schema)
 }
 
+// maxFormatAttempts is how many answers a run accepts before giving up on one
+// that isn't valid JSON for the schema; each retry tells the model what was wrong.
+const maxFormatAttempts = 2
+
 func (o openAIProvider) run(ctx context.Context, s settings.Settings, t Task) (aiResult, error) {
 	c := o.p.conn(s)
 	ctx, cancel := context.WithTimeout(ctx, openAITimeout[t.Role])
 	defer cancel()
 	chat := openai.NewChatCompletionService(openAIOptions(c)...)
+	params := o.chatParams(t, c)
+	for attempt := 1; ; attempt++ {
+		resp, err := chat.New(ctx, params)
+		if err != nil {
+			return aiResult{}, openAIError(err, o.p, c)
+		}
+		logOpenAIUsage(o.p.label, resp)
+		content := firstChoiceContent(resp)
+		raw, err := extractJSON(content)
+		if err == nil {
+			err = validateAnswer(raw, t.Schema)
+		}
+		if err == nil {
+			return aiResult{raw: raw, model: resp.Model}, nil
+		}
+		if attempt == maxFormatAttempts {
+			return aiResult{}, fmt.Errorf("%s's answer wasn't in the expected format: %v", o.p.label, err)
+		}
+		params.Messages = append(params.Messages,
+			openai.AssistantMessage(content),
+			openai.UserMessage("That answer wasn't valid: "+err.Error()+". Reply again with only the corrected json object."))
+	}
+}
 
+// chatParams is the first request of a run: the instruction, the input, the
+// token limit and the structured-answer mode.
+func (o openAIProvider) chatParams(t Task, c openAIConn) openai.ChatCompletionNewParams {
 	params := openai.ChatCompletionNewParams{
 		Model: c.model,
 		Messages: []openai.ChatCompletionMessageParamUnion{
@@ -139,33 +169,14 @@ func (o openAIProvider) run(ctx context.Context, s settings.Settings, t Task) (a
 	case settings.ModeJSONObject:
 		params.ResponseFormat.OfJSONObject = &shared.ResponseFormatJSONObjectParam{}
 	}
+	return params
+}
 
-	var model string
-	for attempt := 1; ; attempt++ {
-		resp, err := chat.New(ctx, params)
-		if err != nil {
-			return aiResult{}, openAIError(err, o.p, c)
-		}
-		model = resp.Model
-		logOpenAIUsage(o.p.label, resp)
-		content := ""
-		if len(resp.Choices) > 0 {
-			content = resp.Choices[0].Message.Content
-		}
-		raw, err := extractJSON(content)
-		if err == nil {
-			err = validateAnswer(raw, t.Schema)
-		}
-		if err == nil {
-			return aiResult{raw: raw, model: model}, nil
-		}
-		if attempt == 2 {
-			return aiResult{}, fmt.Errorf("%s's answer wasn't in the expected format: %v", o.p.label, err)
-		}
-		params.Messages = append(params.Messages,
-			openai.AssistantMessage(content),
-			openai.UserMessage("That answer wasn't valid: "+err.Error()+". Reply again with only the corrected json object."))
+func firstChoiceContent(resp *openai.ChatCompletion) string {
+	if len(resp.Choices) == 0 {
+		return ""
 	}
+	return resp.Choices[0].Message.Content
 }
 
 // StrictCompatible reports whether OpenAI's strict mode accepts schema: every
@@ -197,7 +208,7 @@ func logOpenAIUsage(label string, resp *openai.ChatCompletion) {
 			Miss *int64 `json:"prompt_cache_miss_tokens"`
 		} `json:"usage"`
 	}
-	json.Unmarshal([]byte(resp.RawJSON()), &extra)
+	_ = json.Unmarshal([]byte(resp.RawJSON()), &extra) // only for the log line; without the extra counts it's still logged
 	line := fmt.Sprintf("%s: %s, %d prompt tokens", label, resp.Model, resp.Usage.PromptTokens)
 	if extra.Usage.Hit != nil && extra.Usage.Miss != nil {
 		line += fmt.Sprintf(" (cache hit %d, miss %d)", *extra.Usage.Hit, *extra.Usage.Miss)

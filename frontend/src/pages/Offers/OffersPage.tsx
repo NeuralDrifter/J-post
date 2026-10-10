@@ -4,11 +4,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Scale } from 'lucide-react'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { confirmThen } from '../../components/ConfirmDialog'
 import { PackageEditor } from '../../components/comp/PackageEditor'
 import { PageTitle } from '../../components/PageTitle'
 import { SourcesFooter } from '../../components/SourcesFooter'
-import { api, apiOk } from '../../lib/api'
+import { api } from '../../lib/api'
 import { DeleteCompPackage, DraftCounter, ListComparisons, type app, type comp } from '../../lib/backend'
 import { blankPackage } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
@@ -54,13 +54,8 @@ export default function OffersPage() {
   }
 
   const remove = async (it: app.ComparisonItem) => {
-    const ok = await confirmDialog({
-      title: 'Delete this package?',
-      message: `Delete "${it.package.label}" for ${it.company}?`,
-      confirmLabel: 'Delete',
-      danger: true,
-    })
-    if (ok && (await apiOk(DeleteCompPackage(it.package.id)))) notifyDataChanged()
+    const options = { title: 'Delete this package?', message: `Delete "${it.package.label}" for ${it.company}?`, confirmLabel: 'Delete' }
+    if (await confirmThen(options, () => DeleteCompPackage(it.package.id))) notifyDataChanged()
   }
 
   const hasCurrent = items?.some((it) => it.package.kind === 'current')

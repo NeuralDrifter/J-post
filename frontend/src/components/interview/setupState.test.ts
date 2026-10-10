@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { app } from '../../lib/backend'
+import { NO_PLAN_PROVIDER } from '../../generated/choices'
 import { closeUnlessStarting, initialSetup, preparingLabel } from './setupState'
 
 const job = (status: string) => ({ id: 'j1', status }) as app.Job
@@ -37,7 +38,7 @@ describe('preparingLabel', () => {
   })
   it('just starts when no plan is being written', () => {
     expect(preparingLabel('Claude Code', { ...base, retryOf: 'm1' })).toBe('Starting…')
-    expect(preparingLabel('Gemini Live', { ...base, planProvider: 'none' })).toBe('Starting…')
+    expect(preparingLabel('Gemini Live', { ...base, planProvider: NO_PLAN_PROVIDER })).toBe('Starting…')
   })
 })
 

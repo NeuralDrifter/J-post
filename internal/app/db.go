@@ -25,6 +25,9 @@ const tsLayout = "2006-01-02T15:04:05.000Z"
 
 func ts(t time.Time) string { return t.UTC().Format(tsLayout) }
 
+// parseTS reads a timestamp written by ts (or any RFC 3339 time from the frontend).
+func parseTS(s string) (time.Time, error) { return time.Parse(time.RFC3339, s) }
+
 func newID() string {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {

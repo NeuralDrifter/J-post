@@ -6,12 +6,12 @@ package app
 import (
 	"errors"
 	"fmt"
-	"time"
+	"slices"
 )
 
-var validInterviewKinds = map[string]bool{
-	"phone_screen": true, "technical": true, "behavioral": true, "onsite": true, "panel": true, "other": true,
-}
+// ScheduledInterviewKinds are the kinds of real interview the user can schedule
+// on a job (mock interview types are in interview_options.go).
+var ScheduledInterviewKinds = []string{"phone_screen", "technical", "behavioral", "onsite", "panel", "other"}
 
 type Interview struct {
 	ID             string `json:"id"`
@@ -38,10 +38,10 @@ func (r *Repo) ListInterviews(jobID string) ([]Interview, error) {
 }
 
 func (r *Repo) SaveInterview(iv Interview) (Interview, error) {
-	if !validInterviewKinds[iv.Kind] {
+	if !slices.Contains(ScheduledInterviewKinds, iv.Kind) {
 		return iv, fmt.Errorf("invalid interview kind %q", iv.Kind)
 	}
-	at, err := time.Parse(time.RFC3339, iv.ScheduledAt)
+	at, err := parseTS(iv.ScheduledAt)
 	if err != nil {
 		return iv, fmt.Errorf("invalid interview time %q", iv.ScheduledAt)
 	}

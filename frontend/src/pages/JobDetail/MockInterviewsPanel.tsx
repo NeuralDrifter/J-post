@@ -5,11 +5,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { FolderOpen, Mic, Trash2 } from 'lucide-react'
 import { Chip } from '../../components/Chip'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { deleteMockInterview } from '../../components/deleteActions'
 import { InterviewSetupModal } from '../../components/interview/InterviewSetupModal'
 import { Panel } from '../../components/Panel'
-import { api, apiOk } from '../../lib/api'
-import { DeleteMockInterview, ListMockInterviews, type app } from '../../lib/backend'
+import { api } from '../../lib/api'
+import { ListMockInterviews, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { formatDateTime } from '../../lib/format'
 import { averageScore } from '../../lib/interview'
@@ -24,8 +24,7 @@ export function MockInterviewsPanel({ job }: { job: app.Job }) {
   const [setup, setSetup] = useState(false)
 
   const remove = async (m: app.MockInterview) => {
-    const ok = await confirmDialog({ title: 'Delete this mock interview?', message: 'The transcript, tips, scorecards and recording will be deleted.', confirmLabel: 'Delete', danger: true })
-    if (ok && (await apiOk(DeleteMockInterview(m.id)))) notifyDataChanged()
+    if (await deleteMockInterview(m.id)) notifyDataChanged()
   }
 
   return (

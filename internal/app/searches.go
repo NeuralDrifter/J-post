@@ -92,7 +92,7 @@ func hoursOld(lastRunAt string, now time.Time) int {
 	if lastRunAt == "" {
 		return 0
 	}
-	last, err := time.Parse(time.RFC3339, lastRunAt)
+	last, err := parseTS(lastRunAt)
 	if err != nil {
 		return 0
 	}
@@ -105,7 +105,7 @@ func cacheHit(s SavedSearch, now time.Time, cacheHours int) bool {
 	if cacheHours <= 0 || s.LastRunAt == "" {
 		return false
 	}
-	last, err := time.Parse(time.RFC3339, s.LastRunAt)
+	last, err := parseTS(s.LastRunAt)
 	if err != nil {
 		return false
 	}
@@ -223,15 +223,10 @@ func runSearch(ctx context.Context, r *Repo, q SearchQuery, cacheHours int, fetc
 	return run, nil
 }
 
-// runDiscover queries every requested source concurrently; one failing source
-// only adds an entry to Errors.
+// runDiscover queries every source in q concurrently; one failing source only
+// adds an entry to Errors. q.Sources must already be normalized (normalizeSources).
 func runDiscover(ctx context.Context, q discover.DiscoverQuery, fetch sourceFunc, optsFor func(source string) discover.FetchOptions) discover.DiscoverResponse {
-	var sources []string
-	for _, s := range q.Sources {
-		if isKnownSource(s) && !slices.Contains(sources, s) {
-			sources = append(sources, s)
-		}
-	}
+	sources := q.Sources
 	type outcome struct {
 		source string
 		jobs   []discover.RawJob

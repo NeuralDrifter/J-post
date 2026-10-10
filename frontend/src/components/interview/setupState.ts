@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
+import { NO_PLAN_PROVIDER } from '../../generated/choices'
 import type { app } from '../../lib/backend'
 
 /** The interview being retried with the same question plan. */
@@ -19,9 +20,9 @@ export function initialSetup(job: app.Job, retry?: RetryInfo): app.InterviewSetu
   }
 }
 
-/** The Start button while s is being prepared. A retry or "none" writes no plan, so it just starts. */
+/** The Start button while s is being prepared. A retry or "no plan" writes no plan, so it just starts. */
 export function preparingLabel(providerLabel: string, s: app.InterviewSetup): string {
-  return s.retryOf || s.planProvider === 'none' ? 'Starting…' : `Preparing your questions with ${providerLabel}…`
+  return s.retryOf || s.planProvider === NO_PLAN_PROVIDER ? 'Starting…' : `Preparing your questions with ${providerLabel}…`
 }
 
 /**

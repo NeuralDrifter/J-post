@@ -37,8 +37,7 @@ export function useStaticData<T>(key: string, load: () => Promise<T>): T | undef
     return () => {
       cancelled = true
     }
-    // load is the same backend call for a given key
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only key on purpose: load is the same backend call for a given key.
   }, [key])
   return value
 }

@@ -3,12 +3,11 @@
 
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { deleteJob } from '../../components/deleteActions'
 import { useStatusChange } from '../../components/useStatusChange'
-import { api, apiOk } from '../../lib/api'
-import { DeleteJob, GetJob, ListStageEvents } from '../../lib/backend'
+import { api } from '../../lib/api'
+import { GetJob, ListStageEvents } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
-import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { CompPanel } from './CompPanel'
 import { ContactsPanel } from './ContactsPanel'
@@ -34,16 +33,9 @@ export default function JobDetailPage({ id }: { id: string }) {
   }
 
   const remove = async () => {
-    const ok = await confirmDialog({
-      title: 'Delete this job?',
-      message: `${job.position} at ${job.company} will be permanently deleted, along with its history, contacts, interviews and attached files.`,
-      confirmLabel: 'Delete',
-      danger: true,
-    })
-    if (!ok || !(await apiOk(DeleteJob(job.id)))) return
+    if (!(await deleteJob(job))) return
     navigate('/')
     notifyDataChanged()
-    toast.success('Job deleted')
   }
 
   return (

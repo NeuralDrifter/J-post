@@ -45,7 +45,7 @@ export function DeviceCheck({ onChange }: { onChange: (c: DeviceChoice) => void 
     onChange({ micDeviceId: mic, outputDeviceId: output })
     if (mic) writePref('micDeviceId', mic)
     if (output) writePref('outputDeviceId', output)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Not onChange on purpose: report only when a device choice changes, not every render.
   }, [mic, output])
 
   // Live level meter for the chosen microphone.

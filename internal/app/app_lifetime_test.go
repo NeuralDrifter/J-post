@@ -8,14 +8,14 @@ import (
 	"testing"
 )
 
-func TestShutdownCancelsAIRuns(t *testing.T) {
+func TestShutdownCancelsBackgroundWork(t *testing.T) {
 	a := NewApp(t.TempDir())
-	ctx := a.aiContext()
+	ctx := a.lifetimeContext()
 	if ctx.Err() != nil {
-		t.Fatal("AI runs should be allowed while the app is open")
+		t.Fatal("background work should be allowed while the app is open")
 	}
 	a.shutdown(context.Background())
 	if ctx.Err() == nil {
-		t.Fatal("closing the app must cancel running AI work (headless Claude Code, API calls)")
+		t.Fatal("closing the app must cancel running work (searches, headless Claude Code, API calls)")
 	}
 }

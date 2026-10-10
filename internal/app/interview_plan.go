@@ -86,7 +86,6 @@ func planTask(job Job, resume string, s InterviewSetup) ai.Task {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Interview: a %d minutes %s interview for the %s role at %s.\n", s.Minutes, kindBriefName(s.Kind), job.Position, job.Company)
 	fmt.Fprintf(&b, "You are %s.\n", textproc.OrDefault(kind.interviewer, "the interviewer"))
-
 	fmt.Fprintf(&b, "Interviewer style: %s (%s).\n", s.Persona, persona.briefStyle)
 	fmt.Fprintf(&b, "Write %d core questions.\n", planQuestionCount(s.Minutes))
 	if s.Focus != "" {
@@ -148,20 +147,20 @@ func (p InterviewPlan) briefSection() string {
 	return b.String()
 }
 
-// planNone as InterviewSetup.PlanProvider starts the interview without a plan.
-const planNone = "none"
+// PlanNone as InterviewSetup.PlanProvider starts the interview without a plan.
+const PlanNone = "none"
 
 var errNoPlanToRetry = errors.New("This interview has no question plan to retry.")
 
 // interviewPlanFor returns the plan for a new interview: reused when retrying,
-// nil for planNone, otherwise written by the chosen provider (the setup's
+// nil for PlanNone, otherwise written by the chosen provider (the setup's
 // override, else the setting) and checked. A new plan has no ID yet.
 func interviewPlanFor(ctx context.Context, s settings.Settings, job Job, resume string, setup InterviewSetup, reused *InterviewPlanRecord) (*InterviewPlanRecord, error) {
 	if reused != nil {
 		return reused, nil
 	}
 	provider := cmp.Or(setup.PlanProvider, s.PlanProvider)
-	if provider == planNone {
+	if provider == PlanNone {
 		return nil, nil
 	}
 	var p InterviewPlan

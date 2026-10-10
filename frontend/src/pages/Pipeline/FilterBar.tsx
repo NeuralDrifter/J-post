@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Columns3, Rows3 } from 'lucide-react'
+import { LabelSelect } from '../../components/LabelSelect'
 import { WORK_MODE_LABEL } from '../../lib/format'
 import { sourceOptions, useJobSources } from '../../lib/jobSources'
 
@@ -35,18 +36,13 @@ export function FilterBar({ view, onViewChange, filters, onChange, shown, total 
           </button>
         ))}
       </div>
-      <select
+      <LabelSelect
         className="field w-auto py-1 text-xs"
+        labels={WORK_MODE_LABEL}
+        empty="Any work mode"
         value={filters.workMode}
-        onChange={(e) => onChange({ ...filters, workMode: e.target.value })}
-      >
-        <option value="">Any work mode</option>
-        {Object.entries(WORK_MODE_LABEL).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
+        onChange={(workMode) => onChange({ ...filters, workMode })}
+      />
       <select
         className="field w-auto py-1 text-xs"
         value={filters.source}

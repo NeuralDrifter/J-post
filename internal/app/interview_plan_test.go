@@ -325,7 +325,7 @@ func TestPrepareInterviewWithoutPlan(t *testing.T) {
 	s := planSettings()
 	s.PlanProvider = settings.ProviderAnthropic
 	setup := testSetup
-	setup.PlanProvider = planNone
+	setup.PlanProvider = PlanNone
 	live, err := prepareInterview(context.Background(), r, s, j.ID, setup)
 	if err != nil || *calls != 0 {
 		t.Fatalf("err = %v, calls = %d", err, *calls)
@@ -379,7 +379,7 @@ func TestRetryWithoutPlanIsRefused(t *testing.T) {
 	j := interviewJob(t, r)
 	tokenServer(t)
 	setup := testSetup
-	setup.PlanProvider = planNone
+	setup.PlanProvider = PlanNone
 	live, err := prepareInterview(context.Background(), r, planSettings(), j.ID, setup)
 	if err != nil {
 		t.Fatal(err)

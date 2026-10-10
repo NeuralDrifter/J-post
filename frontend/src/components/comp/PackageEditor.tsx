@@ -4,6 +4,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { labelFor } from '../../lib/format'
 import { TriangleAlert } from 'lucide-react'
+import { NATIONAL_AREA } from '../../generated/choices'
 import { api } from '../../lib/api'
 import { DescribeArea, DescribeOccupation, PreviewComp, SaveCompPackage, SearchAreas, SearchOccupations, type comp } from '../../lib/backend'
 import { EQUITY_LABEL, formatMoneyFull, KIND_LABEL, percentileLabel, STATES, VESTING_LABEL } from '../../lib/comp'
@@ -11,6 +12,7 @@ import { notifyDataChanged } from '../../lib/events'
 import { colDetail, marketDetail, taxDetail, useSources } from '../../lib/sources'
 import { toast } from '../../lib/toast'
 import { Field } from '../JobForm'
+import { LabelSelect } from '../LabelSelect'
 import { Modal } from '../Modal'
 import { SourceMark } from '../SourceMark'
 import { CodePicker } from './CodePicker'
@@ -93,23 +95,11 @@ export function PackageEditor({ initial, onClose }: { initial: comp.CompPackage;
 
         <Section title="Equity">
           <Field label="Type">
-            <select className="field" value={p.equityType} onChange={(e) => set('equityType', e.target.value)}>
-              {Object.entries(EQUITY_LABEL).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
+            <LabelSelect labels={EQUITY_LABEL} value={p.equityType} onChange={(v) => set('equityType', v)} />
           </Field>
           {p.equityType !== 'none' && (
             <Field label="Vesting">
-              <select className="field" value={p.vesting} onChange={(e) => set('vesting', e.target.value)}>
-                {Object.entries(VESTING_LABEL).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
+              <LabelSelect labels={VESTING_LABEL} value={p.vesting} onChange={(v) => set('vesting', v)} />
             </Field>
           )}
           {p.equityType === 'rsu' && num('rsuGrantValue', 'Total grant value (4 years)', { prefix: '$', step: 1000 })}
@@ -156,7 +146,9 @@ export function PackageEditor({ initial, onClose }: { initial: comp.CompPackage;
             <CodePicker
               value={p.areaCode}
               onChange={(code, o) => {
-                setP((cur) => ({ ...cur, areaCode: code, taxState: o && o.state && o.state !== 'US' ? o.state : cur.taxState }))
+                // A remote (national) area has no tax state of its own, so keep the one already picked.
+                const areaState = o && o.code !== NATIONAL_AREA ? o.state : ''
+                setP((cur) => ({ ...cur, areaCode: code, taxState: areaState || cur.taxState }))
               }}
               search={SearchAreas}
               describe={DescribeArea}

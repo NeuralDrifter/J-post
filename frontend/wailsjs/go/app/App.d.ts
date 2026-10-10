@@ -134,7 +134,7 @@ export function SaveInterviewTranscript(arg1:string,arg2:Array<app.TranscriptLin
 
 export function SavePosting(arg1:string):Promise<app.Job>;
 
-export function SaveSettings(arg1:settings.Settings):Promise<void>;
+export function SaveSettings(arg1:settings.Settings):Promise<settings.Settings>;
 
 export function ScoreInbox():Promise<app.MatchRun>;
 

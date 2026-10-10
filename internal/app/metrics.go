@@ -43,7 +43,7 @@ func dateOnly(t time.Time) time.Time {
 
 // daysBetween counts calendar days (in now's time zone) from a stored timestamp to now.
 func daysBetween(fromTS string, now time.Time) int {
-	t, err := time.Parse(time.RFC3339, fromTS)
+	t, err := parseTS(fromTS)
 	if err != nil {
 		return 0
 	}

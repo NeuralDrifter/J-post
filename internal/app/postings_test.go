@@ -5,6 +5,7 @@ package app
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -128,6 +129,27 @@ func TestSavedPostingAfterJobDeleted(t *testing.T) {
 	}
 }
 
+func TestSavePostingReportsUnreadableJobInsteadOfDuplicating(t *testing.T) {
+	r := newTestRepo(t)
+	mustUpsert(t, r, result("Acme", "Go Dev", "", "indeed"))
+	p := mustList(t, r, PostingFilter{Tab: "inbox"})[0]
+	j, err := r.SavePosting(p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Text in an INTEGER column makes the job row fail to scan: a real error, not "not found".
+	if _, err := r.db.Exec(`UPDATE jobs SET salary_min = 'abc' WHERE id = ?`, j.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.SavePosting(p.ID); err == nil || errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v, want the read error", err)
+	}
+	var jobs int
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM jobs`).Scan(&jobs); err != nil || jobs != 1 {
+		t.Fatalf("jobs = %d, %v; a failed read must not add a duplicate job", jobs, err)
+	}
+}
+
 func TestAutoSavedWhenAlreadyTracked(t *testing.T) {
 	r := newTestRepo(t)
 	j := mustCreate(t, r, Job{Company: "Acme", Position: "Go Dev", Status: StatusApplied})
@@ -214,7 +236,7 @@ func TestSavePostingLeavesNoJobWhenPostingUpdateFails(t *testing.T) {
 	}
 }
 
-func TestMarkTracked(t *testing.T) {
+func TestTrackedJobIDs(t *testing.T) {
 	results := []discover.DiscoverResult{
 		discover.FromRaw(discover.RawJob{Title: "Dev", Company: "Acme"}, "indeed"),
 		discover.FromRaw(discover.RawJob{Title: "Different title", Company: "Brex", URL: "https://brex.test/9"}, "indeed"),
@@ -225,8 +247,8 @@ func TestMarkTracked(t *testing.T) {
 		{ID: "j2", Company: "Brex", Position: "PM", URL: "https://brex.test/9", Status: StatusInterested},
 		{ID: "j3", Company: "Cora", Position: "Other"},
 	}
-	markTracked(results, jobs)
-	if results[0].TrackedJobID != "j1" || results[0].TrackedStatus != StatusApplied || results[1].TrackedJobID != "j2" || results[2].TrackedJobID != "" {
-		t.Fatalf("results = %+v", results)
+	got := trackedJobIDs(results, jobs)
+	if want := []string{"j1", "j2", ""}; !slices.Equal(got, want) {
+		t.Fatalf("got %q, want %q (by company+title, else by URL)", got, want)
 	}
 }

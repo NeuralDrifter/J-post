@@ -4,14 +4,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ArrowRightLeft, BadgeDollarSign, Copy, ExternalLink, FolderOpen, Mic, Pencil, Receipt, Trash2 } from 'lucide-react'
+import { deleteJob } from './deleteActions'
 import { InterviewSetupModal } from './interview/InterviewSetupModal'
-import { apiOk, api } from '../lib/api'
-import { BrowserOpenURL, DeleteJob, NewEstimate, type app, type comp } from '../lib/backend'
+import { api } from '../lib/api'
+import { BrowserOpenURL, NewEstimate, type app, type comp } from '../lib/backend'
 import { notifyDataChanged } from '../lib/events'
 import { STATUSES, STATUS_LABEL, type Status } from '../lib/format'
 import type { MenuEntry } from '../lib/menu'
-import { toast } from '../lib/toast'
-import { confirmDialog } from './ConfirmDialog'
 import { copyText } from './ContextMenu'
 import { PackageEditor } from './comp/PackageEditor'
 import { useStatusChange } from './useStatusChange'
@@ -32,15 +31,7 @@ export function useJobMenu(move?: (jobId: string, status: Status) => void) {
   }
 
   const remove = async (job: app.Job) => {
-    const ok = await confirmDialog({
-      title: 'Delete this job?',
-      message: `${job.position} at ${job.company} will be permanently deleted, along with its history, contacts, interviews, files and comp packages.`,
-      confirmLabel: 'Delete',
-      danger: true,
-    })
-    if (!ok || !(await apiOk(DeleteJob(job.id)))) return
-    notifyDataChanged()
-    toast.success('Job deleted')
+    if (await deleteJob(job)) notifyDataChanged()
   }
 
   const menuFor = (job: app.Job): MenuEntry[] => [

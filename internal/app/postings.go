@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -48,8 +47,18 @@ type Posting struct {
 	Match       *MatchScore `json:"match,omitempty"` // nil until scored
 }
 
+// Discover's tabs, as PostingFilter.Tab names them.
+const (
+	TabInbox     = "inbox" // new and seen postings
+	TabSaved     = "saved" // added to Interested
+	TabDismissed = "dismissed"
+)
+
+// PostingTabs are the tabs in display order.
+var PostingTabs = []string{TabInbox, TabSaved, TabDismissed}
+
 type PostingFilter struct {
-	Tab     string `json:"tab"` // inbox, saved, dismissed
+	Tab     string `json:"tab"` // a Tab* constant; "" = TabInbox
 	Query   string `json:"query"`
 	Source  string `json:"source"`
 	OnlyNew bool   `json:"onlyNew"`
@@ -77,6 +86,9 @@ func scanPosting(s rowScanner) (Posting, error) {
 	err := s.Scan(append([]any{&p.ID, &p.DedupeKey, &p.URL, &p.Title, &p.Company, &p.Location, &p.WorkMode, &lo, &hi,
 		&p.SalaryText, &p.Annualized, &p.Description, &p.DatePosted, &sources, &p.State, &jobID, &searchID,
 		&p.FirstSeen, &p.LastSeen, &p.DismissedAt, &p.JobStatus}, match.dests()...)...)
+	if err != nil {
+		return p, err
+	}
 	if lo.Valid {
 		p.SalaryMin = &lo.Int64
 	}
@@ -86,7 +98,7 @@ func scanPosting(s rowScanner) (Posting, error) {
 	p.Sources = splitSources(sources)
 	p.JobID, p.SearchID = jobID.String, searchID.String
 	p.Match = match.score()
-	return p, err
+	return p, nil
 }
 
 func splitSources(s string) []string {
@@ -121,8 +133,7 @@ func (r *Repo) UpsertPostings(results []discover.DiscoverResult, searchID string
 	if err != nil {
 		return 0, err
 	}
-	tracked := slices.Clone(results) // markTracked edits in place; leave the caller's slice alone
-	markTracked(tracked, jobs)
+	trackedIDs := trackedJobIDs(results, jobs)
 
 	now := ts(r.now())
 	tx, err := r.db.Begin()
@@ -131,7 +142,7 @@ func (r *Repo) UpsertPostings(results []discover.DiscoverResult, searchID string
 	}
 	defer tx.Rollback()
 	newCount := 0
-	for _, res := range tracked {
+	for i, res := range results {
 		existing, err := findPosting(tx, res.Key, res.URL)
 		switch {
 		case err == nil:
@@ -142,7 +153,7 @@ func (r *Repo) UpsertPostings(results []discover.DiscoverResult, searchID string
 				m.Description, m.DatePosted, strings.Join(m.Sources, ","), now, existing.ID)
 		case errors.Is(err, sql.ErrNoRows):
 			state := PostingNew
-			if res.TrackedJobID != "" {
+			if trackedIDs[i] != "" {
 				state = PostingSaved
 			} else {
 				newCount++
@@ -152,7 +163,7 @@ func (r *Repo) UpsertPostings(results []discover.DiscoverResult, searchID string
 				first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				newID(), res.Key, res.URL, res.Title, res.Company, res.Location, res.WorkMode, nullInt(res.SalaryMin),
 				nullInt(res.SalaryMax), res.SalaryText, res.Annualized, res.Description, res.DatePosted,
-				strings.Join(res.Sources, ","), state, nullStr(res.TrackedJobID), nullStr(searchID), now, now)
+				strings.Join(res.Sources, ","), state, nullStr(trackedIDs[i]), nullStr(searchID), now, now)
 		}
 		if err != nil {
 			return 0, err
@@ -166,15 +177,15 @@ func (r *Repo) ListPostings(f PostingFilter) ([]Posting, error) {
 	args := []any{}
 	order := "p.first_seen DESC, p.rowid DESC"
 	switch f.Tab {
-	case "", "inbox":
+	case "", TabInbox:
 		if f.OnlyNew {
 			where, args = append(where, "p.state = ?"), append(args, PostingNew)
 		} else {
 			where, args = append(where, "p.state IN (?, ?)"), append(args, PostingNew, PostingSeen)
 		}
-	case "saved":
+	case TabSaved:
 		where, args = append(where, "p.state = ?"), append(args, PostingSaved)
-	case "dismissed":
+	case TabDismissed:
 		where, args = append(where, "p.state = ?"), append(args, PostingDismissed)
 		order = "p.dismissed_at DESC, p.rowid DESC"
 	default:
@@ -245,8 +256,9 @@ func (r *Repo) SavePosting(id string) (Job, error) {
 		return Job{}, err
 	}
 	if p.State == PostingSaved && p.JobID != "" {
-		if j, err := r.GetJob(p.JobID); err == nil {
-			return j, nil
+		j, err := r.GetJob(p.JobID)
+		if !errors.Is(err, ErrNotFound) {
+			return j, err
 		}
 	}
 	company := strings.TrimSpace(p.Company)
@@ -288,23 +300,24 @@ func (r *Repo) ClearDismissed(olderThanDays int) (int, error) {
 	return int(n), err
 }
 
-// markTracked flags results that are already on the board, by company+title or URL.
-func markTracked(results []discover.DiscoverResult, jobs []Job) {
-	byKey := map[string]Job{}
-	byURL := map[string]Job{}
+// trackedJobIDs gives, for each result, the pipeline job it already is (matched
+// by company+title, else by URL), or "" when it isn't on the board.
+func trackedJobIDs(results []discover.DiscoverResult, jobs []Job) []string {
+	byKey := map[string]string{}
+	byURL := map[string]string{}
 	for _, j := range jobs {
-		byKey[discover.DedupeKey(j.Company, j.Position)] = j
+		byKey[discover.DedupeKey(j.Company, j.Position)] = j.ID
 		if j.URL != "" {
-			byURL[j.URL] = j
+			byURL[j.URL] = j.ID
 		}
 	}
-	for i := range results {
-		j, ok := byKey[results[i].Key]
-		if !ok && results[i].URL != "" {
-			j, ok = byURL[results[i].URL]
+	ids := make([]string, len(results))
+	for i, res := range results {
+		id, ok := byKey[res.Key]
+		if !ok && res.URL != "" {
+			id = byURL[res.URL]
 		}
-		if ok {
-			results[i].TrackedJobID, results[i].TrackedStatus = j.ID, j.Status
-		}
+		ids[i] = id
 	}
+	return ids
 }

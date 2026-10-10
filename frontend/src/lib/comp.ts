@@ -1,9 +1,12 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
+import { EQUITY_TYPES, FILING_STATUSES, PACKAGE_KINDS, VESTINGS } from '../generated/choices'
 import type { marketdata, comp } from './backend'
 
-export const PACKAGE_KINDS = ['offer', 'estimate', 'counter', 'current'] as const
+// The value lists come from the backend (go generate); the labels live here.
+export { EQUITY_TYPES, FILING_STATUSES, PACKAGE_KINDS, VESTINGS }
+
 export type PackageKind = (typeof PACKAGE_KINDS)[number]
 
 export const KIND_LABEL: Record<PackageKind, string> = {
@@ -22,7 +25,6 @@ export const KIND_TONE: Record<PackageKind, ChipTone> = {
   current: 'neutral',
 }
 
-export const VESTINGS = ['standard', 'backloaded', 'monthly', 'custom'] as const
 export type Vesting = (typeof VESTINGS)[number]
 
 export const VESTING_LABEL: Record<Vesting, string> = {
@@ -32,12 +34,10 @@ export const VESTING_LABEL: Record<Vesting, string> = {
   custom: 'Custom yearly %',
 }
 
-export const EQUITY_TYPES = ['none', 'rsu', 'options'] as const
 export type Equity = (typeof EQUITY_TYPES)[number]
 
 export const EQUITY_LABEL: Record<Equity, string> = { none: 'None', rsu: 'RSUs', options: 'Stock options' }
 
-export const FILING_STATUSES = ['single', 'married', 'head'] as const
 export type Filing = (typeof FILING_STATUSES)[number]
 
 export const FILING_LABEL: Record<Filing, string> = {

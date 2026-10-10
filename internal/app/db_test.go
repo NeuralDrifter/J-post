@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestOpenDBCreatesSchema(t *testing.T) {
@@ -105,5 +106,16 @@ func TestFailedMigrationRollsBack(t *testing.T) {
 	db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name='ok'`).Scan(&n)
 	if n != 0 {
 		t.Fatal("partial migration was not rolled back")
+	}
+}
+
+func TestParseTSReadsWhatTSWrites(t *testing.T) {
+	at := time.Date(2026, time.October, 9, 15, 4, 5, 123e6, time.FixedZone("MDT", -6*3600))
+	got, err := parseTS(ts(at))
+	if err != nil || !got.Equal(at) {
+		t.Fatalf("parseTS(ts(%v)) = %v, %v", at, got, err)
+	}
+	if _, err := parseTS("yesterday"); err == nil {
+		t.Fatal("a malformed timestamp must be an error")
 	}
 }

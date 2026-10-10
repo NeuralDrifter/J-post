@@ -4,6 +4,7 @@
 import type { ChangeEvent, ReactNode } from 'react'
 import { STATUSES, STATUS_LABEL, WORK_MODE_LABEL } from '../lib/format'
 import type { JobDraft } from '../lib/jobDraft'
+import { LabelSelect } from './LabelSelect'
 
 export function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
@@ -29,24 +30,16 @@ export function JobForm({ draft, onChange, mode }: { draft: JobDraft; onChange: 
       </Field>
       {mode === 'create' && (
         <Field label="Status">
-          <select className="field" value={draft.status} onChange={set('status')}>
-            {STATUSES.filter((s) => s !== 'closed').map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
+          <LabelSelect
+            labels={STATUS_LABEL}
+            values={STATUSES.filter((s) => s !== 'closed')}
+            value={draft.status}
+            onChange={(status) => onChange({ ...draft, status })}
+          />
         </Field>
       )}
       <Field label="Work mode">
-        <select className="field" value={draft.workMode} onChange={set('workMode')}>
-          <option value="">Not specified</option>
-          {Object.entries(WORK_MODE_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <LabelSelect labels={WORK_MODE_LABEL} empty="Not specified" value={draft.workMode} onChange={(workMode) => onChange({ ...draft, workMode })} />
       </Field>
       <Field label="Location" wide={mode === 'edit'}>
         <input className="field" value={draft.location} onChange={set('location')} placeholder="City, state or Remote" />

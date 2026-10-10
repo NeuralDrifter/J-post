@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"slices"
 	"sync"
 
 	"jobtrack/internal/marketdata"
@@ -74,9 +75,10 @@ const (
 	FilingHead    = "head"    // head of household
 )
 
-func ValidFilingStatus(s string) bool {
-	return s == FilingSingle || s == FilingMarried || s == FilingHead
-}
+// FilingStatuses are the federal filing statuses, in the order Settings offers them.
+var FilingStatuses = []string{FilingSingle, FilingMarried, FilingHead}
+
+func ValidFilingStatus(s string) bool { return slices.Contains(FilingStatuses, s) }
 
 // stateSchedule picks the state table for a filing status. State tables cover
 // only single and married filers, so head of household uses the single schedule

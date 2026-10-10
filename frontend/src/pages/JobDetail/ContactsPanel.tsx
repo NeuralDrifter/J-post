@@ -4,12 +4,12 @@
 import { useState, type FormEvent } from 'react'
 import { Copy, Link2, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import { openMenu } from '../../lib/menu'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { confirmThen } from '../../components/ConfirmDialog'
 import { IconButton } from '../../components/IconButton'
 import { Field } from '../../components/JobForm'
 import { Modal } from '../../components/Modal'
 import { Panel } from '../../components/Panel'
-import { api, apiOk } from '../../lib/api'
+import { api } from '../../lib/api'
 import { BrowserOpenURL, DeleteContact, ListContacts, SaveContact, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { toast } from '../../lib/toast'
@@ -31,8 +31,8 @@ export function ContactsPanel({ jobId }: { jobId: string }) {
   const [editing, setEditing] = useState<app.Contact | null>(null)
 
   const remove = async (c: app.Contact) => {
-    const ok = await confirmDialog({ title: 'Remove contact?', message: `Remove ${c.name} from this job?`, confirmLabel: 'Remove', danger: true })
-    if (ok && (await apiOk(DeleteContact(c.id)))) notifyDataChanged()
+    const options = { title: 'Remove contact?', message: `Remove ${c.name} from this job?`, confirmLabel: 'Remove' }
+    if (await confirmThen(options, () => DeleteContact(c.id))) notifyDataChanged()
   }
 
   const copyEmail = async (email: string) => {

@@ -90,7 +90,7 @@ func TestPrepareInterview(t *testing.T) {
 	})
 	s := settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
 	setup := testSetup
-	setup.PlanProvider = planNone // planning has its own tests (interview_plan_test.go)
+	setup.PlanProvider = PlanNone // planning has its own tests (interview_plan_test.go)
 	live, err := prepareInterview(context.Background(), r, s, j.ID, setup)
 
 	if err != nil {

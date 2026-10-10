@@ -5,14 +5,14 @@ import { useState } from 'react'
 import { labelFor, lookup } from '../../lib/format'
 import { useNavigate } from 'react-router'
 import { ArrowRight, Copy, Pencil, Trash2 } from 'lucide-react'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { confirmThen } from '../../components/ConfirmDialog'
 import { openMenu } from '../../lib/menu'
 import { notifyDataChanged } from '../../lib/events'
 import { Chip } from '../../components/Chip'
 import { PackageEditor } from '../../components/comp/PackageEditor'
 import { Panel } from '../../components/Panel'
 import { SourceMark } from '../../components/SourceMark'
-import { api, apiOk } from '../../lib/api'
+import { api } from '../../lib/api'
 import { DeleteCompPackage, DraftCounter, ListCompForJob, NewEstimate, type app, type comp } from '../../lib/backend'
 import { formatMoneyFull, KIND_LABEL, KIND_TONE } from '../../lib/comp'
 import { taxDetail } from '../../lib/sources'
@@ -37,8 +37,8 @@ export function CompPanel({ jobId }: { jobId: string }) {
   }
 
   const remove = async (it: app.ComparisonItem) => {
-    const ok = await confirmDialog({ title: 'Delete this package?', message: `Delete "${it.package.label}"?`, confirmLabel: 'Delete', danger: true })
-    if (ok && (await apiOk(DeleteCompPackage(it.package.id)))) notifyDataChanged()
+    const options = { title: 'Delete this package?', message: `Delete "${it.package.label}"?`, confirmLabel: 'Delete' }
+    if (await confirmThen(options, () => DeleteCompPackage(it.package.id))) notifyDataChanged()
   }
 
   return (

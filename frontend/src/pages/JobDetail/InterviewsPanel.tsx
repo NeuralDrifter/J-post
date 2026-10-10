@@ -5,15 +5,16 @@ import { useState, type FormEvent } from 'react'
 import { Circle, CircleCheck, Copy, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { copyText } from '../../components/ContextMenu'
 import { openMenu } from '../../lib/menu'
-import { confirmDialog } from '../../components/ConfirmDialog'
+import { confirmThen } from '../../components/ConfirmDialog'
 import { IconButton } from '../../components/IconButton'
 import { Field } from '../../components/JobForm'
+import { LabelSelect } from '../../components/LabelSelect'
 import { Modal } from '../../components/Modal'
 import { Panel } from '../../components/Panel'
-import { api, apiOk } from '../../lib/api'
+import { api } from '../../lib/api'
 import { BrowserOpenURL, DeleteInterview, ListInterviews, SaveInterview, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
-import { formatDateTime, fromLocalInputValue, INTERVIEW_KIND_LABEL, INTERVIEW_KINDS, labelFor, toLocalInputValue } from '../../lib/format'
+import { formatDateTime, fromLocalInputValue, INTERVIEW_KIND_LABEL, labelFor, toLocalInputValue } from '../../lib/format'
 import { useLoad } from '../../lib/useLoad'
 
 const blankInterview = (jobId: string): app.Interview => ({
@@ -36,13 +37,12 @@ export function InterviewsPanel({ jobId }: { jobId: string }) {
   }
 
   const remove = async (iv: app.Interview) => {
-    const ok = await confirmDialog({
+    const options = {
       title: 'Delete interview?',
       message: `Delete the ${labelFor(INTERVIEW_KIND_LABEL, iv.kind).toLowerCase()} on ${formatDateTime(iv.scheduledAt)}?`,
       confirmLabel: 'Delete',
-      danger: true,
-    })
-    if (ok && (await apiOk(DeleteInterview(iv.id)))) notifyDataChanged()
+    }
+    if (await confirmThen(options, () => DeleteInterview(iv.id))) notifyDataChanged()
   }
 
   return (
@@ -138,13 +138,7 @@ function InterviewModal({ interview, onClose }: { interview: app.Interview; onCl
       <form onSubmit={submit} className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Type">
-            <select className="field" value={iv.kind} onChange={(e) => setIv({ ...iv, kind: e.target.value })}>
-              {INTERVIEW_KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {INTERVIEW_KIND_LABEL[k]}
-                </option>
-              ))}
-            </select>
+            <LabelSelect labels={INTERVIEW_KIND_LABEL} value={iv.kind} onChange={(kind) => setIv({ ...iv, kind })} />
           </Field>
           <Field label="Duration (min)">
             <input

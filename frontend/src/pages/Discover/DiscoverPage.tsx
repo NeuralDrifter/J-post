@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
-import { Inbox, LoaderCircle, Search, Telescope, TriangleAlert, X } from 'lucide-react'
+import { Inbox, Telescope, TriangleAlert, X } from 'lucide-react'
 import { confirmDialog } from '../../components/ConfirmDialog'
 import { PageTitle } from '../../components/PageTitle'
 import { api, apiOk } from '../../lib/api'
@@ -11,7 +10,6 @@ import {
   ClearDismissed,
   DeleteSearch,
   DismissPosting,
-  EventsOn,
   GetSettings,
   InboxCounts,
   ListAIProviders,
@@ -32,23 +30,18 @@ import { notifyDataChanged } from '../../lib/events'
 import { timeAgo } from '../../lib/format'
 import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
 import { readPref, readSessionValue, writePref, writeSessionValue } from '../../lib/prefs'
-import { settingsLink } from '../../lib/settingsNav'
 import { toast } from '../../lib/toast'
 import { visiblePostings } from '../../lib/inbox'
 import { useLoad } from '../../lib/useLoad'
-import { outdatedCount, scoringStatus, searchStatus, shouldAutoScore, sortByMatch } from '../../lib/match'
+import { outdatedCount, shouldAutoScore, sortByMatch } from '../../lib/match'
+import { CLEAR_DISMISSED_DAYS, InboxToolbar, type Tab } from './InboxToolbar'
 import { MatchDialog } from './MatchDialog'
 import { PostingList, type PostingActions } from './PostingList'
 import { PreviewPane } from './PreviewPane'
 import { RecentSearches } from './RecentSearches'
 import { SearchForm } from './SearchForm'
-
-type Tab = 'inbox' | 'saved' | 'dismissed'
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'inbox', label: 'Inbox' },
-  { id: 'saved', label: 'Interested' },
-  { id: 'dismissed', label: 'Not interested' },
-]
+import { StatusLine } from './StatusLine'
+import { useDiscoverProgress } from './useDiscoverProgress'
 
 const QUERY_PREF = 'discoverQuery'
 const SORT_PREF = 'discoverSort'
@@ -84,27 +77,12 @@ export default function DiscoverPage() {
   const [searching, setSearching] = useState(false)
   const [busy, setBusy] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  type Status = { phase: 'searching'; boards: string[]; done: number; total: number } | { phase: 'scoring'; done: number; total: number }
-  const [status, setStatus] = useState<Status | null>(null)
+  const [status, setStatus] = useDiscoverProgress()
   const [statusError, setStatusError] = useState('')
   const [sort, setSort] = useState(() => readPref(SORT_PREF, 'newest'))
   const [matchFor, setMatchFor] = useState<string | null>(null)
   const { data: appSettings } = useLoad(() => api(GetSettings()), [])
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
-
-  useEffect(() => {
-    const offSearch = EventsOn('search:progress', (p: { done: number; total: number }) =>
-      setStatus((s) => (s?.phase === 'searching' ? { ...s, done: p.done, total: p.total } : s)),
-    )
-    const offMatch = EventsOn('match:progress', (p: { done: number; total: number }) => {
-      setStatus({ phase: 'scoring', done: p.done, total: p.total })
-      notifyDataChanged() // badges fill in request by request
-    })
-    return () => {
-      offSearch()
-      offMatch()
-    }
-  }, [])
 
   const { data: postings } = useLoad(
     // Only new is applied below (visiblePostings), so opening a posting doesn't drop it from the list.
@@ -213,19 +191,18 @@ export default function DiscoverPage() {
   const clearOld = async () => {
     const ok = await confirmDialog({
       title: 'Clear old postings?',
-      message: 'Delete postings you marked Not interested more than 90 days ago. If a board still lists them, a future search may bring them back.',
+      message: `Delete postings you marked Not interested more than ${CLEAR_DISMISSED_DAYS} days ago. If a board still lists them, a future search may bring them back.`,
       confirmLabel: 'Clear',
       danger: true,
     })
     if (!ok) return
-    const n = await api(ClearDismissed(90))
+    const n = await api(ClearDismissed(CLEAR_DISMISSED_DAYS))
     if (n === undefined) return
     notifyDataChanged()
-    toast.success(n === 0 ? 'Nothing older than 90 days' : `Cleared ${n} posting${n === 1 ? '' : 's'}`)
+    toast.success(n === 0 ? `Nothing older than ${CLEAR_DISMISSED_DAYS} days` : `Cleared ${n} posting${n === 1 ? '' : 's'}`)
   }
 
   const errors = Object.entries(run?.errors ?? {})
-  const tabCount: Record<Tab, number | undefined> = { inbox: counts?.inbox, saved: counts?.saved, dismissed: counts?.dismissed }
 
   return (
     <div className="flex h-full min-h-[520px] flex-col gap-3">
@@ -238,31 +215,14 @@ export default function DiscoverPage() {
         onRemove={removeSearch}
       />
 
-      {status ? (
-        <p className="flex items-center gap-2 font-mono text-[11px] text-ink-2">
-          <LoaderCircle size={12} className="animate-spin" />
-          {status.phase === 'searching' ? searchStatus(status.boards, status.done, status.total) : scoringStatus(status.done, status.total)}
-        </p>
-      ) : statusError ? (
-        <p className="flex items-center gap-2 font-mono text-[11px] text-amber-300">
-          <TriangleAlert size={12} />
-          {statusError}
-          <button onClick={() => setStatusError('')} aria-label="Dismiss" className="opacity-70 hover:opacity-100">
-            <X size={12} />
-          </button>
-        </p>
-      ) : outdatedCount(postings) > 0 ? (
-        <button className="self-start font-mono text-[11px] text-ink-2 underline-offset-2 hover:text-ink hover:underline" onClick={() => score(RescoreOutdated)}>
-          Re-score outdated ({outdatedCount(postings)})
-        </button>
-      ) : appSettings && !appSettings.matchEnabled ? (
-        <p className="font-mono text-[11px] text-ink-3">
-          Match scores are off.{' '}
-          <Link to={settingsLink('matching')} className="text-indigo-300 hover:underline">
-            Turn them on in Settings → Job matching
-          </Link>
-        </p>
-      ) : null}
+      <StatusLine
+        progress={status}
+        error={statusError}
+        onDismissError={() => setStatusError('')}
+        outdated={outdatedCount(postings)}
+        onRescoreOutdated={() => score(RescoreOutdated)}
+        matchOff={!!appSettings && !appSettings.matchEnabled}
+      />
 
       {run && (
         <p className="font-mono text-[11px] text-ink-3">
@@ -288,73 +248,23 @@ export default function DiscoverPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-line bg-white/5 p-0.5">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                setTab(t.id)
-                setSelectedId(null)
-              }}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition ${
-                tab === t.id ? 'bg-accent/30 text-ink' : 'text-ink-2 hover:text-ink'
-              }`}
-            >
-              {t.label}
-              {tabCount[t.id] !== undefined && <span className="font-mono text-[10px] text-ink-3">{tabCount[t.id]}</span>}
-              {t.id === 'inbox' && (counts?.new ?? 0) > 0 && (
-                <span className="rounded-full bg-info/20 px-1.5 font-mono text-[10px] text-cyan-300">{counts?.new} new</span>
-              )}
-            </button>
-          ))}
-        </div>
-        <label className="relative">
-          <Search size={13} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-3" />
-          <input
-            className="field w-48 py-1 pl-7 text-xs"
-            placeholder="Filter"
-            value={filter.query}
-            onChange={(e) => setFilter({ ...filter, query: e.target.value })}
-          />
-        </label>
-        <select className="field w-auto py-1 text-xs" value={filter.source} onChange={(e) => setFilter({ ...filter, source: e.target.value })}>
-          <option value="">Any source</option>
-          {(sources ?? []).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <select
-          className="field w-auto py-1 text-xs"
-          value={sort}
-          onChange={(e) => {
-            setSort(e.target.value)
-            writePref(SORT_PREF, e.target.value)
-          }}
-          aria-label="Sort"
-        >
-          <option value="newest">Newest</option>
-          <option value="match">Best match</option>
-        </select>
-        {tab === 'inbox' && (
-          <label className="flex items-center gap-1.5 text-xs text-ink-2">
-            <input
-              type="checkbox"
-              className="accent-indigo-500"
-              checked={filter.onlyNew}
-              onChange={(e) => setFilter({ ...filter, onlyNew: e.target.checked })}
-            />
-            Only new
-          </label>
-        )}
-        {tab === 'dismissed' && (counts?.dismissed ?? 0) > 0 && (
-          <button className="ml-auto text-xs text-ink-2 underline-offset-2 hover:text-ink hover:underline" onClick={clearOld}>
-            Clear older than 90 days
-          </button>
-        )}
-      </div>
+      <InboxToolbar
+        tab={tab}
+        onTab={(t) => {
+          setTab(t)
+          setSelectedId(null)
+        }}
+        counts={counts}
+        filter={filter}
+        onFilter={setFilter}
+        sources={sources ?? []}
+        sort={sort}
+        onSort={(next) => {
+          setSort(next)
+          writePref(SORT_PREF, next)
+        }}
+        onClearOld={clearOld}
+      />
 
       <div className="grid min-h-0 flex-1 gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="min-h-0 overflow-y-auto pr-1">

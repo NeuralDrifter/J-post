@@ -161,3 +161,26 @@ func TestEstimateLocation(t *testing.T) {
 		}
 	}
 }
+
+func TestDescribe(t *testing.T) {
+	md := testMarket()
+	cases := []struct {
+		name string
+		got  Option
+		want Option
+	}{
+		{"metro", md.DescribeArea("19740"), Option{Code: "19740", Title: "Denver-Aurora-Centennial, CO", State: "CO", Type: "metro"}},
+		{"national reads as remote", md.DescribeArea("US"), Option{Code: "US", Title: "Remote / United States", State: "US", Type: "national"}},
+		{"unknown area", md.DescribeArea("nope"), CodeOnly("nope")},
+		{"occupation", md.DescribeOccupation("15-1252"), Option{Code: "15-1252", Title: "Software Developers"}},
+		{"unknown occupation", md.DescribeOccupation("nope"), Option{Code: "nope", Title: "nope"}},
+	}
+	for _, c := range cases {
+		if c.got != c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, c.got, c.want)
+		}
+	}
+	if search := md.SearchAreas("remote"); len(search) != 1 || search[0] != md.DescribeArea("US") {
+		t.Errorf("search and describe disagree on the national area: %+v", search)
+	}
+}

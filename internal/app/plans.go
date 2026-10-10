@@ -121,20 +121,7 @@ func (r *Repo) ListPlanAttempts(id string) ([]MockInterview, error) {
 	if m.PlanID == "" {
 		return []MockInterview{m}, nil
 	}
-	list, err := queryAll(r.db, scanMock, `SELECT `+mockColumns+` FROM mock_interviews m JOIN jobs j ON j.id = m.job_id
-		WHERE m.plan_id = ? ORDER BY m.started_at, m.rowid`, m.PlanID)
-	if err != nil {
-		return nil, err
-	}
-	for i := range list {
-		if err := r.loadReviewData(&list[i]); err != nil {
-			return nil, err
-		}
-		if err := r.loadPlanData(&list[i]); err != nil {
-			return nil, err
-		}
-	}
-	return list, nil
+	return r.listMockInterviews(`WHERE m.plan_id = ? ORDER BY m.started_at, m.rowid`, m.PlanID)
 }
 
 // deleteMockAndOrphanPlan deletes an interview, and its plan when no other

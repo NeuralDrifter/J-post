@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
+	"jobtrack/internal/settings"
 	"jobtrack/internal/textproc"
 )
 
@@ -26,13 +28,11 @@ const (
 // SourceManual marks a job the user added by hand (not from a job board).
 const SourceManual = "manual"
 
-var validStatuses = map[string]bool{
-	StatusInterested: true, StatusApplied: true, StatusInterviewing: true, StatusOffer: true, StatusClosed: true,
-}
+// JobStatuses are the pipeline stages, in board order.
+var JobStatuses = []string{StatusInterested, StatusApplied, StatusInterviewing, StatusOffer, StatusClosed}
 
-var validCloseReasons = map[string]bool{"rejected": true, "withdrawn": true, "ghosted": true, "declined": true}
-
-var validWorkModes = map[string]bool{"": true, "remote": true, "hybrid": true, "onsite": true}
+// CloseReasons are why a job was closed.
+var CloseReasons = []string{"rejected", "withdrawn", "ghosted", "declined"}
 
 type Job struct {
 	ID          string `json:"id"`
@@ -102,7 +102,7 @@ func validateJobFields(j *Job) error {
 	if j.Position == "" {
 		return errors.New("position is required")
 	}
-	if !validWorkModes[j.WorkMode] {
+	if j.WorkMode != "" && !slices.Contains(settings.WorkModes, j.WorkMode) {
 		return fmt.Errorf("invalid work mode %q", j.WorkMode)
 	}
 	if j.SalaryMin != nil && j.SalaryMax != nil && *j.SalaryMin > *j.SalaryMax {
@@ -123,10 +123,10 @@ func validateJobFields(j *Job) error {
 }
 
 func validateStatus(status, reason string) error {
-	if !validStatuses[status] {
+	if !slices.Contains(JobStatuses, status) {
 		return fmt.Errorf("invalid status %q", status)
 	}
-	if status == StatusClosed && !validCloseReasons[reason] {
+	if status == StatusClosed && !slices.Contains(CloseReasons, reason) {
 		return errors.New("closing a job needs a reason: rejected, withdrawn, ghosted or declined")
 	}
 	if status != StatusClosed && reason != "" {
@@ -278,7 +278,9 @@ func (r *Repo) ListStageEvents(jobID string) ([]StageEvent, error) {
 func scanStageEvent(s rowScanner) (StageEvent, error) {
 	var e StageEvent
 	var from sql.NullString
-	err := s.Scan(&e.ID, &e.JobID, &from, &e.ToStatus, &e.CloseReason, &e.At, &e.Note)
+	if err := s.Scan(&e.ID, &e.JobID, &from, &e.ToStatus, &e.CloseReason, &e.At, &e.Note); err != nil {
+		return e, err
+	}
 	e.FromStatus = from.String
-	return e, err
+	return e, nil
 }

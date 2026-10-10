@@ -39,20 +39,21 @@ type App struct {
 	settings *settings.SettingsStore
 	window   *settings.WindowStateStore
 	market   *marketdata.MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
-	// aiCtx lives as long as the app; shutdown cancels it so AI work (headless
-	// Claude Code, API calls) never outlives the window.
-	aiCtx       context.Context
-	aiCancel    context.CancelFunc
-	initErr     error
-	windowShown bool
-	matchMu     sync.Mutex // one scoring run at a time
+	// lifetimeCtx lives as long as the app; shutdown cancels it so background
+	// work (searches and their scraper processes, headless Claude Code, API
+	// calls) never outlives the window.
+	lifetimeCtx    context.Context
+	lifetimeCancel context.CancelFunc
+	initErr        error
+	windowShown    bool
+	matchMu        sync.Mutex // one scoring run at a time
 }
 
 // NewApp opens (and if needed creates or migrates) the data folder. A failure
 // is kept in initErr and shown full-screen by the frontend instead of crashing.
 func NewApp(dataDir string) *App {
 	a := &App{dataDir: dataDir, settings: settings.NewSettingsStore(dataDir), window: settings.NewWindowStateStore(dataDir)}
-	a.aiCtx, a.aiCancel = context.WithCancel(context.Background())
+	a.lifetimeCtx, a.lifetimeCancel = context.WithCancel(context.Background())
 	if md, err := marketdata.Load(); err != nil {
 		log.Printf("market data unavailable: %v", err)
 	} else {
@@ -76,11 +77,11 @@ func NewApp(dataDir string) *App {
 
 func (a *App) startup(ctx context.Context) { a.ctx = ctx }
 
-// aiContext is the context for AI work; it ends when the app closes.
-func (a *App) aiContext() context.Context { return a.aiCtx }
+// lifetimeContext is the context for background work; it ends when the app closes.
+func (a *App) lifetimeContext() context.Context { return a.lifetimeCtx }
 
 func (a *App) shutdown(ctx context.Context) {
-	a.aiCancel()
+	a.lifetimeCancel()
 	if a.repo != nil {
 		a.repo.db.Close()
 	}
@@ -240,7 +241,7 @@ func (a *App) RunSearch(q SearchQuery) (SearchRun, error) {
 	}
 	fetcher := sourceFetcher{settings: settings, repo: a.repo}
 	fetch := withProgress(fetcher.fetch, len(normalizeSources(q.Sources)), a.reportProgress("search:progress"))
-	return RunSearch(context.Background(), a.repo, q, settings, fetch)
+	return RunSearch(a.lifetimeContext(), a.repo, q, settings, fetch)
 }
 
 // RefreshSearch fetches new postings for a search even if it ran recently.
@@ -251,7 +252,7 @@ func (a *App) RefreshSearch(q SearchQuery) (SearchRun, error) {
 	}
 	fetcher := sourceFetcher{settings: settings, repo: a.repo}
 	fetch := withProgress(fetcher.fetch, len(normalizeSources(q.Sources)), a.reportProgress("search:progress"))
-	return RefreshSearch(context.Background(), a.repo, q, fetch)
+	return RefreshSearch(a.lifetimeContext(), a.repo, q, fetch)
 }
 
 // ListPostings returns a tab's postings, with each match score flagged if it
@@ -313,7 +314,7 @@ func (a *App) scoreMatches(want func(p Posting, fingerprint string) bool) (Match
 	if err != nil {
 		return MatchRun{}, err
 	}
-	return runMatch(a.aiContext(), a.repo, s, profile.ResumeText, postings, a.reportProgress("match:progress"))
+	return runMatch(a.lifetimeContext(), a.repo, s, profile.ResumeText, postings, a.reportProgress("match:progress"))
 }
 
 // currentMatchFingerprint identifies the resume and preferences new scores are graded against.
@@ -376,9 +377,14 @@ func (a *App) GetSettings() (settings.Settings, error) {
 	return a.settings.Load()
 }
 
-func (a *App) SaveSettings(s settings.Settings) error {
+// SaveSettings stores s and returns it as stored, with defaults filled in for
+// anything left blank.
+func (a *App) SaveSettings(s settings.Settings) (settings.Settings, error) {
 	s.PythonPath = strings.TrimSpace(s.PythonPath)
-	return a.settings.Save(s)
+	if err := a.settings.Save(s); err != nil {
+		return settings.Settings{}, err
+	}
+	return a.settings.Load()
 }
 
 // TestPython reports which Python will be used and whether it can import JobSpy.
@@ -387,7 +393,7 @@ func (a *App) TestPython(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := discover.CheckScraper(context.Background(), python); err != nil {
+	if err := discover.CheckScraper(a.lifetimeContext(), python); err != nil {
 		return "", fmt.Errorf("%s: %w", python, err)
 	}
 	return python, nil
@@ -523,24 +529,16 @@ func (a *App) SearchAreas(q string) []marketdata.Option {
 // DescribeArea and DescribeOccupation give pickers the title for a saved code.
 func (a *App) DescribeArea(code string) marketdata.Option {
 	if md := a.market; md != nil {
-		if ar, ok := md.Areas[code]; ok {
-			title := ar.Title
-			if ar.Type == "national" {
-				title = "Remote / United States"
-			}
-			return marketdata.Option{Code: code, Title: title, State: ar.State, Type: ar.Type}
-		}
+		return md.DescribeArea(code)
 	}
-	return marketdata.Option{Code: code, Title: code}
+	return marketdata.CodeOnly(code)
 }
 
 func (a *App) DescribeOccupation(code string) marketdata.Option {
 	if md := a.market; md != nil {
-		if t, ok := md.Occupations[code]; ok {
-			return marketdata.Option{Code: code, Title: t}
-		}
+		return md.DescribeOccupation(code)
 	}
-	return marketdata.Option{Code: code, Title: code}
+	return marketdata.CodeOnly(code)
 }
 
 func (a *App) MarketSources() DataSources {
@@ -597,7 +595,7 @@ func (a *App) PrepareInterview(jobID string, setup InterviewSetup) (LiveSession,
 	if err != nil {
 		return LiveSession{}, err
 	}
-	return prepareInterview(a.aiContext(), a.repo, s, jobID, setup)
+	return prepareInterview(a.lifetimeContext(), a.repo, s, jobID, setup)
 }
 
 // NudgeAnswer returns one short coaching cue for the answer just given.
@@ -607,7 +605,7 @@ func (a *App) NudgeAnswer(sessionID, question, answer string, answerAtMs int64) 
 	if err != nil {
 		return Nudge{}, err
 	}
-	return nudgeAnswer(a.aiContext(), a.repo, s, sessionID, question, answer, answerAtMs)
+	return nudgeAnswer(a.lifetimeContext(), a.repo, s, sessionID, question, answer, answerAtMs)
 }
 
 // RegradeInterview scores an interview again with another provider and keeps both scorecards.
@@ -616,7 +614,7 @@ func (a *App) RegradeInterview(id, provider string) (MockInterview, error) {
 	if err != nil {
 		return MockInterview{}, err
 	}
-	return regradeInterview(a.aiContext(), a.repo, s, id, provider)
+	return regradeInterview(a.lifetimeContext(), a.repo, s, id, provider)
 }
 
 // DeleteScorecard removes one provider's scorecard from an interview.
@@ -636,7 +634,7 @@ func (a *App) ScoreInterview(id string) (MockInterview, error) {
 	if err != nil {
 		return MockInterview{}, err
 	}
-	return scoreInterview(a.aiContext(), a.repo, s, id)
+	return scoreInterview(a.lifetimeContext(), a.repo, s, id)
 }
 
 func (a *App) SaveInterviewTranscript(id string, lines []TranscriptLine) error {
@@ -687,7 +685,6 @@ func (a *App) ListPlanAttempts(id string) ([]MockInterview, error) {
 }
 
 func (a *App) DeleteMockInterview(id string) error {
-
 	return a.repo.DeleteMockInterview(id)
 }
 
@@ -707,19 +704,19 @@ func (a *App) TestClaudeCode(path string) (string, error) {
 		return "", err
 	}
 	s.ClaudeCodePath = strings.TrimSpace(path)
-	return ai.ClaudeCodeVersion(a.aiContext(), s)
+	return ai.ClaudeCodeVersion(a.lifetimeContext(), s)
 }
 
 // ListAIModels lists the models an OpenAI-style provider offers, using the
 // settings as entered on the page (Settings "Load models" button).
 func (a *App) ListAIModels(providerID string, s settings.Settings) ([]string, error) {
-	return ai.ListAIModels(a.aiContext(), providerID, s)
+	return ai.ListAIModels(a.lifetimeContext(), providerID, s)
 }
 
 // TestAIProvider runs a tiny task on a provider with the settings as entered
 // on the page (Settings "Test" button).
 func (a *App) TestAIProvider(providerID string, s settings.Settings) (ai.AIProviderTest, error) {
-	return ai.TestAIProvider(a.aiContext(), providerID, s)
+	return ai.TestAIProvider(a.lifetimeContext(), providerID, s)
 }
 
 // ListInterviewOptions returns the interview types, interviewer styles and lengths.
@@ -734,7 +731,7 @@ func (a *App) VoicePreview(voice string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	wav, err := voicePreview(a.aiContext(), s, filepath.Join(a.dataDir, "voice-previews"), voice)
+	wav, err := voicePreview(a.lifetimeContext(), s, filepath.Join(a.dataDir, "voice-previews"), voice)
 	if err != nil {
 		return "", err
 	}

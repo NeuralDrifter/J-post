@@ -25,7 +25,7 @@ type MatchRun struct {
 // matchCandidates returns the inbox and Interested postings that want picks, newest first.
 func (r *Repo) matchCandidates(want func(Posting) bool) ([]Posting, error) {
 	var out []Posting
-	for _, tab := range []string{"inbox", "saved"} {
+	for _, tab := range []string{TabInbox, TabSaved} {
 		postings, err := r.ListPostings(PostingFilter{Tab: tab})
 		if err != nil {
 			return nil, err

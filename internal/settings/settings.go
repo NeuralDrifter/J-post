@@ -20,7 +20,9 @@ import (
 
 const (
 	DefaultFollowUpDays       = 7
+	maxFollowUpDays           = 365
 	defaultDiscoverCacheHours = 12
+	maxDiscoverCacheHours     = 168 // a week
 	defaultGeminiLiveModel    = "gemini-3.8-live"
 	defaultAnthropicModel     = "claude-opus-5-5"
 	defaultGradingEffort      = "high"
@@ -101,21 +103,21 @@ type Settings struct {
 	MatchProvider   string   `json:"matchProvider"`   // an AI provider ID
 	MatchPerRequest int      `json:"matchPerRequest"` // postings sent per request
 	MatchMinSalary  int64    `json:"matchMinSalary"`  // annual floor in dollars; 0 = none
-	MatchWorkModes  []string `json:"matchWorkModes"`  // MatchWorkModeOptions; empty = no preference
+	MatchWorkModes  []string `json:"matchWorkModes"`  // WorkModes values; empty = no preference
 	MatchLocations  string   `json:"matchLocations"`
 	MatchSeniority  string   `json:"matchSeniority"` // a MatchSeniorityOptions value; "" = no target
 	MatchGoals      string   `json:"matchGoals"`     // free text: wants, must-haves, deal-breakers
 }
 
-// anthropicEfforts are the effort levels the Anthropic API accepts.
-var anthropicEfforts = []string{"low", "medium", "high", "xhigh", "max"}
+// AnthropicEfforts are the effort levels the Anthropic API accepts.
+var AnthropicEfforts = []string{"low", "medium", "high", "xhigh", "max"}
 
-// MatchWorkModeOptions and MatchSeniorityOptions are the values the job-match
-// preferences accept.
-var (
-	MatchWorkModeOptions  = []string{"remote", "hybrid", "onsite"}
-	MatchSeniorityOptions = []string{"entry", "mid", "senior", "staff", "principal", "manager"}
-)
+// WorkModes are how a job is worked; jobs, postings and the job-match
+// preferences all use these values.
+var WorkModes = []string{"remote", "hybrid", "onsite"}
+
+// MatchSeniorityOptions are the target levels the job-match preferences accept.
+var MatchSeniorityOptions = []string{"entry", "mid", "senior", "staff", "principal", "manager"}
 
 // AnswerMode is how a request asks for a structured answer (response_format).
 type AnswerMode string
@@ -126,12 +128,23 @@ const (
 	ModePlain      AnswerMode = "plain"       // no response_format; the schema goes in the instruction
 )
 
-var answerModes = []AnswerMode{ModeJSONSchema, ModeJSONObject, ModePlain}
+// Choice is one option of a Settings dropdown.
+type Choice struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+// AnswerModeChoices are the answer modes, in the order Settings offers them.
+var AnswerModeChoices = []Choice{
+	{ID: string(ModePlain), Label: "plain — works with any server"},
+	{ID: string(ModeJSONObject), Label: "json_object — JSON mode"},
+	{ID: string(ModeJSONSchema), Label: "json_schema — strict schema"},
+}
 
 func answerModeNames() []string {
-	names := make([]string, len(answerModes))
-	for i, m := range answerModes {
-		names[i] = string(m)
+	names := make([]string, len(AnswerModeChoices))
+	for i, c := range AnswerModeChoices {
+		names[i] = c.ID
 	}
 	return names
 }
@@ -226,44 +239,8 @@ func (s *SettingsStore) Load() (Settings, error) {
 // Save writes atomically; 0600 because the file holds API keys.
 func (s *SettingsStore) Save(settings Settings) error {
 	ApplyDefaults(&settings)
-	if !taxes.ValidFilingStatus(settings.FilingStatus) {
-		return errors.New("filing status must be single, married or head of household")
-	}
-	if settings.USAJobsKey != "" && !strings.Contains(settings.USAJobsEmail, "@") {
-		return errors.New("USAJobs needs the email address you registered the key with")
-	}
-	if settings.DiscoverCacheHours > 168 {
-		return errors.New("search results can be reused for at most 168 hours (a week)")
-	}
-	if settings.FollowUpDays > 365 {
-		return errors.New("follow-up threshold must be between 1 and 365 days")
-	}
-	for _, id := range []string{settings.GradingProvider, settings.TipsProvider, settings.PlanProvider, settings.MatchProvider} {
-		if !slices.Contains(AIProviderIDs, id) {
-			return fmt.Errorf("unknown AI provider %q", id)
-		}
-	}
-	for _, effort := range []string{settings.AnthropicGradingEffort, settings.AnthropicTipsEffort} {
-		if !slices.Contains(anthropicEfforts, effort) {
-			return fmt.Errorf("effort must be one of %s", strings.Join(anthropicEfforts, ", "))
-		}
-	}
-	if !slices.Contains(answerModes, AnswerMode(settings.CustomAIMode)) {
-		return fmt.Errorf("answer mode must be one of %s", strings.Join(answerModeNames(), ", "))
-	}
-	if settings.MatchPerRequest < minMatchPerRequest || settings.MatchPerRequest > maxMatchPerRequest {
-		return fmt.Errorf("postings per request must be between %d and %d", minMatchPerRequest, maxMatchPerRequest)
-	}
-	for _, m := range settings.MatchWorkModes {
-		if !slices.Contains(MatchWorkModeOptions, m) {
-			return fmt.Errorf("work mode must be one of %s", strings.Join(MatchWorkModeOptions, ", "))
-		}
-	}
-	if settings.MatchSeniority != "" && !slices.Contains(MatchSeniorityOptions, settings.MatchSeniority) {
-		return fmt.Errorf("seniority must be one of %s", strings.Join(MatchSeniorityOptions, ", "))
-	}
-	if settings.MatchMinSalary < 0 {
-		return errors.New("the salary floor can't be negative")
+	if err := settings.validate(); err != nil {
+		return err
 	}
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
@@ -273,6 +250,62 @@ func (s *SettingsStore) Save(settings Settings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return writeFileAtomic(s.filePath, data, 0o600)
+}
+
+// validate checks settings that already have their defaults applied.
+func (s Settings) validate() error {
+	if !taxes.ValidFilingStatus(s.FilingStatus) {
+		return errors.New("filing status must be single, married or head of household")
+	}
+	if s.USAJobsKey != "" && !strings.Contains(s.USAJobsEmail, "@") {
+		return errors.New("USAJobs needs the email address you registered the key with")
+	}
+	if s.DiscoverCacheHours > maxDiscoverCacheHours {
+		return fmt.Errorf("search results can be reused for at most %d hours (a week)", maxDiscoverCacheHours)
+	}
+	if s.FollowUpDays > maxFollowUpDays {
+		return fmt.Errorf("follow-up threshold must be between 1 and %d days", maxFollowUpDays)
+	}
+	if err := s.validateAIChoices(); err != nil {
+		return err
+	}
+	return s.validateMatchPreferences()
+}
+
+// validateAIChoices checks the provider picked for each AI job and the provider options.
+func (s Settings) validateAIChoices() error {
+	for _, id := range []string{s.GradingProvider, s.TipsProvider, s.PlanProvider, s.MatchProvider} {
+		if !slices.Contains(AIProviderIDs, id) {
+			return fmt.Errorf("unknown AI provider %q", id)
+		}
+	}
+	for _, effort := range []string{s.AnthropicGradingEffort, s.AnthropicTipsEffort} {
+		if !slices.Contains(AnthropicEfforts, effort) {
+			return fmt.Errorf("effort must be one of %s", strings.Join(AnthropicEfforts, ", "))
+		}
+	}
+	if !slices.Contains(answerModeNames(), s.CustomAIMode) {
+		return fmt.Errorf("answer mode must be one of %s", strings.Join(answerModeNames(), ", "))
+	}
+	return nil
+}
+
+func (s Settings) validateMatchPreferences() error {
+	if s.MatchPerRequest < minMatchPerRequest || s.MatchPerRequest > maxMatchPerRequest {
+		return fmt.Errorf("postings per request must be between %d and %d", minMatchPerRequest, maxMatchPerRequest)
+	}
+	for _, m := range s.MatchWorkModes {
+		if !slices.Contains(WorkModes, m) {
+			return fmt.Errorf("work mode must be one of %s", strings.Join(WorkModes, ", "))
+		}
+	}
+	if s.MatchSeniority != "" && !slices.Contains(MatchSeniorityOptions, s.MatchSeniority) {
+		return fmt.Errorf("seniority must be one of %s", strings.Join(MatchSeniorityOptions, ", "))
+	}
+	if s.MatchMinSalary < 0 {
+		return errors.New("the salary floor can't be negative")
+	}
+	return nil
 }
 
 // writeFileAtomic writes via a temp file and rename, so a crash can't leave a
