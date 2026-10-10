@@ -90,6 +90,10 @@ export function FetchPicture(arg1) {
   return window['go']['app']['App']['FetchPicture'](arg1);
 }
 
+export function GetAtsReport(arg1) {
+  return window['go']['app']['App']['GetAtsReport'](arg1);
+}
+
 export function GetCurrentComp() {
   return window['go']['app']['App']['GetCurrentComp']();
 }
@@ -242,6 +246,10 @@ export function PreviewComp(arg1) {
   return window['go']['app']['App']['PreviewComp'](arg1);
 }
 
+export function ReadAttachment(arg1) {
+  return window['go']['app']['App']['ReadAttachment'](arg1);
+}
+
 export function RefreshSearch(arg1) {
   return window['go']['app']['App']['RefreshSearch'](arg1);
 }
@@ -272,6 +280,10 @@ export function RestorePosting(arg1) {
 
 export function RunSearch(arg1) {
   return window['go']['app']['App']['RunSearch'](arg1);
+}
+
+export function SaveAtsReport(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SaveAtsReport'](arg1, arg2, arg3);
 }
 
 export function SaveCompPackage(arg1) {

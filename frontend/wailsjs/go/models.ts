@@ -35,6 +35,24 @@ export namespace ai {
 
 export namespace app {
 	
+	export class AtsReport {
+	    jobId: string;
+	    report: string;
+	    source: string;
+	    checkedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AtsReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.jobId = source["jobId"];
+	        this.report = source["report"];
+	        this.source = source["source"];
+	        this.checkedAt = source["checkedAt"];
+	    }
+	}
 	export class Attachment {
 	    id: string;
 	    jobId: string;

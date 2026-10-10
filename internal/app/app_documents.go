@@ -78,6 +78,17 @@ func (a *App) TailorResumeForJob(jobID, resumeID string) (Document, error) {
 	return a.repo.TailorResumeForJob(jobID, resumeID)
 }
 
+// SaveAtsReport keeps a job's latest ATS check.
+func (a *App) SaveAtsReport(jobID, report, source string) error {
+	return a.repo.SaveAtsReport(jobID, report, source)
+}
+
+// GetAtsReport is a job's latest ATS check, or null before the first.
+func (a *App) GetAtsReport(jobID string) (*AtsReport, error) { return a.repo.GetAtsReport(jobID) }
+
+// ReadAttachment returns an attached file (base64), e.g. a PDF to run the ATS check on.
+func (a *App) ReadAttachment(id string) (string, error) { return a.repo.ReadAttachment(id) }
+
 // FetchPicture downloads a photo an imported resume links to and returns it as
 // a data URL, so the resume keeps the image itself.
 func (a *App) FetchPicture(url string) (string, error) {

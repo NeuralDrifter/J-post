@@ -50,6 +50,8 @@ export function EmptyTrash(arg1:string):Promise<void>;
 
 export function FetchPicture(arg1:string):Promise<string>;
 
+export function GetAtsReport(arg1:string):Promise<app.AtsReport>;
+
 export function GetCurrentComp():Promise<comp.CompPackage>;
 
 export function GetDocument(arg1:string):Promise<app.Document>;
@@ -126,6 +128,8 @@ export function PrepareInterview(arg1:string,arg2:app.InterviewSetup):Promise<ap
 
 export function PreviewComp(arg1:comp.CompPackage):Promise<comp.PackageResult>;
 
+export function ReadAttachment(arg1:string):Promise<string>;
+
 export function RefreshSearch(arg1:app.SearchQuery):Promise<app.SearchRun>;
 
 export function RegradeInterview(arg1:string,arg2:string):Promise<app.MockInterview>;
@@ -141,6 +145,8 @@ export function RestoreDocument(arg1:string):Promise<void>;
 export function RestorePosting(arg1:string):Promise<void>;
 
 export function RunSearch(arg1:app.SearchQuery):Promise<app.SearchRun>;
+
+export function SaveAtsReport(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SaveCompPackage(arg1:comp.CompPackage):Promise<comp.CompPackage>;
 

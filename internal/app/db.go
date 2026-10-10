@@ -378,6 +378,13 @@ var migrations = []string{
 	ALTER TABLE jobs ADD COLUMN resume_id TEXT NOT NULL DEFAULT '';
 	ALTER TABLE jobs ADD COLUMN letter_id TEXT NOT NULL DEFAULT '';
 	ALTER TABLE posting_scores ADD COLUMN resume_id TEXT NOT NULL DEFAULT '';`,
+	// 12: each job's latest ATS check (see ats_reports.go).
+	`CREATE TABLE ats_reports (
+		job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+		report TEXT NOT NULL,
+		source TEXT NOT NULL,
+		checked_at TEXT NOT NULL
+	);`,
 }
 
 func openDB(path string) (*sql.DB, error) {

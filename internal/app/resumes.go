@@ -260,11 +260,16 @@ func validateDocument(kind, name, data string) error {
 }
 
 func validateDocumentData(data string) error {
-	if len(data) > maxDocumentBytes {
-		return fmt.Errorf("document is %d MB; the limit is %d MB", len(data)>>20, maxDocumentBytes>>20)
+	return validateJSON(data, maxDocumentBytes, "document")
+}
+
+// validateJSON checks that what the frontend stores is well-formed JSON within a size limit.
+func validateJSON(data string, limit int, what string) error {
+	if len(data) > limit {
+		return fmt.Errorf("%s is %d MB; the limit is %d MB", what, len(data)>>20, limit>>20)
 	}
 	if !json.Valid([]byte(data)) {
-		return errors.New("document data is not valid JSON")
+		return fmt.Errorf("%s is not valid JSON", what)
 	}
 	return nil
 }
