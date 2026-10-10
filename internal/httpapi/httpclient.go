@@ -35,6 +35,7 @@ type Request struct {
 	Headers map[string]string
 	Body    []byte
 	Timeout time.Duration // apiTimeout when zero
+	Client  *http.Client  // http.DefaultClient when nil; e.g. one whose dialer refuses local addresses
 }
 
 type Response struct {
@@ -62,7 +63,7 @@ func (r Request) Send(ctx context.Context) (Response, error) {
 	for k, v := range r.Headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := cmp.Or(r.Client, http.DefaultClient).Do(req)
 	if err != nil {
 		return Response{}, transportError(ctx, r.Source, timeout, err)
 	}

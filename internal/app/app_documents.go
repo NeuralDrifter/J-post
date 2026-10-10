@@ -68,6 +68,12 @@ func (a *App) clearDefaultResumeIf(id string) error {
 	return a.SetDefaultResume("")
 }
 
+// FetchPicture downloads a photo an imported resume links to and returns it as
+// a data URL, so the resume keeps the image itself.
+func (a *App) FetchPicture(url string) (string, error) {
+	return a.pictures.Fetch(a.lifetimeContext(), url)
+}
+
 // SaveExportedFile asks where to save an exported document (contentBase64,
 // as the browser encodes a Blob) and writes it there. It returns the chosen
 // path, or "" if the user cancelled.

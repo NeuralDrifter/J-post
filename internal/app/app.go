@@ -21,6 +21,7 @@ import (
 	"jobtrack/internal/discover"
 	"jobtrack/internal/marketdata"
 	"jobtrack/internal/osproc"
+	"jobtrack/internal/resumes"
 	"jobtrack/internal/settings"
 	"jobtrack/internal/taxes"
 )
@@ -39,6 +40,7 @@ type App struct {
 	settings *settings.SettingsStore
 	window   *settings.WindowStateStore
 	market   *marketdata.MarketData // nil if the embedded dataset can't be read; comp figures then skip market data
+	pictures *resumes.PictureFetcher
 	// lifetimeCtx lives as long as the app; shutdown cancels it so background
 	// work (searches and their scraper processes, headless Claude Code, API
 	// calls) never outlives the window.
@@ -52,7 +54,7 @@ type App struct {
 // NewApp opens (and if needed creates or migrates) the data folder. A failure
 // is kept in initErr and shown full-screen by the frontend instead of crashing.
 func NewApp(dataDir string) *App {
-	a := &App{dataDir: dataDir, settings: settings.NewSettingsStore(dataDir), window: settings.NewWindowStateStore(dataDir)}
+	a := &App{dataDir: dataDir, settings: settings.NewSettingsStore(dataDir), window: settings.NewWindowStateStore(dataDir), pictures: resumes.NewPictureFetcher()}
 	a.lifetimeCtx, a.lifetimeCancel = context.WithCancel(context.Background())
 	if md, err := marketdata.Load(); err != nil {
 		log.Printf("market data unavailable: %v", err)

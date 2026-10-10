@@ -48,6 +48,8 @@ export function DuplicateDocument(arg1:string):Promise<app.Document>;
 
 export function EmptyTrash(arg1:string):Promise<void>;
 
+export function FetchPicture(arg1:string):Promise<string>;
+
 export function GetCurrentComp():Promise<comp.CompPackage>;
 
 export function GetDocument(arg1:string):Promise<app.Document>;

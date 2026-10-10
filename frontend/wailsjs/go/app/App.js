@@ -86,6 +86,10 @@ export function EmptyTrash(arg1) {
   return window['go']['app']['App']['EmptyTrash'](arg1);
 }
 
+export function FetchPicture(arg1) {
+  return window['go']['app']['App']['FetchPicture'](arg1);
+}
+
 export function GetCurrentComp() {
   return window['go']['app']['App']['GetCurrentComp']();
 }
