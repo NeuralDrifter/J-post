@@ -25,9 +25,14 @@ the aliases in `frontend/vite.config.ts` and `paths` in `frontend/tsconfig.json`
 | `fonts/` | `@reactive-resume/fonts` | Font catalogue (Google Fonts file list) |
 | `utils/` | `@reactive-resume/utils` | Colour, locale, string and style helpers |
 | `fixtures/` | `packages/pdf/fixtures` | PDFs the ATS extraction tests read |
+| `web/features/resume/editor/write/model.ts` | `apps/web` | The editor's section and entry model: outline order, add/move/remove sections, new entries, drafts |
+| `web/features/resume/editor/design/presets.ts` | `apps/web` | Design presets: font pairings, density, margins, text size, accents, Fit to one page |
+| `web/templates/*.jpg` | `apps/web/public/templates/jpg` | Template preview images |
 
 Not taken: `ai`, `api`, `auth`, `db`, `email`, `env`, `mcp`, `dsh-plugin`, `ui`,
-`config`, and both apps (`apps/web` is a behavioural reference only).
+`config`, `apps/server`, and the rest of `apps/web`, which is a behavioural reference
+only: Job Track's screens are its own. The `web/` files above (and their tests) are
+UI-free logic, kept at their upstream paths.
 
 ## Left out
 

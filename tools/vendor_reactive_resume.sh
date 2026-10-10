@@ -14,6 +14,13 @@ upstream=$(cd "$1" && pwd)
 cd "$(dirname "$0")/.."
 dest=frontend/src/vendor/reactive-resume
 packages=(schema resume pdf docx import fonts utils)
+# UI-free logic from upstream's web app, kept at its path under web/.
+web_files=(
+	features/resume/editor/write/model.ts
+	features/resume/editor/write/model.test.ts
+	features/resume/editor/design/presets.ts
+	features/resume/editor/design/presets.test.ts
+)
 commit=$(git -C "$upstream" rev-parse --short=7 HEAD)
 header="// Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit $commit.
 // Copyright (c) 2026 Amruth Pillai. SPDX-License-Identifier: MIT"
@@ -24,9 +31,19 @@ copy_packages() {
 		rm -rf "${dest:?}/$pkg"
 		cp -R "$upstream/packages/$pkg/src" "$dest/$pkg"
 	done
+	copy_web_files
 	rm -rf "${dest:?}/fixtures"
 	cp -R "$upstream/packages/pdf/fixtures" "$dest/fixtures" # the PDF tests read ../fixtures
 	cp "$upstream/LICENSE" "$dest/LICENSE"
+}
+
+copy_web_files() {
+	rm -rf "${dest:?}/web"
+	for file in "${web_files[@]}"; do
+		mkdir -p "$dest/web/$(dirname "$file")"
+		cp "$upstream/apps/web/src/$file" "$dest/web/$file"
+	done
+	cp -R "$upstream/apps/web/public/templates/jpg" "$dest/web/templates" # template preview images
 }
 
 drop_excluded() {
