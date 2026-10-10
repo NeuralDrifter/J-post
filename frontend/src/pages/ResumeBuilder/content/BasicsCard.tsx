@@ -19,14 +19,23 @@ const TEXT_FIELDS: { key: TextKey; label: string; placeholder?: string }[] = [
   { key: 'location', label: 'Location', placeholder: 'City, Country' },
 ]
 
-/** Name, headline and contact details, plus any extra lines for the header. */
+export type EditBasics = (mutate: (basics: Basics) => void) => void
+
+/** The resume's name, headline and contact details, plus any extra lines for the header. */
 export function BasicsCard() {
   const basics = useResume().basics
   const update = useUpdate()
-  const edit = (mutate: (b: Basics) => void) => update((d) => mutate(d.basics))
-
   return (
     <Fold title="Basics" icon={<IdCard size={15} className="shrink-0 text-indigo-300" />} defaultOpen>
+      <BasicsForm basics={basics} edit={(mutate) => update((d) => mutate(d.basics))} />
+    </Fold>
+  )
+}
+
+/** Name, headline, contact details and extra header lines, for a resume or a letter's sender. */
+export function BasicsForm({ basics, edit }: { basics: Basics; edit: EditBasics }) {
+  return (
+    <>
       <div className="grid grid-cols-2 gap-3">
         {TEXT_FIELDS.map(({ key, label, placeholder }) => (
           <TextInput key={key} label={label} placeholder={placeholder} value={basics[key]} wide={key === 'headline'} onChange={(v) => edit((b) => void (b[key] = v))} />
@@ -35,11 +44,11 @@ export function BasicsCard() {
         <TextInput label="Link text" placeholder="Shown instead of the URL" value={basics.website.label} onChange={(v) => edit((b) => void (b.website.label = v))} />
       </div>
       <CustomFields fields={basics.customFields} edit={edit} />
-    </Fold>
+    </>
   )
 }
 
-function CustomFields({ fields, edit }: { fields: CustomField[]; edit: (mutate: (b: Basics) => void) => void }) {
+function CustomFields({ fields, edit }: { fields: CustomField[]; edit: EditBasics }) {
   const setField = (id: string, patch: Partial<CustomField>) =>
     edit((b) => {
       const field = b.customFields.find((f) => f.id === id)

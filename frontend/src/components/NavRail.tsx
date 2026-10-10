@@ -1,19 +1,21 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { NavLink } from 'react-router'
+import { NavLink, useLocation } from 'react-router'
 import { BadgeDollarSign, FileText, Mic, Search, Settings, SquareKanban } from 'lucide-react'
 
+// `also`: other paths that belong to the item, e.g. letters live under Resumes.
 const ITEMS = [
-  { to: '/', label: 'Pipeline', icon: SquareKanban, end: true },
-  { to: '/discover', label: 'Discover', icon: Search, end: false },
-  { to: '/resumes', label: 'Resumes', icon: FileText, end: false },
-  { to: '/offers', label: 'Offers', icon: BadgeDollarSign, end: false },
-  { to: '/interviews', label: 'Interviews', icon: Mic, end: false },
-  { to: '/settings', label: 'Settings', icon: Settings, end: false },
+  { to: '/', label: 'Pipeline', icon: SquareKanban, end: true, also: [] },
+  { to: '/discover', label: 'Discover', icon: Search, end: false, also: [] },
+  { to: '/resumes', label: 'Resumes', icon: FileText, end: false, also: ['/letters'] },
+  { to: '/offers', label: 'Offers', icon: BadgeDollarSign, end: false, also: [] },
+  { to: '/interviews', label: 'Interviews', icon: Mic, end: false, also: [] },
+  { to: '/settings', label: 'Settings', icon: Settings, end: false, also: [] },
 ]
 
 export function NavRail() {
+  const { pathname } = useLocation()
   return (
     <nav className="flex w-16 shrink-0 flex-col border-r border-line bg-base/60 py-4 min-[1100px]:w-56">
       <div className="mb-6 flex items-center gap-2.5 px-4">
@@ -22,7 +24,7 @@ export function NavRail() {
         </div>
         <span className="hidden text-lg font-bold tracking-tight min-[1100px]:inline">Job Track</span>
       </div>
-      {ITEMS.map(({ to, label, icon: Icon, end }) => (
+      {ITEMS.map(({ to, label, icon: Icon, end, also }) => (
         <NavLink
           key={to}
           to={to}
@@ -30,7 +32,7 @@ export function NavRail() {
           title={label}
           className={({ isActive }) =>
             `mx-2 mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-              isActive ? 'bg-accent/20 text-ink shadow-[inset_2px_0_0_var(--color-accent)]' : 'text-ink-2 hover:bg-white/5 hover:text-ink'
+              isActive || also.some((path) => pathname.startsWith(path)) ? 'bg-accent/20 text-ink shadow-[inset_2px_0_0_var(--color-accent)]' : 'text-ink-2 hover:bg-white/5 hover:text-ink'
             }`
           }
         >

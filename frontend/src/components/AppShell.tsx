@@ -7,7 +7,7 @@ import { NavRail } from './NavRail'
 import { TopBar } from './TopBar'
 
 /** Workspaces that fill the window edge to edge and scroll their own panes. */
-const FULL_BLEED = /^\/resumes\/[^/]+$/
+const FULL_BLEED = /^\/(resumes|letters)\/[^/]+$/
 
 export function AppShell() {
   const location = useLocation()
