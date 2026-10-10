@@ -3,7 +3,7 @@
 
 import { useState, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from 'react'
 import { ExternalLink, LoaderCircle } from 'lucide-react'
-import { Field } from '../../components/JobForm'
+import { Field } from '../../components/Field'
 import { ANSWER_MODES, ANTHROPIC_EFFORTS } from '../../generated/choices'
 import { api } from '../../lib/api'
 import { BrowserOpenURL, ListAIProviders, TestClaudeCode, type ai, type settings } from '../../lib/backend'

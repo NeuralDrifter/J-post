@@ -11,7 +11,7 @@ import { EQUITY_LABEL, formatMoneyFull, KIND_LABEL, percentileLabel, STATES, VES
 import { notifyDataChanged } from '../../lib/events'
 import { colDetail, marketDetail, taxDetail, useSources } from '../../lib/sources'
 import { toast } from '../../lib/toast'
-import { Field } from '../JobForm'
+import { Field } from '../Field'
 import { LabelSelect } from '../LabelSelect'
 import { Modal } from '../Modal'
 import { SourceMark } from '../SourceMark'

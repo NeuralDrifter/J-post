@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CodePicker } from '../../components/comp/CodePicker'
-import { Field } from '../../components/JobForm'
+import { Field } from '../../components/Field'
 import { LabelSelect } from '../../components/LabelSelect'
 import { NATIONAL_AREA } from '../../generated/choices'
 import { DescribeArea, DescribeOccupation, SearchAreas, SearchOccupations, type comp, type settings } from '../../lib/backend'

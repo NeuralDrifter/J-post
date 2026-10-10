@@ -3,14 +3,15 @@
 
 import type { ReactNode } from 'react'
 
-export function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+export function IconButton({ label, onClick, disabled = false, children }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="grid h-7 w-7 place-items-center rounded-md text-ink-2 transition hover:bg-white/10 hover:text-ink"
+      disabled={disabled}
+      className="grid h-7 w-7 place-items-center rounded-md text-ink-2 transition hover:bg-white/10 hover:text-ink disabled:pointer-events-none disabled:opacity-35"
     >
       {children}
     </button>

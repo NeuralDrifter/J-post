@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Link } from 'react-router'
-import { Field } from '../../components/JobForm'
+import { Field } from '../../components/Field'
 import { api } from '../../lib/api'
 import { ListAIProviders, type settings } from '../../lib/backend'
 import { MATCH_SENIORITY } from '../../generated/choices'

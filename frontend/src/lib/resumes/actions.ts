@@ -50,6 +50,11 @@ export async function exportStoredResume(doc: app.Document, format: 'pdf' | 'jso
   return format === 'pdf' ? exportResumePdf(doc.name, parsed.data) : exportResumeJson(doc.name, parsed.data)
 }
 
+/** Saves a stored document's data exactly as stored, e.g. one that no longer opens. */
+export function exportRawDocument(doc: app.Document): Promise<boolean> {
+  return saveFile(exportFileName(doc.name, 'json'), new Blob([doc.data], { type: 'application/json' }))
+}
+
 async function saveFile(fileName: string, content: Blob): Promise<boolean> {
   const path = await api(SaveExportedFile(fileName, await blobToBase64(content)))
   if (path) toast.success(`Saved ${path}`)

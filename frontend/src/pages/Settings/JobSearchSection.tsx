@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { ExternalLink, LoaderCircle } from 'lucide-react'
-import { Field } from '../../components/JobForm'
+import { Field } from '../../components/Field'
 import { api } from '../../lib/api'
 import { BrowserOpenURL, TestPython, type settings } from '../../lib/backend'
 import { toast } from '../../lib/toast'

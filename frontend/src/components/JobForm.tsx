@@ -1,19 +1,11 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ChangeEvent } from 'react'
 import { STATUSES, STATUS_LABEL, WORK_MODE_LABEL } from '../lib/format'
 import type { JobDraft } from '../lib/jobDraft'
+import { Field } from './Field'
 import { LabelSelect } from './LabelSelect'
-
-export function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
-  return (
-    <label className={`block space-y-1.5 ${wide ? 'col-span-2' : ''}`}>
-      <span className="label-mono">{label}</span>
-      {children}
-    </label>
-  )
-}
 
 /** Shared create/edit fields. Status is only chosen on create; edits use ChangeStatus. */
 export function JobForm({ draft, onChange, mode }: { draft: JobDraft; onChange: (d: JobDraft) => void; mode: 'create' | 'edit' }) {

@@ -24,6 +24,7 @@ import SettingsPage from './pages/Settings/SettingsPage'
 const LicensesPage = lazy(() => import('./pages/Licenses/LicensesPage'))
 // Loaded on demand: they carry the PDF engine, templates and editors.
 const ResumesPage = lazy(() => import('./pages/Resumes/ResumesPage'))
+const ResumeBuilderPage = lazy(() => import('./pages/ResumeBuilder/ResumeBuilderPage'))
 
 // Remount the detail page per job so no state leaks between jobs.
 function JobDetailRoute() {
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="interviews/:id/live" element={<LiveInterviewPage />} />
           <Route path="interviews/:id" element={<InterviewReviewRoute />} />
           <Route path="resumes" element={<Lazy page={<ResumesPage />} />} />
+          <Route path="resumes/:id" element={<Lazy page={<ResumeBuilderPage />} />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="licenses" element={<Lazy page={<LicensesPage />} />} />
         </Route>
