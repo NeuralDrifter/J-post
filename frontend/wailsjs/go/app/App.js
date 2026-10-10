@@ -130,6 +130,10 @@ export function InboxCounts() {
   return window['go']['app']['App']['InboxCounts']();
 }
 
+export function LinkJobDocuments(arg1, arg2, arg3) {
+  return window['go']['app']['App']['LinkJobDocuments'](arg1, arg2, arg3);
+}
+
 export function ListAIModels(arg1, arg2) {
   return window['go']['app']['App']['ListAIModels'](arg1, arg2);
 }
@@ -318,6 +322,10 @@ export function ScorePosting(arg1) {
   return window['go']['app']['App']['ScorePosting'](arg1);
 }
 
+export function ScorePostingWith(arg1, arg2) {
+  return window['go']['app']['App']['ScorePostingWith'](arg1, arg2);
+}
+
 export function SearchAreas(arg1) {
   return window['go']['app']['App']['SearchAreas'](arg1);
 }
@@ -332,6 +340,10 @@ export function SetDefaultResume(arg1) {
 
 export function ShowAttachmentInFolder(arg1) {
   return window['go']['app']['App']['ShowAttachmentInFolder'](arg1);
+}
+
+export function TailorResumeForJob(arg1, arg2) {
+  return window['go']['app']['App']['TailorResumeForJob'](arg1, arg2);
 }
 
 export function TestAIProvider(arg1, arg2) {

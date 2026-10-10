@@ -4,6 +4,7 @@
 package app
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -36,4 +37,17 @@ func fakeServer(t *testing.T, handler http.HandlerFunc) string {
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 	return srv.URL
+}
+
+// insertV1Job adds a job with plain SQL, using only the columns of the first
+// schema, for tests that build data at an older schema version.
+func insertV1Job(t *testing.T, db *sql.DB) Job {
+	t.Helper()
+	job := Job{ID: newID(), Company: "Acme", Position: "Dev", Status: StatusInterested}
+	_, err := db.Exec(`INSERT INTO jobs (id, company, position, status, created_at, updated_at) VALUES (?, ?, ?, ?, '2026-10-01T12:00:00.000Z', '2026-10-01T12:00:00.000Z')`,
+		job.ID, job.Company, job.Position, job.Status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return job
 }

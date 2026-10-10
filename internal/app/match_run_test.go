@@ -78,7 +78,7 @@ func TestRunMatchScoresInGroups(t *testing.T) {
 	})
 	var log progressLog
 	s := matchSettings(2)
-	run, err := runMatch(context.Background(), r, s, "Jane Doe, Go", ps, log.report)
+	run, err := runMatch(context.Background(), r, s, matchResume{ID: "r1", Text: "Jane Doe, Go"}, ps, log.report)
 	if err != nil || run.Scored != 5 || run.Failed != 0 || run.Total != 5 || run.Error != "" {
 		t.Fatalf("run = %+v, %v", run, err)
 	}
@@ -87,7 +87,7 @@ func TestRunMatchScoresInGroups(t *testing.T) {
 	}
 	got, _ := r.GetPosting(ps[4].ID)
 	if got.Match == nil || got.Match.Overall != 80 || got.Match.Provider != settings.ProviderAnthropic || got.Match.Model != "claude-opus-5-5" ||
-		got.Match.fingerprint != matchFingerprint("Jane Doe, Go", s) {
+		got.Match.fingerprint != matchFingerprint("Jane Doe, Go", s) || got.Match.ResumeID != "r1" {
 		t.Fatalf("match = %+v", got.Match)
 	}
 }
@@ -106,7 +106,7 @@ func TestRunMatchStopsAtFailedRequest(t *testing.T) {
 		}
 		w.Write(matchReply(requestedIDs(t, body)))
 	})
-	run, err := runMatch(context.Background(), r, matchSettings(2), "Jane Doe", ps, func(int, int) {})
+	run, err := runMatch(context.Background(), r, matchSettings(2), matchResume{Text: "Jane Doe"}, ps, func(int, int) {})
 	if err != nil || run.Scored != 2 || run.Failed != 2 || run.Total != 5 || !strings.HasPrefix(run.Error, "Scoring stopped: ") || !strings.Contains(run.Error, "API key") {
 		t.Fatalf("run = %+v, %v", run, err)
 	}
@@ -123,7 +123,7 @@ func TestRunMatchPartialAnswer(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(matchReply(requestedIDs(t, body)[:1]))
 	})
-	run, err := runMatch(context.Background(), r, matchSettings(5), "Jane Doe", ps, func(int, int) {})
+	run, err := runMatch(context.Background(), r, matchSettings(5), matchResume{Text: "Jane Doe"}, ps, func(int, int) {})
 	if err != nil || run.Scored != 1 || run.Failed != 1 || run.Error != "" {
 		t.Fatalf("run = %+v, %v", run, err)
 	}
@@ -138,7 +138,7 @@ func TestRunMatchSkipsPostingDeletedMidRun(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(matchReply(requestedIDs(t, body)))
 	})
-	run, err := runMatch(context.Background(), r, matchSettings(5), "Jane Doe", ps, func(int, int) {})
+	run, err := runMatch(context.Background(), r, matchSettings(5), matchResume{Text: "Jane Doe"}, ps, func(int, int) {})
 	if err != nil || run.Error != "" {
 		t.Fatalf("run = %+v, %v", run, err)
 	}
@@ -153,17 +153,17 @@ func TestRunMatchSafeguards(t *testing.T) {
 	var requests atomic.Int32
 	aitest.FakeAnthropic(t, func(w http.ResponseWriter, req *http.Request) { requests.Add(1) })
 
-	run, _ := runMatch(context.Background(), r, matchSettings(5), "Jane", nil, func(int, int) {})
+	run, _ := runMatch(context.Background(), r, matchSettings(5), matchResume{Text: "Jane"}, nil, func(int, int) {})
 	if run.Total != 0 || run.Error != "" {
 		t.Fatalf("nothing to score: %+v", run)
 	}
-	run, _ = runMatch(context.Background(), r, matchSettings(5), "  \n\t ", ps, func(int, int) {})
+	run, _ = runMatch(context.Background(), r, matchSettings(5), matchResume{Text: "  \n\t "}, ps, func(int, int) {})
 	if run.Error != "Add your resume on the Profile page to get match scores" {
 		t.Fatalf("blank resume: %+v", run)
 	}
 	noKey := matchSettings(5)
 	noKey.AnthropicKey = ""
-	run, _ = runMatch(context.Background(), r, noKey, "Jane", ps, func(int, int) {})
+	run, _ = runMatch(context.Background(), r, noKey, matchResume{Text: "Jane"}, ps, func(int, int) {})
 	if !strings.HasPrefix(run.Error, "Job matching: ") || !strings.Contains(run.Error, "Anthropic") {
 		t.Fatalf("provider not set up: %+v", run)
 	}

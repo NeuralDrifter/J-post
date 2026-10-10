@@ -52,6 +52,8 @@ type Job struct {
 	DateApplied string `json:"dateApplied"`
 	FollowUpOn  string `json:"followUpOn"`
 	Notes       string `json:"notes"`
+	ResumeID    string `json:"resumeId"` // the resume sent for this job (a documents row id), "" = none chosen
+	LetterID    string `json:"letterId"` // the cover letter sent, "" = none
 	CreatedAt   string `json:"createdAt"`
 	UpdatedAt   string `json:"updatedAt"`
 }
@@ -66,14 +68,14 @@ type StageEvent struct {
 	Note        string `json:"note"`
 }
 
-const jobColumns = `id, company, position, status, close_reason, location, work_mode, salary_min, salary_max, salary_text, url, source, description, date_posted, date_applied, follow_up_on, notes, created_at, updated_at`
+const jobColumns = `id, company, position, status, close_reason, location, work_mode, salary_min, salary_max, salary_text, url, source, description, date_posted, date_applied, follow_up_on, notes, resume_id, letter_id, created_at, updated_at`
 
 func scanJob(s rowScanner) (Job, error) {
 	var j Job
 	var lo, hi sql.NullInt64
 	err := s.Scan(&j.ID, &j.Company, &j.Position, &j.Status, &j.CloseReason, &j.Location, &j.WorkMode,
 		&lo, &hi, &j.SalaryText, &j.URL, &j.Source, &j.Description, &j.DatePosted, &j.DateApplied,
-		&j.FollowUpOn, &j.Notes, &j.CreatedAt, &j.UpdatedAt)
+		&j.FollowUpOn, &j.Notes, &j.ResumeID, &j.LetterID, &j.CreatedAt, &j.UpdatedAt)
 	if err != nil {
 		return j, err
 	}
@@ -176,10 +178,10 @@ func (r *Repo) insertJob(tx *sql.Tx, j Job) (Job, error) {
 	}
 	now := ts(r.now())
 	j.ID, j.CreatedAt, j.UpdatedAt = newID(), now, now
-	_, err := tx.Exec(`INSERT INTO jobs (`+jobColumns+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := tx.Exec(`INSERT INTO jobs (`+jobColumns+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		j.ID, j.Company, j.Position, j.Status, j.CloseReason, j.Location, j.WorkMode,
 		nullInt(j.SalaryMin), nullInt(j.SalaryMax), j.SalaryText, j.URL, j.Source, j.Description,
-		j.DatePosted, j.DateApplied, j.FollowUpOn, j.Notes, j.CreatedAt, j.UpdatedAt)
+		j.DatePosted, j.DateApplied, j.FollowUpOn, j.Notes, j.ResumeID, j.LetterID, j.CreatedAt, j.UpdatedAt)
 	if err != nil {
 		return Job{}, err
 	}

@@ -47,11 +47,9 @@ func TestMigration9KeepsV8Data(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	job, err := NewRepo(db, t.TempDir()).CreateJob(Job{Company: "Acme", Position: "Dev"})
-	if err == nil {
-		_, err = db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, status, started_at)
-			VALUES ('mock1', ?, 'behavioral', 25, 'neutral', 'done', '2026-10-01T12:00:00.000Z')`, job.ID)
-	}
+	job := insertV1Job(t, db)
+	_, err = db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, status, started_at)
+		VALUES ('mock1', ?, 'behavioral', 25, 'neutral', 'done', '2026-10-01T12:00:00.000Z')`, job.ID)
 	if err == nil {
 		_, err = db.Exec(`INSERT INTO scorecards (id, mock_interview_id, provider, model, scorecard, created_at)
 			VALUES ('c1', 'mock1', 'gemini-live', '', ?, '2026-10-01T12:30:00.000Z')`, scorecardJSON())

@@ -60,6 +60,7 @@ type MatchScore struct {
 	Model       string       `json:"model"`
 	ScoredAt    string       `json:"scoredAt"`
 	Outdated    bool         `json:"outdated"`
+	ResumeID    string       `json:"resumeId"` // the resume it was graded against; "" = the default at the time
 	fingerprint string       // matchFingerprint at scoring time
 }
 

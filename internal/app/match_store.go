@@ -15,23 +15,23 @@ func (r *Repo) saveMatchScore(postingID string, m MatchScore, fingerprint string
 	factors, _ := json.Marshal(m.Factors)
 	strengths, _ := json.Marshal(m.Strengths)
 	gaps, _ := json.Marshal(m.Gaps)
-	_, err := r.db.Exec(`INSERT OR REPLACE INTO posting_scores (posting_id, overall, factors, strengths, gaps, fingerprint, provider, model, scored_at)
-		SELECT id, ?, ?, ?, ?, ?, ?, ?, ? FROM postings WHERE id = ?`,
-		m.Overall, string(factors), string(strengths), string(gaps), fingerprint, m.Provider, m.Model, ts(r.now()), postingID)
+	_, err := r.db.Exec(`INSERT OR REPLACE INTO posting_scores (posting_id, overall, factors, strengths, gaps, fingerprint, provider, model, scored_at, resume_id)
+		SELECT id, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM postings WHERE id = ?`,
+		m.Overall, string(factors), string(strengths), string(gaps), fingerprint, m.Provider, m.Model, ts(r.now()), m.ResumeID, postingID)
 	return err
 }
 
 // matchColumns are appended to postingColumns; scanMatch reads them back.
-const matchColumns = `, ms.overall, ms.factors, ms.strengths, ms.gaps, ms.fingerprint, ms.provider, ms.model, ms.scored_at`
+const matchColumns = `, ms.overall, ms.factors, ms.strengths, ms.gaps, ms.fingerprint, ms.provider, ms.model, ms.scored_at, ms.resume_id`
 
 // matchCells receives matchColumns from a row.
 type matchCells struct {
-	overall                                                        sql.NullInt64
-	factors, strengths, gaps, fingerprint, provider, model, scored sql.NullString
+	overall                                                                  sql.NullInt64
+	factors, strengths, gaps, fingerprint, provider, model, scored, resumeID sql.NullString
 }
 
 func (c *matchCells) dests() []any {
-	return []any{&c.overall, &c.factors, &c.strengths, &c.gaps, &c.fingerprint, &c.provider, &c.model, &c.scored}
+	return []any{&c.overall, &c.factors, &c.strengths, &c.gaps, &c.fingerprint, &c.provider, &c.model, &c.scored, &c.resumeID}
 }
 
 // score is nil for an unscored posting. A stored score that can't be read also
@@ -41,7 +41,7 @@ func (c *matchCells) score() *MatchScore {
 	if !c.overall.Valid {
 		return nil
 	}
-	m := &MatchScore{Overall: int(c.overall.Int64), Provider: c.provider.String, Model: c.model.String, ScoredAt: c.scored.String, fingerprint: c.fingerprint.String}
+	m := &MatchScore{Overall: int(c.overall.Int64), Provider: c.provider.String, Model: c.model.String, ScoredAt: c.scored.String, ResumeID: c.resumeID.String, fingerprint: c.fingerprint.String}
 	for _, part := range []struct {
 		raw  string
 		dest any
@@ -53,11 +53,25 @@ func (c *matchCells) score() *MatchScore {
 	return m
 }
 
-// markOutdated flags scores graded against another resume or preferences.
-func markOutdated(postings []Posting, fingerprint string) {
+// markOutdated flags scores whose resume or preferences changed since grading;
+// fingerprintFor gives the fingerprint a score's resume (by ID) has now.
+func markOutdated(postings []Posting, fingerprintFor func(resumeID string) string) {
 	for i := range postings {
 		if m := postings[i].Match; m != nil {
-			m.Outdated = m.fingerprint != fingerprint
+			m.Outdated = m.fingerprint != fingerprintFor(m.ResumeID)
 		}
 	}
+}
+
+// scoredResumeIDs lists the resumes the postings' scores were graded against, once each.
+func scoredResumeIDs(postings []Posting) []string {
+	seen := map[string]bool{}
+	var ids []string
+	for _, p := range postings {
+		if p.Match != nil && !seen[p.Match.ResumeID] {
+			seen[p.Match.ResumeID] = true
+			ids = append(ids, p.Match.ResumeID)
+		}
+	}
+	return ids
 }

@@ -228,3 +228,80 @@ func names(docs []Document) []string {
 	}
 	return out
 }
+
+func mustCreateJob(t *testing.T, r *Repo) Job {
+	t.Helper()
+	job, err := r.CreateJob(Job{Company: "Acme", Position: "Staff Engineer", Status: StatusApplied})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return job
+}
+
+func TestLinkJobDocuments(t *testing.T) {
+	r := newTestRepo(t)
+	job := mustCreateJob(t, r)
+	resume := mustCreateDocument(t, r, DocumentResume, "Backend")
+	letter := mustCreateDocument(t, r, DocumentLetter, "To Acme")
+	if err := r.LinkJobDocuments(job.ID, resume.ID, letter.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := r.GetJob(job.ID)
+	if got.ResumeID != resume.ID || got.LetterID != letter.ID {
+		t.Fatalf("job = %+v", got)
+	}
+	if err := r.LinkJobDocuments(job.ID, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ = r.GetJob(job.ID); got.ResumeID != "" || got.LetterID != "" {
+		t.Fatalf("links not cleared: %+v", got)
+	}
+}
+
+func TestLinkJobDocumentsChecksKinds(t *testing.T) {
+	r := newTestRepo(t)
+	job := mustCreateJob(t, r)
+	resume := mustCreateDocument(t, r, DocumentResume, "Backend")
+	letter := mustCreateDocument(t, r, DocumentLetter, "To Acme")
+	if err := r.LinkJobDocuments(job.ID, letter.ID, ""); err == nil {
+		t.Error("a letter was linked as the resume")
+	}
+	if err := r.LinkJobDocuments(job.ID, "", resume.ID); err == nil {
+		t.Error("a resume was linked as the letter")
+	}
+	if err := r.LinkJobDocuments(job.ID, "missing", ""); err == nil {
+		t.Error("a missing document was linked")
+	}
+}
+
+func TestTailorResumeForJob(t *testing.T) {
+	r := newTestRepo(t)
+	job := mustCreateJob(t, r)
+	resume := mustCreateDocument(t, r, DocumentResume, "Backend")
+	copy, err := r.TailorResumeForJob(job.ID, resume.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if copy.ID == resume.ID || copy.Name != "Backend · Acme" || copy.SourceID != resume.ID || copy.JobID != job.ID || copy.Data != resume.Data {
+		t.Fatalf("copy = %+v", copy)
+	}
+	if got, _ := r.GetJob(job.ID); got.ResumeID != copy.ID {
+		t.Fatalf("job links %q, want the tailored copy", got.ResumeID)
+	}
+}
+
+func TestInterviewsReadTheJobsLinkedResume(t *testing.T) {
+	r := newTestRepo(t)
+	if err := r.SaveResume("cv.pdf", "", "Uploaded text"); err != nil {
+		t.Fatal(err)
+	}
+	job := mustCreateJob(t, r)
+	resume, _ := r.CreateDocument(DocumentResume, "Tailored", sampleData, "Tailored text")
+	if err := r.LinkJobDocuments(job.ID, resume.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	ic, err := r.loadInterviewContext(settings.Settings{}, job.ID)
+	if err != nil || ic.resume != "Tailored text" {
+		t.Fatalf("interview resume = %q, %v", ic.resume, err)
+	}
+}

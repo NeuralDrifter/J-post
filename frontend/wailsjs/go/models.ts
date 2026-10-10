@@ -532,6 +532,8 @@ export namespace app {
 	    dateApplied: string;
 	    followUpOn: string;
 	    notes: string;
+	    resumeId: string;
+	    letterId: string;
 	    createdAt: string;
 	    updatedAt: string;
 	
@@ -558,6 +560,8 @@ export namespace app {
 	        this.dateApplied = source["dateApplied"];
 	        this.followUpOn = source["followUpOn"];
 	        this.notes = source["notes"];
+	        this.resumeId = source["resumeId"];
+	        this.letterId = source["letterId"];
 	        this.createdAt = source["createdAt"];
 	        this.updatedAt = source["updatedAt"];
 	    }
@@ -779,6 +783,7 @@ export namespace app {
 	    model: string;
 	    scoredAt: string;
 	    outdated: boolean;
+	    resumeId: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new MatchScore(source);
@@ -794,6 +799,7 @@ export namespace app {
 	        this.model = source["model"];
 	        this.scoredAt = source["scoredAt"];
 	        this.outdated = source["outdated"];
+	        this.resumeId = source["resumeId"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

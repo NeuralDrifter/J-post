@@ -22,6 +22,16 @@ type MatchRun struct {
 	Error  string `json:"error"`
 }
 
+// add counts another run into r; its error, if any, becomes r's.
+func (r *MatchRun) add(other MatchRun) {
+	r.Scored += other.Scored
+	r.Failed += other.Failed
+	r.Total += other.Total
+	if other.Error != "" {
+		r.Error = other.Error
+	}
+}
+
 // matchCandidates returns the inbox and Interested postings that want picks, newest first.
 func (r *Repo) matchCandidates(want func(Posting) bool) ([]Posting, error) {
 	var out []Posting
@@ -45,13 +55,20 @@ func (r *Repo) matchCandidates(want func(Posting) bool) ([]Posting, error) {
 // failed request: a bad key or a rate limit then costs one request, not one per
 // group. Problems the user can fix go in MatchRun.Error; the returned error is
 // for database failures.
-func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume string, postings []Posting, progress func(done, total int)) (MatchRun, error) {
+// matchResume is the resume postings are graded against: its documents row id
+// ("" = the default, as resolved at the time) and its text.
+type matchResume struct {
+	ID   string
+	Text string
+}
+
+func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume matchResume, postings []Posting, progress func(done, total int)) (MatchRun, error) {
 	settings.ApplyDefaults(&s)
 	run := MatchRun{Total: len(postings)}
 	if len(postings) == 0 {
 		return run, nil
 	}
-	if strings.TrimSpace(resume) == "" {
+	if strings.TrimSpace(resume.Text) == "" {
 		run.Error = "Add your resume on the Profile page to get match scores"
 		return run, nil
 	}
@@ -59,11 +76,11 @@ func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume string, 
 		run.Error = "Job matching: " + reason
 		return run, nil
 	}
-	fingerprint := matchFingerprint(resume, s)
+	fingerprint := matchFingerprint(resume.Text, s)
 	done := 0
 	for group := range slices.Chunk(postings, s.MatchPerRequest) {
 		var ans matchAnswer
-		model, err := ai.RunTask(ctx, s, s.MatchProvider, matchTask(resume, s, group), &ans)
+		model, err := ai.RunTask(ctx, s, s.MatchProvider, matchTask(resume.Text, s, group), &ans)
 		if err != nil {
 			run.Failed += len(group)
 			run.Error = "Scoring stopped: " + err.Error()
@@ -76,7 +93,7 @@ func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume string, 
 				run.Failed++
 				continue
 			}
-			m.Provider, m.Model = s.MatchProvider, model
+			m.Provider, m.Model, m.ResumeID = s.MatchProvider, model, resume.ID
 			if err := r.saveMatchScore(p.ID, m, fingerprint); err != nil {
 				return run, err
 			}

@@ -70,6 +70,8 @@ export function GetStartupError():Promise<string>;
 
 export function InboxCounts():Promise<app.InboxCounts>;
 
+export function LinkJobDocuments(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function ListAIModels(arg1:string,arg2:settings.Settings):Promise<Array<string>>;
 
 export function ListAIProviders():Promise<Array<ai.AIProvider>>;
@@ -164,6 +166,8 @@ export function ScoreInterview(arg1:string):Promise<app.MockInterview>;
 
 export function ScorePosting(arg1:string):Promise<app.MatchRun>;
 
+export function ScorePostingWith(arg1:string,arg2:string):Promise<app.MatchRun>;
+
 export function SearchAreas(arg1:string):Promise<Array<marketdata.Option>>;
 
 export function SearchOccupations(arg1:string):Promise<Array<marketdata.Option>>;
@@ -171,6 +175,8 @@ export function SearchOccupations(arg1:string):Promise<Array<marketdata.Option>>
 export function SetDefaultResume(arg1:string):Promise<void>;
 
 export function ShowAttachmentInFolder(arg1:string):Promise<void>;
+
+export function TailorResumeForJob(arg1:string,arg2:string):Promise<app.Document>;
 
 export function TestAIProvider(arg1:string,arg2:settings.Settings):Promise<ai.AIProviderTest>;
 

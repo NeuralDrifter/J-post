@@ -68,6 +68,8 @@ export function jobFromDraft(d: JobDraft, base?: app.Job): app.Job {
     dateApplied: d.dateApplied,
     followUpOn: d.followUpOn,
     notes: base?.notes ?? '',
+    resumeId: base?.resumeId ?? '',
+    letterId: base?.letterId ?? '',
     createdAt: base?.createdAt ?? '',
     updatedAt: base?.updatedAt ?? '',
   }

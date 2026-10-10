@@ -121,7 +121,7 @@ func TestDeletingPostingDeletesScore(t *testing.T) {
 
 func TestMarkOutdated(t *testing.T) {
 	ps := []Posting{{ID: "a", Match: &MatchScore{fingerprint: "old"}}, {ID: "b", Match: &MatchScore{fingerprint: "now"}}, {ID: "c"}}
-	markOutdated(ps, "now")
+	markOutdated(ps, func(string) string { return "now" })
 	if !ps[0].Match.Outdated || ps[1].Match.Outdated || ps[2].Match != nil {
 		t.Fatalf("ps = %+v %+v %+v", ps[0].Match, ps[1].Match, ps[2].Match)
 	}
@@ -131,11 +131,11 @@ func TestAppListPostingsFlagsOutdatedScores(t *testing.T) {
 	a := newTestApp(t)
 	a.repo.UpdateResumeText("Jane Doe, Go")
 	ps := addPostings(t, a.repo, "Go Dev")
-	fp, err := a.currentMatchFingerprint()
+	s, err := a.settings.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.repo.saveMatchScore(ps[0].ID, sampleScore(80), fp)
+	a.repo.saveMatchScore(ps[0].ID, sampleScore(80), matchFingerprint("Jane Doe, Go", s))
 	list, _ := a.ListPostings(PostingFilter{Tab: "inbox"})
 	if list[0].Match == nil || list[0].Match.Outdated {
 		t.Fatalf("fresh score shown as outdated: %+v", list[0].Match)
@@ -144,5 +144,53 @@ func TestAppListPostingsFlagsOutdatedScores(t *testing.T) {
 	list, _ = a.ListPostings(PostingFilter{Tab: "inbox"})
 	if !list[0].Match.Outdated {
 		t.Fatal("a resume change must mark the score outdated")
+	}
+}
+
+func TestAppScoresKeepTheResumeTheyWereGradedAgainst(t *testing.T) {
+	a := newTestApp(t)
+	a.repo.UpdateResumeText("Jane Doe, Go")
+	chosen, err := a.repo.CreateDocument(DocumentResume, "Rust resume", `{}`, "Jane Doe, Rust")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps := addPostings(t, a.repo, "Rust Dev")
+	s, _ := a.settings.Load()
+	score := sampleScore(77)
+	score.ResumeID = chosen.ID
+	a.repo.saveMatchScore(ps[0].ID, score, matchFingerprint("Jane Doe, Rust", s))
+
+	list, _ := a.ListPostings(PostingFilter{Tab: "inbox"})
+	if m := list[0].Match; m == nil || m.ResumeID != chosen.ID || m.Outdated {
+		t.Fatalf("score graded against a chosen resume = %+v", m)
+	}
+	a.repo.UpdateResumeText("Jane Doe, Go and Python")
+	if list, _ = a.ListPostings(PostingFilter{Tab: "inbox"}); list[0].Match.Outdated {
+		t.Fatal("changing the default resume outdated a score graded against another resume")
+	}
+	a.repo.SaveDocument(chosen.ID, `{}`, "Jane Doe, Rust and C")
+	if list, _ = a.ListPostings(PostingFilter{Tab: "inbox"}); !list[0].Match.Outdated {
+		t.Fatal("changing the chosen resume must outdate its scores")
+	}
+}
+
+func TestOutdatedByResumeGroupsChangedScoresByTheirResume(t *testing.T) {
+	ps := []Posting{
+		{ID: "a", Match: &MatchScore{ResumeID: "", fingerprint: "old"}},
+		{ID: "b", Match: &MatchScore{ResumeID: "r1", fingerprint: "r1-old"}},
+		{ID: "c", Match: &MatchScore{ResumeID: "r1", fingerprint: "r1-now"}},
+		{ID: "d", Match: &MatchScore{ResumeID: "", fingerprint: "now"}},
+	}
+	groups := outdatedByResume(ps, map[string]string{"": "now", "r1": "r1-now"})
+	if len(groups) != 2 || len(groups[""]) != 1 || groups[""][0].ID != "a" || len(groups["r1"]) != 1 || groups["r1"][0].ID != "b" {
+		t.Fatalf("groups = %+v", groups)
+	}
+}
+
+func TestMatchRunAddKeepsTheLastError(t *testing.T) {
+	total := MatchRun{Scored: 2, Total: 2}
+	total.add(MatchRun{Scored: 1, Failed: 1, Total: 2, Error: "boom"})
+	if total != (MatchRun{Scored: 3, Failed: 1, Total: 4, Error: "boom"}) {
+		t.Fatalf("total = %+v", total)
 	}
 }

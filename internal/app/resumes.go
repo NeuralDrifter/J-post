@@ -162,6 +162,69 @@ func unlinkDocuments(tx *sql.Tx, where string, args ...any) error {
 	return err
 }
 
+// LinkJobDocuments records the resume and cover letter sent for a job; "" clears one.
+func (r *Repo) LinkJobDocuments(jobID, resumeID, letterID string) error {
+	for _, link := range []struct{ id, kind string }{{resumeID, DocumentResume}, {letterID, DocumentLetter}} {
+		if err := r.requireDocumentKind(link.id, link.kind); err != nil {
+			return err
+		}
+	}
+	res, err := r.db.Exec(`UPDATE jobs SET resume_id = ?, letter_id = ?, updated_at = ? WHERE id = ?`, resumeID, letterID, ts(r.now()), jobID)
+	return expectOneRow(res, err, "job", jobID)
+}
+
+func (r *Repo) requireDocumentKind(id, kind string) error {
+	if id == "" {
+		return nil
+	}
+	doc, err := r.GetDocument(id)
+	if err != nil {
+		return err
+	}
+	if doc.Kind != kind {
+		return fmt.Errorf("document %s is a %s, not a %s", id, doc.Kind, kind)
+	}
+	return nil
+}
+
+// TailorResumeForJob copies a resume as "<name> · <company>", marks the copy as
+// that job's, and links it to the job, ready to adjust for this application.
+func (r *Repo) TailorResumeForJob(jobID, resumeID string) (Document, error) {
+	job, err := r.GetJob(jobID)
+	if err != nil {
+		return Document{}, err
+	}
+	original, err := r.GetDocument(resumeID)
+	if err != nil {
+		return Document{}, err
+	}
+	if original.Kind != DocumentResume {
+		return Document{}, fmt.Errorf("document %s is not a resume", resumeID)
+	}
+	tx, err := r.db.Begin()
+	if err != nil {
+		return Document{}, err
+	}
+	defer tx.Rollback()
+	copy, err := insertTailoredCopy(tx, original, job, ts(r.now()))
+	if err != nil {
+		return Document{}, err
+	}
+	if _, err := tx.Exec(`UPDATE jobs SET resume_id = ?, updated_at = ? WHERE id = ?`, copy.ID, copy.CreatedAt, jobID); err != nil {
+		return Document{}, err
+	}
+	return copy, tx.Commit()
+}
+
+func insertTailoredCopy(tx *sql.Tx, original Document, job Job, now string) (Document, error) {
+	copy := original
+	copy.ID, copy.Name, copy.SourceID, copy.JobID = newID(), original.Name+" · "+job.Company, original.ID, job.ID
+	copy.CreatedAt, copy.UpdatedAt, copy.DeletedAt = now, now, ""
+	_, err := tx.Exec(`INSERT INTO documents (id, kind, name, data, plain_text, source_id, job_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		copy.ID, copy.Kind, copy.Name, copy.Data, copy.PlainText, copy.SourceID, copy.JobID, copy.CreatedAt, copy.UpdatedAt)
+	return copy, err
+}
+
 // resumeTextFor is the resume text AI features read: the given resume, else
 // the default resume, else the uploaded resume. Trashed resumes are skipped.
 func (r *Repo) resumeTextFor(s settings.Settings, resumeID string) (string, error) {

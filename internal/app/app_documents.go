@@ -68,6 +68,16 @@ func (a *App) clearDefaultResumeIf(id string) error {
 	return a.SetDefaultResume("")
 }
 
+// LinkJobDocuments records the resume and cover letter sent for a job; "" clears one.
+func (a *App) LinkJobDocuments(jobID, resumeID, letterID string) error {
+	return a.repo.LinkJobDocuments(jobID, resumeID, letterID)
+}
+
+// TailorResumeForJob copies a resume for one job and links the copy to it.
+func (a *App) TailorResumeForJob(jobID, resumeID string) (Document, error) {
+	return a.repo.TailorResumeForJob(jobID, resumeID)
+}
+
 // FetchPicture downloads a photo an imported resume links to and returns it as
 // a data URL, so the resume keeps the image itself.
 func (a *App) FetchPicture(url string) (string, error) {

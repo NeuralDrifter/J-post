@@ -34,11 +34,7 @@ func TestMigration8MovesScorecards(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Build the version-7 data with plain SQL: today's code already expects migration 8.
-	job, err := NewRepo(db, t.TempDir()).CreateJob(Job{Company: "Acme", Position: "Dev"})
-	if err != nil {
-		db.Close()
-		t.Fatal(err)
-	}
+	job := insertV1Job(t, db)
 	const id = "mock1"
 	_, err = db.Exec(`INSERT INTO mock_interviews (id, job_id, kind, minutes, persona, status, started_at, ended_at, scorecard)
 		VALUES (?, ?, 'behavioral', 25, 'neutral', 'done', '2026-10-01T12:00:00.000Z', '2026-10-01T12:25:00.000Z', ?)`, id, job.ID,
