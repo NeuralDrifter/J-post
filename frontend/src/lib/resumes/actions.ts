@@ -1,21 +1,29 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-// Resume actions shared by the library and the builder. Each reports failures
+// Document actions shared by the library and the editors. Each reports failures
 // as toasts (through api/apiOk) and resolves to whether it succeeded.
 import { api, apiOk } from '../api'
 import { CreateDocument, SaveExportedFile, SetDefaultResume, type app } from '../backend'
 import { notifyDataChanged } from '../events'
 import { toast } from '../toast'
-import { newResumeData, parseStoredResume, resumePlainText, serializeResume, type ResumeData, type ResumeStart, type Template } from './document'
+import { newResumeData, resumePlainText, serializeResume, type ResumeData, type ResumeStart, type Template } from './document'
+import { letterPlainText, newLetterData, serializeLetter } from './letter'
 import { exportFileName } from './library'
 import { renderResumePdf } from './render'
+import { LETTER_KIND, readStoredDocument, RESUME_KIND, type Exportable, type PrintablePage } from './stored'
 
-export const RESUME_KIND = 'resume'
+export type ExportFormat = 'pdf' | 'docx' | 'json'
 
 export async function createResume(name: string, start: ResumeStart, template: Template): Promise<app.Document | undefined> {
   const data = newResumeData(start, template)
   return api(CreateDocument(RESUME_KIND, name, serializeResume(data), resumePlainText(data)))
+}
+
+/** A new letter carrying the sender details and design of `source` (or blank). */
+export async function createLetter(name: string, source: ResumeData | null): Promise<app.Document | undefined> {
+  const letter = newLetterData(source)
+  return api(CreateDocument(LETTER_KIND, name, serializeLetter(letter), letterPlainText(letter)))
 }
 
 export async function setDefaultResume(id: string): Promise<boolean> {
@@ -27,37 +35,30 @@ export async function setDefaultResume(id: string): Promise<boolean> {
   return ok
 }
 
-export async function exportResumePdf(name: string, data: ResumeData): Promise<boolean> {
+export async function exportDocument({ name, page, json }: Exportable, format: ExportFormat): Promise<boolean> {
   try {
-    return await saveFile(exportFileName(name, 'pdf'), await renderResumePdf(data))
+    return await saveFile(exportFileName(name, format), await exportContent(page, json, format))
   } catch (err) {
     toast.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`)
     return false
   }
 }
 
-export async function exportResumeDocx(name: string, data: ResumeData): Promise<boolean> {
-  try {
-    const { buildDocx } = await import('@reactive-resume/docx')
-    return await saveFile(exportFileName(name, 'docx'), await buildDocx(data))
-  } catch (err) {
-    toast.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`)
-    return false
-  }
-}
-
-export function exportResumeJson(name: string, data: ResumeData): Promise<boolean> {
-  return saveFile(exportFileName(name, 'json'), new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+async function exportContent(page: PrintablePage, json: unknown, format: ExportFormat): Promise<Blob> {
+  if (format === 'pdf') return renderResumePdf(page.data, page.renderOptions)
+  if (format === 'json') return new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' })
+  const { buildDocx } = await import('@reactive-resume/docx')
+  return buildDocx(page.data)
 }
 
 /** Exports a stored document straight from the library, without opening it. */
-export async function exportStoredResume(doc: app.Document, format: 'pdf' | 'json'): Promise<boolean> {
-  const parsed = parseStoredResume(doc.data)
-  if (!parsed.ok) {
-    toast.error(parsed.error)
+export async function exportStoredDocument(doc: app.Document, format: ExportFormat): Promise<boolean> {
+  const exportable = readStoredDocument(doc)
+  if ('error' in exportable) {
+    toast.error(exportable.error)
     return false
   }
-  return format === 'pdf' ? exportResumePdf(doc.name, parsed.data) : exportResumeJson(doc.name, parsed.data)
+  return exportDocument(exportable, format)
 }
 
 /** Saves a stored document's data exactly as stored, e.g. one that no longer opens. */

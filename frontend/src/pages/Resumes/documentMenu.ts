@@ -1,17 +1,24 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { Copy, FileDown, FileJson, FolderOpen, Pencil, RotateCcw, Star, StarOff, Trash2 } from 'lucide-react'
+import { Copy, FileDown, FolderOpen, Pencil, RotateCcw, Star, StarOff, Trash2 } from 'lucide-react'
 import { confirmThen, promptDialog } from '../../components/ConfirmDialog'
 import { api, apiOk } from '../../lib/api'
 import { DeleteDocumentForever, DuplicateDocument, RenameDocument, RestoreDocument, TrashDocument, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import type { MenuEntry } from '../../lib/menu'
-import { exportStoredResume, setDefaultResume } from '../../lib/resumes/actions'
+import { exportStoredDocument, setDefaultResume } from '../../lib/resumes/actions'
+import { RESUME_KIND } from '../../lib/resumes/stored'
 import { toast } from '../../lib/toast'
+import { exportMenuItems } from '../ResumeBuilder/exportMenu'
+
+/** "resume" or "cover letter", for menus and messages. */
+export function kindNoun(doc: app.Document): string {
+  return doc.kind === RESUME_KIND ? 'resume' : 'cover letter'
+}
 
 async function rename(doc: app.Document) {
-  const name = await promptDialog({ title: 'Rename resume', label: 'Name', initial: doc.name, confirmLabel: 'Rename' })
+  const name = await promptDialog({ title: `Rename ${kindNoun(doc)}`, label: 'Name', initial: doc.name, confirmLabel: 'Rename' })
   if (name && (await apiOk(RenameDocument(doc.id, name)))) notifyDataChanged()
 }
 
@@ -37,29 +44,24 @@ export async function deleteForever(doc: app.Document) {
   if (deleted) notifyDataChanged()
 }
 
-/** The right-click menu of a resume in the library. */
+/** The right-click menu of a live resume or letter. Only resumes can be the default. */
 export function liveDocumentMenu(doc: app.Document, isDefault: boolean, open: () => void): MenuEntry[] {
+  const defaultEntry: MenuEntry[] =
+    doc.kind !== RESUME_KIND
+      ? []
+      : [isDefault ? { label: 'Stop using as default', icon: StarOff, onSelect: () => setDefaultResume('') } : { label: 'Set as default', icon: Star, onSelect: () => setDefaultResume(doc.id) }]
   return [
     { label: 'Open', icon: FolderOpen, onSelect: open },
     { label: 'Rename', icon: Pencil, onSelect: () => rename(doc) },
     { label: 'Duplicate', icon: Copy, onSelect: () => duplicate(doc) },
-    isDefault
-      ? { label: 'Stop using as default', icon: StarOff, onSelect: () => setDefaultResume('') }
-      : { label: 'Set as default', icon: Star, onSelect: () => setDefaultResume(doc.id) },
-    {
-      label: 'Export',
-      icon: FileDown,
-      submenu: [
-        { label: 'PDF', icon: FileDown, onSelect: () => exportStoredResume(doc, 'pdf') },
-        { label: 'JSON (Reactive Resume)', icon: FileJson, onSelect: () => exportStoredResume(doc, 'json') },
-      ],
-    },
+    ...defaultEntry,
+    { label: 'Export', icon: FileDown, submenu: exportMenuItems((format) => exportStoredDocument(doc, format)) },
     'separator',
     { label: 'Move to Trash', icon: Trash2, danger: true, onSelect: () => moveToTrash(doc) },
   ]
 }
 
-/** The right-click menu of a resume in Trash. */
+/** The right-click menu of a document in Trash. */
 export function trashedDocumentMenu(doc: app.Document): MenuEntry[] {
   return [
     { label: 'Restore', icon: RotateCcw, onSelect: () => restoreDocument(doc) },

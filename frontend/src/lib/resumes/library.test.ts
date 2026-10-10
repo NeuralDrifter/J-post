@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import { exportFileName, libraryOrder, templateLabel, templateOf, type LibraryDocument } from './library'
 
-const doc = (id: string, name: string, data = '{}'): LibraryDocument => ({ id, name, data, updatedAt: '2026-10-01T12:00:00Z' })
+const doc = (id: string, name: string, data = '{}'): LibraryDocument => ({ id, kind: 'resume', name, data, updatedAt: '2026-10-01T12:00:00Z' })
 
 describe('libraryOrder', () => {
   const docs = [doc('a', 'Backend'), doc('b', 'Frontend'), doc('c', 'Data platform')]
@@ -25,6 +25,10 @@ describe('libraryOrder', () => {
 describe('templateOf', () => {
   it("reads the template from the document's data", () => {
     expect(templateOf(doc('a', 'A', JSON.stringify({ metadata: { template: 'lapras' } })))).toBe('lapras')
+  })
+
+  it("reads a letter's template from its style", () => {
+    expect(templateOf(doc('a', 'A', JSON.stringify({ style: { metadata: { template: 'onyx' } } })))).toBe('onyx')
   })
 
   it('is unknown for data it cannot read', () => {

@@ -3,12 +3,12 @@
 
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router'
-import { FileDown, FileJson, FileType2, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 import { syncResumeDates } from '@reactive-resume/schema/resume/dates'
 import { api, apiOk } from '../../lib/api'
 import { GetDocument, GetSettings, SaveDocument, type app } from '../../lib/backend'
-import type { MenuEntry } from '../../lib/menu'
-import { exportResumeDocx, exportResumeJson, exportResumePdf, setDefaultResume } from '../../lib/resumes/actions'
+import { exportDocument, setDefaultResume, type ExportFormat } from '../../lib/resumes/actions'
+import { resumeExportable } from '../../lib/resumes/stored'
 import { parseStoredResume, resumePlainText, serializeResume, type ResumeData } from '../../lib/resumes/document'
 import { useLoad } from '../../lib/useLoad'
 import { BuilderTopBar, useEditorControls } from './BuilderTopBar'
@@ -18,6 +18,7 @@ import { ResumeDesignPanel } from './design/DesignPanel'
 import { EditorContext, useEditor, useEditorStore } from './editorContext'
 import { createEditorStore } from './editorStore'
 import { EditorShell } from './EditorShell'
+import { exportMenuItems } from './exportMenu'
 import { PreviewCanvas } from './PreviewCanvas'
 import { RepairView } from './RepairView'
 import { useBuilderHotkeys } from './useBuilderHotkeys'
@@ -69,13 +70,8 @@ function ResumeEditor({ doc, isDefault }: { doc: app.Document; isDefault: boolea
   const update = useEditor((s) => s.update)
   const controls = useEditorControls(useEditorStore())
   const design = useMemo<DesignEditor>(() => ({ metadata: data.metadata, updateMetadata: (recipe) => update((d) => recipe(d.metadata)) }), [data.metadata, update])
-  useBuilderHotkeys({ undo: controls.undo, redo: controls.redo, exportPdf: () => void exportResumePdf(doc.name, data), zoomIn: () => setZoom(zoomIn), zoomOut: () => setZoom(zoomOut) })
-
-  const exportItems: MenuEntry[] = [
-    { label: 'PDF', icon: FileDown, shortcut: 'Ctrl+S', onSelect: () => exportResumePdf(doc.name, data) },
-    { label: 'Word (.docx)', icon: FileType2, onSelect: () => exportResumeDocx(doc.name, data) },
-    { label: 'JSON (Reactive Resume)', icon: FileJson, onSelect: () => exportResumeJson(doc.name, data) },
-  ]
+  const exportAs = (format: ExportFormat) => exportDocument(resumeExportable(doc.name, data), format)
+  useBuilderHotkeys({ undo: controls.undo, redo: controls.redo, exportPdf: () => void exportAs('pdf'), zoomIn: () => setZoom(zoomIn), zoomOut: () => setZoom(zoomOut) })
 
   return (
     <DesignContext value={design}>
@@ -86,7 +82,7 @@ function ResumeEditor({ doc, isDefault }: { doc: app.Document; isDefault: boolea
             name={doc.name}
             back={BACK}
             controls={controls}
-            exportItems={exportItems}
+            exportItems={exportMenuItems(exportAs, 'Ctrl+S')}
             actions={<DefaultResumeButton docId={doc.id} isDefault={isDefault} />}
             zoom={zoom}
             onZoom={setZoom}

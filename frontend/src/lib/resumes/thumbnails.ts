@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useState } from 'react'
-import { parseStoredResume } from './document'
 import type { LibraryDocument } from './library'
 import { firstPageImage } from './pdfjs'
 import { renderResumePreview } from './render'
+import { readStoredDocument } from './stored'
 
 /** Card thumbnails are drawn at twice their on-screen width so they stay sharp. */
 const THUMBNAIL_WIDTH = 360
@@ -21,9 +21,9 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
 }
 
 async function renderThumbnail(doc: LibraryDocument): Promise<string> {
-  const parsed = parseStoredResume(doc.data)
-  if (!parsed.ok) throw new Error(parsed.error)
-  const { pdf } = await renderResumePreview(parsed.data)
+  const stored = readStoredDocument(doc)
+  if ('error' in stored) throw new Error(stored.error)
+  const { pdf } = await renderResumePreview(stored.page.data, stored.page.renderOptions)
   return firstPageImage(pdf, THUMBNAIL_WIDTH)
 }
 

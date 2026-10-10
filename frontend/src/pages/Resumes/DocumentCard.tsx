@@ -14,12 +14,14 @@ type Props = {
   doc: app.Document
   isDefault: boolean
   dimmed?: boolean
+  /** Shown before the template, e.g. which kind of document it is in Trash. */
+  label?: string
   onOpen?: () => void
   onContextMenu: (e: MouseEvent) => void
 }
 
-/** A resume in the library: its first page, name, template and when it last changed. */
-export function DocumentCard({ doc, isDefault, dimmed = false, onOpen, onContextMenu }: Props) {
+/** A resume or letter in the library: its first page, name, template and when it last changed. */
+export function DocumentCard({ doc, isDefault, dimmed = false, label, onOpen, onContextMenu }: Props) {
   const template = templateOf(doc)
   return (
     <article
@@ -41,7 +43,7 @@ export function DocumentCard({ doc, isDefault, dimmed = false, onOpen, onContext
           {doc.name}
         </p>
         <p className="truncate font-mono text-[11px] text-ink-3">
-          {[templateLabel(template), `edited ${timeAgo(doc.updatedAt)}`].filter(Boolean).join(' · ')}
+          {[label, templateLabel(template), `edited ${timeAgo(doc.updatedAt)}`].filter(Boolean).join(' · ')}
         </p>
       </div>
     </article>
