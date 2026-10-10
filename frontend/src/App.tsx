@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { HashRouter, Route, Routes, useParams } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { ConfirmHost } from './components/ConfirmDialog'
@@ -22,11 +22,17 @@ import SettingsPage from './pages/Settings/SettingsPage'
 
 // Loaded on demand: it carries every license text (~440 KB).
 const LicensesPage = lazy(() => import('./pages/Licenses/LicensesPage'))
+// Loaded on demand: they carry the PDF engine, templates and editors.
+const ResumesPage = lazy(() => import('./pages/Resumes/ResumesPage'))
 
 // Remount the detail page per job so no state leaks between jobs.
 function JobDetailRoute() {
   const { id = '' } = useParams()
   return <JobDetailPage key={id} id={id} />
+}
+
+function Lazy({ page }: { page: ReactNode }) {
+  return <Suspense fallback={null}>{page}</Suspense>
 }
 
 export default function App() {
@@ -55,15 +61,9 @@ export default function App() {
           <Route path="interviews" element={<InterviewsPage />} />
           <Route path="interviews/:id/live" element={<LiveInterviewPage />} />
           <Route path="interviews/:id" element={<InterviewReviewRoute />} />
+          <Route path="resumes" element={<Lazy page={<ResumesPage />} />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route
-            path="licenses"
-            element={
-              <Suspense fallback={null}>
-                <LicensesPage />
-              </Suspense>
-            }
-          />
+          <Route path="licenses" element={<Lazy page={<LicensesPage />} />} />
         </Route>
       </Routes>
       <Toaster />

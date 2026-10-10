@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { NavLink } from 'react-router'
-import { BadgeDollarSign, Mic, Search, Settings, SquareKanban } from 'lucide-react'
+import { BadgeDollarSign, FileText, Mic, Search, Settings, SquareKanban } from 'lucide-react'
 
 const ITEMS = [
   { to: '/', label: 'Pipeline', icon: SquareKanban, end: true },
   { to: '/discover', label: 'Discover', icon: Search, end: false },
+  { to: '/resumes', label: 'Resumes', icon: FileText, end: false },
   { to: '/offers', label: 'Offers', icon: BadgeDollarSign, end: false },
   { to: '/interviews', label: 'Interviews', icon: Mic, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },

@@ -22,13 +22,17 @@ const reactiveResumeAliases = [
 // Upstream's test setup: Node by default, happy-dom for the importers, and its
 // 30 s timeout, since the PDF tests render real documents.
 function vendorProject(name: string, environment: string, include: string[], exclude: string[]) {
-  return { extends: true, test: { name, environment, include, exclude, testTimeout: 30_000, setupFiles: ['src/vendor/vitest.setup.ts'] } }
+  return { extends: true as const, test: { name, environment, include, exclude, testTimeout: 30_000, setupFiles: ['src/vendor/vitest.setup.ts'] } }
 }
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  // Vendored code skips fast refresh: its runtime needs `window`, and the PDF
+  // templates also run inside the render worker, which has none.
+  plugins: [react({ exclude: /\/src\/vendor\// }), tailwindcss()],
   resolve: { alias: reactiveResumeAliases },
+  // The resume render worker is an ES module (it shares code with the page).
+  worker: { format: 'es' },
   test: {
     projects: [
       { extends: true, test: { name: 'app', environment: 'node', include: ['src/**/*.test.ts'], exclude: ['src/vendor/**'] } },

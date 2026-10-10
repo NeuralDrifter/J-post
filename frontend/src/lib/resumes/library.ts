@@ -1,0 +1,35 @@
+// Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
+// SPDX-License-Identifier: MIT
+
+/** The fields of a stored document the library needs. */
+export type LibraryDocument = { id: string; name: string; data: string; updatedAt: string }
+
+/** The default resume first, the rest as they came (newest first), filtered by name. */
+export function libraryOrder<T extends LibraryDocument>(docs: T[], defaultId: string, query: string): T[] {
+  const q = query.trim().toLowerCase()
+  const shown = q ? docs.filter((d) => d.name.toLowerCase().includes(q)) : docs
+  const isDefault = (d: T) => d.id === defaultId
+  return [...shown.filter(isDefault), ...shown.filter((d) => !isDefault(d))]
+}
+
+/** The template a stored document uses, read without validating the whole document; "" if unknown. */
+export function templateOf(doc: LibraryDocument): string {
+  try {
+    const template = JSON.parse(doc.data)?.metadata?.template
+    return typeof template === 'string' ? template : ''
+  } catch {
+    return ''
+  }
+}
+
+export function templateLabel(template: string): string {
+  return template.charAt(0).toUpperCase() + template.slice(1)
+}
+
+/** Characters Windows doesn't allow in file names. */
+const UNSAFE_FILE_CHARS = /[<>:"/\\|?*\u0000-\u001f]+/g
+
+export function exportFileName(name: string, extension: 'pdf' | 'json' | 'docx'): string {
+  const safe = name.replace(UNSAFE_FILE_CHARS, ' ').replace(/\s+/g, ' ').trim()
+  return `${safe || 'Resume'}.${extension}`
+}
