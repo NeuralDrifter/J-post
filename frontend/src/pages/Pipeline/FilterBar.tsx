@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { Columns3, Download, Rows3 } from 'lucide-react'
+import { Columns3, Download, Rows3, Upload } from 'lucide-react'
 import { LabelSelect } from '../../components/LabelSelect'
 import { WORK_MODE_LABEL } from '../../lib/format'
 import { sourceOptions, useJobSources } from '../../lib/jobSources'
@@ -17,9 +17,10 @@ type Props = {
   shown: number
   total: number
   onExport: () => void
+  onImport: () => void
 }
 
-export function FilterBar({ view, onViewChange, filters, onChange, shown, total, onExport }: Props) {
+export function FilterBar({ view, onViewChange, filters, onChange, shown, total, onExport, onImport }: Props) {
   const sources = useJobSources()
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -66,6 +67,9 @@ export function FilterBar({ view, onViewChange, filters, onChange, shown, total,
       </span>
       <button type="button" className="btn btn-ghost py-1 text-xs" onClick={onExport} disabled={shown === 0} title="Save the jobs shown as a spreadsheet (CSV)">
         <Download size={13} /> Export CSV
+      </button>
+      <button type="button" className="btn btn-ghost py-1 text-xs" onClick={onImport} title="Add jobs from a spreadsheet (CSV)">
+        <Upload size={13} /> Import CSV
       </button>
     </div>
   )

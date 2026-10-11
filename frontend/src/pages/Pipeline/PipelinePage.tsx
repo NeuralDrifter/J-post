@@ -15,6 +15,7 @@ import { readPref, writePref } from '../../lib/prefs'
 import { useLoad } from '../../lib/useLoad'
 import { Board } from './Board'
 import { exportJobsCsv } from '../../lib/exportFiles'
+import { ImportJobsModal } from './ImportJobsModal'
 import { FilterBar, type PipelineFilters, type PipelineView } from './FilterBar'
 import { MetricsRow } from './MetricsRow'
 import { NextUpBanner } from './NextUpBanner'
@@ -28,6 +29,7 @@ export default function PipelinePage() {
   const { request, picker } = useStatusChange()
   const [filters, setFilters] = useState<PipelineFilters>({ workMode: '', source: '' })
   const [view, setView] = useState<PipelineView>(() => (readPref('pipelineView', 'board') === 'table' ? 'table' : 'board'))
+  const [importing, setImporting] = useState(false)
   const changeView = (v: PipelineView) => {
     setView(v)
     writePref('pipelineView', v)
@@ -77,6 +79,7 @@ export default function PipelinePage() {
         shown={visible.length}
         total={summaries?.length ?? 0}
         onExport={() => void exportJobsCsv(visible.map((s) => s.job))}
+        onImport={() => setImporting(true)}
       />
       <div className="min-h-0 flex-1">
         {view === 'board' ? (
@@ -86,6 +89,7 @@ export default function PipelinePage() {
         )}
       </div>
       {picker}
+      {importing && <ImportJobsModal existing={(summaries ?? []).map((s) => s.job)} onClose={() => setImporting(false)} />}
       {jobMenu.element}
     </div>
   )
