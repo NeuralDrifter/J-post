@@ -7,6 +7,7 @@ import { useStore, type StoreApi } from 'zustand'
 import { api, apiOk } from '../../lib/api'
 import { GetDocument, SaveDocument, type app } from '../../lib/backend'
 import { exportDocument, setDocumentLocked, type ExportFormat } from '../../lib/resumes/actions'
+import type { Template } from '../../lib/resumes/document'
 import { LETTER_RENDER_OPTIONS, letterPageData, letterPlainText, parseStoredLetter, serializeLetter, type LetterData } from '../../lib/resumes/letter'
 import { letterExportable } from '../../lib/resumes/stored'
 import { newEditingSession } from '../../lib/resumes/versions'
@@ -90,9 +91,17 @@ function LetterEditor({ doc, store, reopened, onRestored }: EditorProps & { stor
   const update = useStore(store, (s) => s.update)
   const controls = useEditorControls(store)
   const page = useMemo(() => letterPageData(letter), [letter])
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
+  const shownPage = useMemo(() => (previewTemplate ? { ...page, metadata: { ...page.metadata, template: previewTemplate } } : page), [page, previewTemplate])
   const design = useMemo<DesignEditor>(
-    () => ({ metadata: letter.style.metadata, updateMetadata: (recipe) => update((d) => recipe(d.style.metadata)) }),
-    [letter.style.metadata, update],
+    () => ({
+      metadata: letter.style.metadata,
+      updateMetadata: (recipe) => update((d) => recipe(d.style.metadata)),
+      undo: () => store.getState().undo(),
+      page: { data: page, renderOptions: LETTER_RENDER_OPTIONS },
+      previewTemplate: setPreviewTemplate,
+    }),
+    [letter.style.metadata, update, store, page],
   )
   const exportable = letterExportable(doc.name, letter)
   const exportAs = (format: ExportFormat) => exportDocument(exportable, format)
@@ -125,7 +134,7 @@ function LetterEditor({ doc, store, reopened, onRestored }: EditorProps & { stor
       >
         <PreviewCanvas
           zoom={zoom}
-          data={previewed?.page ?? page}
+          data={previewed?.page ?? shownPage}
           renderOptions={LETTER_RENDER_OPTIONS}
           toolbar={previewed && <VersionBanner title={previewed.title} />}
           onRendered={onRendered}

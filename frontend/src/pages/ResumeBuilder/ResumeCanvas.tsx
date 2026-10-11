@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { ResumeData } from '../../lib/resumes/document'
 import { CheckPageLayer, PageViewToggle } from './check/CheckPageLayer'
 import { ParserView } from './check/ParserView'
@@ -20,7 +20,7 @@ import type { Zoom } from './zoom'
 export type ResumeVersion = { title: string; data: ResumeData }
 
 export function ResumeCanvas({ zoom, checking, version }: { zoom: Zoom; checking: boolean; version?: ResumeVersion }) {
-  const live = useResume()
+  const live = useWithPreviewedTemplate(useResume())
   const pageMap = useBuilderView((s) => s.rendered.pageMap)
   const pageView = useBuilderView((s) => s.pageView)
   const onRendered = useCallback(({ pdf, pageMap, pageCount }: RenderedPreview) => useBuilderView.getState().setRendered({ file: pdf, pageMap, pageCount }), [])
@@ -57,4 +57,10 @@ export function ResumeCanvas({ zoom, checking, version }: { zoom: Zoom; checking
 /** A past version on the page: read-only, so nothing on it can be picked or fixed. */
 function VersionCanvas({ zoom, version }: { zoom: Zoom; version: ResumeVersion }) {
   return <PreviewCanvas zoom={zoom} data={version.data} toolbar={<VersionBanner title={version.title} />} />
+}
+
+/** The resume in the template hovered in the gallery, while one is. */
+function useWithPreviewedTemplate(data: ResumeData): ResumeData {
+  const template = useBuilderView((s) => s.previewTemplate)
+  return useMemo(() => (template ? { ...data, metadata: { ...data.metadata, template } } : data), [data, template])
 }

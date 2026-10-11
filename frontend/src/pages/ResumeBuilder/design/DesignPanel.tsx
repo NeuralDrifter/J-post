@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Code2, LayoutTemplate, NotebookPen, Palette, PanelsTopLeft, Ruler, Type, type LucideIcon } from 'lucide-react'
+import { contentKey, templateLabel } from '../../../lib/resumes/library'
+import { toast } from '../../../lib/toast'
+import type { Template } from '../../../lib/resumes/document'
 import { TemplatePicker } from '../../Resumes/TemplatePicker'
 import { useResume, useUpdate } from '../editorContext'
 import { Fold } from '../ui/controls'
@@ -70,9 +73,39 @@ function DesignFold({ title, icon: Icon, defaultOpen, children }: { title: strin
   )
 }
 
+/** Thumbnails redraw this long after the last edit, so typing doesn't queue renders. */
+const THUMBNAIL_DELAY_MS = 1500
+
 function TemplateSection() {
-  const { metadata, updateMetadata } = useDesign()
-  return <TemplatePicker value={metadata.template} onChange={(t) => updateMetadata((m) => void (m.template = t))} columns="grid-cols-2" />
+  const { metadata, updateMetadata, undo, page, previewTemplate } = useDesign()
+  const content = useSettled(page, THUMBNAIL_DELAY_MS)
+  // Leaving the gallery never leaves a preview on the page.
+  useEffect(() => () => previewTemplate(null), [previewTemplate])
+  const apply = (template: Template) => {
+    previewTemplate(null)
+    if (template === metadata.template) return
+    updateMetadata((m) => void (m.template = template))
+    toast.info(`Template changed to ${templateLabel(template)}`, { label: 'Undo', onClick: undo })
+  }
+  return (
+    <TemplatePicker
+      value={metadata.template}
+      onChange={apply}
+      columns="grid-cols-2"
+      content={{ page: content, key: contentKey(content.data) }}
+      onPreview={previewTemplate}
+    />
+  )
+}
+
+/** `value`, once it has stopped changing for `delayMs`. */
+function useSettled<T>(value: T, delayMs: number): T {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delayMs)
+    return () => clearTimeout(timer)
+  }, [value, delayMs])
+  return settled
 }
 
 function NotesSection() {

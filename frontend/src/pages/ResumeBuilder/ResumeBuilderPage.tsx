@@ -116,7 +116,16 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
     check: <ReadOnly when={locked}><CheckPanel doc={doc} /></ReadOnly>,
     history: <HistoryPanel {...history} />,
   }
-  const design = useMemo<DesignEditor>(() => ({ metadata: data.metadata, updateMetadata: (recipe) => update((d) => recipe(d.metadata)) }), [data.metadata, update])
+  const design = useMemo<DesignEditor>(
+    () => ({
+      metadata: data.metadata,
+      updateMetadata: (recipe) => update((d) => recipe(d.metadata)),
+      undo: () => store.getState().undo(),
+      page: { data },
+      previewTemplate: useBuilderView.getState().setPreviewTemplate,
+    }),
+    [data, update, store],
+  )
   const exportable = resumeExportable(doc.name, data)
   const exportAs = (format: ExportFormat) => exportDocument(exportable, format)
   const pageCount = useBuilderView((s) => s.rendered.pageCount)

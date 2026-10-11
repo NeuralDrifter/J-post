@@ -31,3 +31,11 @@ export function templateLabel(template: string): string {
 export function countWords(text: string): number {
   return text.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)?.length ?? 0
 }
+
+/** Names a document's content (a short hash), ignoring its template: the same key draws the same thumbnails. */
+export function contentKey(data: { metadata: { template: string } }): string {
+  const json = JSON.stringify({ ...data, metadata: { ...data.metadata, template: '' } })
+  let hash = 0x811c9dc5
+  for (let i = 0; i < json.length; i++) hash = Math.imul(hash ^ json.charCodeAt(i), 0x01000193)
+  return `${json.length}:${(hash >>> 0).toString(36)}`
+}

@@ -26,6 +26,30 @@ export function templateTraits(template: Template): string {
   return layout.atsSafe ? `${columns} · ATS friendly` : columns
 }
 
+/** The gallery's filters, as Reactive Resume offers them. */
+export type TemplateFilter = 'all' | 'one' | 'two' | 'ats'
+
+export const TEMPLATE_FILTERS: { value: TemplateFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'one', label: 'One column' },
+  { value: 'two', label: 'Two columns' },
+  { value: 'ats', label: 'ATS-safe' },
+]
+
+export function matchesTemplateFilter(template: Template, filter: TemplateFilter): boolean {
+  const layout = templateLayouts[template]
+  if (filter === 'one') return layout.columns === 1
+  if (filter === 'two') return layout.columns === 2
+  if (filter === 'ats') return layout.atsSafe
+  return true
+}
+
+/** "One column · ATS-safe", under a template's card. */
+export function templateTags(template: Template): string {
+  const layout = templateLayouts[template]
+  return [layout.columns === 1 ? 'One column' : 'Two columns', layout.atsSafe ? 'ATS-safe' : null].filter(Boolean).join(' · ')
+}
+
 export function isTemplate(value: string): value is Template {
   return (TEMPLATES as readonly string[]).includes(value)
 }
