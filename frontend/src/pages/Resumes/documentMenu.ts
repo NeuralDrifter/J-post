@@ -1,14 +1,15 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { Copy, FileDown, FolderOpen, Pencil, RotateCcw, Star, StarOff, Trash2 } from 'lucide-react'
+import { Copy, FileDown, FolderOpen, Lock, LockOpen, Pencil, Printer, RotateCcw, Star, StarOff, Trash2 } from 'lucide-react'
 import { confirmThen, promptDialog } from '../../components/ConfirmDialog'
 import { api, apiOk } from '../../lib/api'
-import { DeleteDocumentForever, DuplicateDocument, RenameDocument, RestoreDocument, TrashDocument, type app } from '../../lib/backend'
+import { DeleteDocumentForever, DuplicateDocument, RenameDocument, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import type { MenuEntry } from '../../lib/menu'
-import { exportStoredDocument, setDefaultResume } from '../../lib/resumes/actions'
+import { exportStoredDocument, moveToTrash, printDocument, restoreFromTrash, setDefaultResume, setDocumentLocked } from '../../lib/resumes/actions'
 import { RESUME_KIND } from '../../lib/resumes/paths'
+import { readStoredDocument } from '../../lib/resumes/stored'
 import { toast } from '../../lib/toast'
 import { exportMenuItems } from '../ResumeBuilder/exportMenu'
 
@@ -22,18 +23,22 @@ async function rename(doc: app.Document) {
   if (name && (await apiOk(RenameDocument(doc.id, name)))) notifyDataChanged()
 }
 
-async function duplicate(doc: app.Document) {
+export async function duplicate(doc: app.Document) {
   if (await api(DuplicateDocument(doc.id))) notifyDataChanged()
 }
 
-async function moveToTrash(doc: app.Document) {
-  if (!(await apiOk(TrashDocument(doc.id)))) return
-  toast.success(`"${doc.name}" moved to Trash`)
-  notifyDataChanged()
+/** Prints a stored document straight from the library, without opening it. */
+async function printStored(doc: app.Document) {
+  const exportable = readStoredDocument(doc)
+  if ('error' in exportable) toast.error(exportable.error)
+  else await printDocument(exportable)
 }
 
-export async function restoreDocument(doc: app.Document) {
-  if (await apiOk(RestoreDocument(doc.id))) notifyDataChanged()
+/** Lock editing / Unlock editing. Locking is reversible, so it doesn't ask first. */
+export function lockEntry(doc: app.Document): MenuEntry {
+  return doc.locked
+    ? { label: 'Unlock editing', icon: LockOpen, onSelect: () => setDocumentLocked(doc, false) }
+    : { label: 'Lock editing', icon: Lock, onSelect: () => setDocumentLocked(doc, true) }
 }
 
 export async function deleteForever(doc: app.Document) {
@@ -52,19 +57,21 @@ export function liveDocumentMenu(doc: app.Document, isDefault: boolean, open: ()
       : [isDefault ? { label: 'Stop using as default', icon: StarOff, onSelect: () => setDefaultResume('') } : { label: 'Set as default', icon: Star, onSelect: () => setDefaultResume(doc.id) }]
   return [
     { label: 'Open', icon: FolderOpen, onSelect: open },
-    { label: 'Rename', icon: Pencil, onSelect: () => rename(doc) },
+    { label: 'Rename', icon: Pencil, disabled: doc.locked, onSelect: () => rename(doc) },
     { label: 'Duplicate', icon: Copy, onSelect: () => duplicate(doc) },
+    lockEntry(doc),
     ...defaultEntry,
     { label: 'Export', icon: FileDown, submenu: exportMenuItems((format) => exportStoredDocument(doc, format)) },
+    { label: 'Print', icon: Printer, onSelect: () => printStored(doc) },
     'separator',
-    { label: 'Move to Trash', icon: Trash2, danger: true, onSelect: () => moveToTrash(doc) },
+    { label: 'Move to Trash', icon: Trash2, danger: true, disabled: doc.locked, onSelect: () => moveToTrash(doc) },
   ]
 }
 
 /** The right-click menu of a document in Trash. */
 export function trashedDocumentMenu(doc: app.Document): MenuEntry[] {
   return [
-    { label: 'Restore', icon: RotateCcw, onSelect: () => restoreDocument(doc) },
+    { label: 'Restore', icon: RotateCcw, onSelect: () => restoreFromTrash(doc) },
     'separator',
     { label: 'Delete forever', icon: Trash2, danger: true, onSelect: () => deleteForever(doc) },
   ]

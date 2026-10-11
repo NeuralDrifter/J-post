@@ -37,13 +37,14 @@ type Document struct {
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
 	DeletedAt string `json:"deletedAt"` // "" unless in Trash
+	Locked    bool   `json:"locked"`    // refuses edits, renaming, Trash and restores
 }
 
-const documentColumns = `id, kind, name, data, plain_text, source_id, COALESCE(job_id, ''), created_at, updated_at, deleted_at`
+const documentColumns = `id, kind, name, data, plain_text, source_id, COALESCE(job_id, ''), created_at, updated_at, deleted_at, locked`
 
 func scanDocument(row rowScanner) (Document, error) {
 	var d Document
-	err := row.Scan(&d.ID, &d.Kind, &d.Name, &d.Data, &d.PlainText, &d.SourceID, &d.JobID, &d.CreatedAt, &d.UpdatedAt, &d.DeletedAt)
+	err := row.Scan(&d.ID, &d.Kind, &d.Name, &d.Data, &d.PlainText, &d.SourceID, &d.JobID, &d.CreatedAt, &d.UpdatedAt, &d.DeletedAt, &d.Locked)
 	return d, err
 }
 
@@ -97,6 +98,9 @@ func (r *Repo) SaveDocument(id, data, plainText, sessionID string) (Document, er
 	if err := validateDocumentData(data); err != nil {
 		return Document{}, err
 	}
+	if err := r.requireUnlocked(id); err != nil {
+		return Document{}, err
+	}
 	res, err := r.db.Exec(`UPDATE documents SET data = ?, plain_text = ?, updated_at = ? WHERE id = ?`, data, plainText, ts(r.now()), id)
 	if err := expectOneRow(res, err, "document", id); err != nil {
 		return Document{}, err
@@ -117,6 +121,9 @@ func (r *Repo) RenameDocument(id, name string) error {
 	if name == "" {
 		return errors.New("a document needs a name")
 	}
+	if err := r.requireUnlocked(id); err != nil {
+		return err
+	}
 	res, err := r.db.Exec(`UPDATE documents SET name = ?, updated_at = ? WHERE id = ?`, name, ts(r.now()), id)
 	return expectOneRow(res, err, "document", id)
 }
@@ -131,6 +138,9 @@ func (r *Repo) DuplicateDocument(id string) (Document, error) {
 }
 
 func (r *Repo) TrashDocument(id string) error {
+	if err := r.requireUnlocked(id); err != nil {
+		return err
+	}
 	return r.setDeletedAt(id, ts(r.now()))
 }
 

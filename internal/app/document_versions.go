@@ -111,6 +111,9 @@ func (r *Repo) RestoreDocumentVersion(documentID, versionID string) (Document, e
 	if err != nil {
 		return Document{}, err
 	}
+	if current.Locked {
+		return Document{}, lockedError(current.ID)
+	}
 	version, err := r.GetDocumentVersion(versionID)
 	if err != nil || version.DocumentID != documentID {
 		return Document{}, fmt.Errorf("version %s of document %s: %w", versionID, documentID, ErrNotFound)

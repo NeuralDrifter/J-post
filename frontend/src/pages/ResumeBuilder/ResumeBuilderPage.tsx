@@ -7,13 +7,14 @@ import { Star } from 'lucide-react'
 import { syncResumeDates } from '@reactive-resume/schema/resume/dates'
 import { api, apiOk } from '../../lib/api'
 import { GetDocument, GetSettings, SaveDocument, type app } from '../../lib/backend'
-import { exportDocument, setDefaultResume, type ExportFormat } from '../../lib/resumes/actions'
+import { exportDocument, setDefaultResume, setDocumentLocked, type ExportFormat } from '../../lib/resumes/actions'
 import { resumeExportable } from '../../lib/resumes/stored'
 import { newEditingSession } from '../../lib/resumes/versions'
 import { parseStoredResume, resumePlainText, serializeResume, type ResumeData } from '../../lib/resumes/document'
 import { useLoad } from '../../lib/useLoad'
 import { BuilderTopBar, useEditorControls } from './BuilderTopBar'
 import { CheckPanel } from './check/CheckPanel'
+import { useDocumentMenu } from './DocumentMenu'
 import { ContentPanel } from './content/ContentPanel'
 import { DesignContext, type DesignEditor } from './design/designContext'
 import { ResumeDesignPanel } from './design/DesignPanel'
@@ -26,6 +27,7 @@ import { useVersionHistory } from './history/useVersionHistory'
 import { RepairView } from './RepairView'
 import { ResumeCanvas, type ResumeVersion } from './ResumeCanvas'
 import { Segmented } from './ui/controls'
+import { ReadOnly } from './ui/ReadOnly'
 import { useBuilderHotkeys } from './useBuilderHotkeys'
 import { useSaveOnClose } from './useSaveOnClose'
 import { useBuilderView } from './viewStore'
@@ -87,6 +89,9 @@ function Workspace({ initial, ...props }: EditorProps & { initial: ResumeData })
     ),
   )
   useSaveOnClose(store)
+  useEffect(() => {
+    store.getState().setLocked(doc.locked)
+  }, [store, doc.locked])
   // What the builder shows (selection, Check's state) belongs to this visit only.
   useEffect(() => () => useBuilderView.getState().reset(), [])
   return (
@@ -105,10 +110,18 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const controls = useEditorControls(store)
   const history = useVersionHistory(doc.id, store, onRestored)
   const previewed = usePreviewedResume(rightPanel === 'history' ? history.previewed : null)
-  const panels: Record<RightPanel, ReactNode> = { design: <ResumeDesignPanel />, check: <CheckPanel doc={doc} />, history: <HistoryPanel {...history} /> }
+  const locked = doc.locked
+  const panels: Record<RightPanel, ReactNode> = {
+    design: <ReadOnly when={locked}><ResumeDesignPanel /></ReadOnly>,
+    check: <ReadOnly when={locked}><CheckPanel doc={doc} /></ReadOnly>,
+    history: <HistoryPanel {...history} />,
+  }
   const design = useMemo<DesignEditor>(() => ({ metadata: data.metadata, updateMetadata: (recipe) => update((d) => recipe(d.metadata)) }), [data.metadata, update])
-  const exportAs = (format: ExportFormat) => exportDocument(resumeExportable(doc.name, data), format)
-  useBuilderHotkeys({ undo: controls.undo, redo: controls.redo, exportPdf: () => void exportAs('pdf'), zoomIn: () => setZoom(zoomIn), zoomOut: () => setZoom(zoomOut) })
+  const exportable = resumeExportable(doc.name, data)
+  const exportAs = (format: ExportFormat) => exportDocument(exportable, format)
+  const pageCount = useBuilderView((s) => s.rendered.pageCount)
+  const menu = useDocumentMenu({ doc, exportable, back: BACK.to, details: { template: data.metadata.template, pageCount, plainText: resumePlainText(data) } })
+  useBuilderHotkeys({ undo: controls.undo, redo: controls.redo, exportPdf: () => void exportAs('pdf'), print: () => void menu.print(), zoomIn: () => setZoom(zoomIn), zoomOut: () => setZoom(zoomOut) })
 
   return (
     <DesignContext value={design}>
@@ -120,13 +133,23 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
             back={BACK}
             controls={controls}
             exportItems={exportMenuItems(exportAs, 'Ctrl+S')}
+            documentItems={menu.items}
+            locked={locked}
+            onUnlock={() => void setDocumentLocked(doc, false)}
             actions={<DefaultResumeButton docId={doc.id} isDefault={isDefault} />}
             zoom={zoom}
             onZoom={setZoom}
             onTogglePanel={togglePanel}
           />
         )}
-        left={{ title: 'Content', content: <ContentPanel /> }}
+        left={{
+          title: 'Content',
+          content: (
+            <ReadOnly when={locked}>
+              <ContentPanel />
+            </ReadOnly>
+          ),
+        }}
         right={{
           title: RIGHT_PANELS.find((p) => p.value === rightPanel)?.label ?? 'Design',
           content: (
@@ -139,6 +162,7 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
       >
         <ResumeCanvas zoom={zoom} checking={rightPanel === 'check'} version={previewed} />
       </EditorShell>
+      {menu.dialog}
     </DesignContext>
   )
 }

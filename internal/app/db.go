@@ -399,6 +399,8 @@ var migrations = []string{
 	CREATE INDEX idx_document_versions_doc ON document_versions(document_id, kind, created_at);
 	INSERT INTO document_versions (id, document_id, kind, data, plain_text, created_at)
 		SELECT lower(hex(randomblob(8))), id, 'created', data, plain_text, updated_at FROM documents;`,
+	// 14: documents locked against editing (see document_lock.go).
+	`ALTER TABLE documents ADD COLUMN locked INTEGER NOT NULL DEFAULT 0;`,
 }
 
 func openDB(path string) (*sql.DB, error) {

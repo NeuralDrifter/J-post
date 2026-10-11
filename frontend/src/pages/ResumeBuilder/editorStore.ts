@@ -18,6 +18,9 @@ export type Normalize<T> = (draft: Draft<T>) => void
 export type EditorState<T> = {
   data: T
   saveState: SaveState
+  /** A locked document ignores edits, undo and redo; the backend refuses them too. */
+  locked: boolean
+  setLocked: (locked: boolean) => void
   /** Applies an edit (an immer recipe); it can be undone, and it autosaves after a pause. */
   update: (recipe: (draft: Draft<T>) => void) => void
   undo: () => void
@@ -67,7 +70,10 @@ export function createEditorStore<T>(initial: T, save: SaveDocument<T>, normaliz
     return {
       data: initial,
       saveState: 'saved',
+      locked: false,
+      setLocked: (locked) => set({ locked }),
       update: (recipe) => {
+        if (get().locked) return
         const current = get().data
         const next = produce(current, (draft) => {
           recipe(draft)
@@ -80,14 +86,14 @@ export function createEditorStore<T>(initial: T, save: SaveDocument<T>, normaliz
       },
       undo: () => {
         const previous = past.at(-1)
-        if (!previous) return
+        if (!previous || get().locked) return
         past = past.slice(0, -1)
         future = [get().data, ...future]
         show(previous)
       },
       redo: () => {
         const [next, ...rest] = future
-        if (!next) return
+        if (!next || get().locked) return
         future = rest
         past = [...past, get().data]
         show(next)

@@ -4,7 +4,7 @@
 import { useState, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useStore, type StoreApi } from 'zustand'
-import { ArrowLeft, Download, Minus, PanelLeft, PanelRight, Plus, Redo2, Undo2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Download, Lock, Minus, PanelLeft, PanelRight, Plus, Redo2, Undo2 } from 'lucide-react'
 import { IconButton } from '../../components/IconButton'
 import { apiOk } from '../../lib/api'
 import { RenameDocument } from '../../lib/backend'
@@ -36,6 +36,11 @@ type Props = {
   back: { to: string; label: string }
   controls: EditorControls
   exportItems: MenuEntry[]
+  /** The document menu, opened from beside the name. */
+  documentItems: MenuEntry[]
+  /** A locked document shows it, and its name can't be edited. */
+  locked: boolean
+  onUnlock: () => void
   /** Extra buttons before Export, e.g. the resume's Set as default. */
   actions?: ReactNode
   zoom: Zoom
@@ -44,7 +49,7 @@ type Props = {
 }
 
 /** Back, name, save state, undo/redo, zoom, extra actions and export. */
-export function BuilderTopBar({ docId, name, back, controls, exportItems, actions, zoom, onZoom, onTogglePanel }: Props) {
+export function BuilderTopBar({ docId, name, back, controls, exportItems, documentItems, locked, onUnlock, actions, zoom, onZoom, onTogglePanel }: Props) {
   const exportMenu = (e: MouseEvent) => openMenu(e, exportItems)
   return (
     <div className="flex items-center gap-2 border-b border-line bg-base/60 px-3 py-2">
@@ -52,8 +57,11 @@ export function BuilderTopBar({ docId, name, back, controls, exportItems, action
         <ArrowLeft size={13} /> {back.label}
       </Link>
       <span className="text-line-strong">/</span>
-      <NameInput docId={docId} name={name} />
-      <SaveIndicator state={controls.saveState} onRetry={() => void controls.saveNow()} />
+      <NameInput docId={docId} name={name} locked={locked} />
+      <IconButton label="Document menu" onClick={(e) => openMenu(e, documentItems)}>
+        <ChevronDown size={14} />
+      </IconButton>
+      {locked ? <LockedChip onUnlock={onUnlock} /> : <SaveIndicator state={controls.saveState} onRetry={() => void controls.saveNow()} />}
       <div className="ml-auto flex items-center gap-1">
         <span className="min-[1100px]:hidden">
           <IconButton label="Show the left panel" onClick={() => onTogglePanel('left')}>
@@ -98,7 +106,7 @@ function ZoomControl({ zoom, onZoom }: { zoom: Zoom; onZoom: (zoom: Zoom) => voi
 }
 
 /** The document's name, edited in place; saved when focus leaves it. */
-function NameInput({ docId, name }: { docId: string; name: string }) {
+function NameInput({ docId, name, locked }: { docId: string; name: string; locked: boolean }) {
   const [typed, setTyped] = useState<string | null>(null)
   const commit = async () => {
     const next = typed?.trim()
@@ -107,13 +115,22 @@ function NameInput({ docId, name }: { docId: string; name: string }) {
   }
   return (
     <input
-      className="min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold outline-none hover:border-line focus:border-accent"
+      className="max-w-[40ch] min-w-[6ch] truncate rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold [field-sizing:content] outline-none hover:border-line focus:border-accent"
       value={typed ?? name}
+      readOnly={locked}
       onChange={(e) => setTyped(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
       aria-label="Name"
     />
+  )
+}
+
+function LockedChip({ onUnlock }: { onUnlock: () => void }) {
+  return (
+    <button type="button" onClick={onUnlock} title="Unlock editing" className="flex shrink-0 items-center gap-1 rounded-md border border-warn/40 bg-warn/10 px-1.5 py-0.5 font-mono text-[11px] text-amber-200 hover:bg-warn/20">
+      <Lock size={11} /> Locked
+    </button>
   )
 }
 

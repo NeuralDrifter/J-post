@@ -26,3 +26,8 @@ export function templateOf(doc: LibraryDocument): string {
 export function templateLabel(template: string): string {
   return template.charAt(0).toUpperCase() + template.slice(1)
 }
+
+/** Words in a document's text, for its details. */
+export function countWords(text: string): number {
+  return text.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)?.length ?? 0
+}

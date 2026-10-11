@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import { libraryOrder, templateLabel, templateOf, type LibraryDocument } from './library'
+import { countWords, libraryOrder, templateLabel, templateOf, type LibraryDocument } from './library'
 
 const doc = (id: string, name: string, data = '{}'): LibraryDocument => ({ id, kind: 'resume', name, data, updatedAt: '2026-10-01T12:00:00Z' })
 
@@ -41,5 +41,12 @@ describe('templateLabel', () => {
   it('capitalises the template id', () => {
     expect(templateLabel('chikorita')).toBe('Chikorita')
     expect(templateLabel('')).toBe('')
+  })
+})
+
+describe('countWords', () => {
+  it('counts words, not markup or punctuation', () => {
+    expect(countWords("## Experience\n- Led a team of 5 engineers; shipped Ada's compiler")).toBe(10)
+    expect(countWords('')).toBe(0)
   })
 })

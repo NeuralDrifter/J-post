@@ -254,6 +254,7 @@ export namespace app {
 	    createdAt: string;
 	    updatedAt: string;
 	    deletedAt: string;
+	    locked: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Document(source);
@@ -271,6 +272,7 @@ export namespace app {
 	        this.createdAt = source["createdAt"];
 	        this.updatedAt = source["updatedAt"];
 	        this.deletedAt = source["deletedAt"];
+	        this.locked = source["locked"];
 	    }
 	}
 	export class DocumentVersion {

@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react'
 
-export type BuilderShortcuts = { undo: () => void; redo: () => void; exportPdf: () => void; zoomIn: () => void; zoomOut: () => void }
+export type BuilderShortcuts = { undo: () => void; redo: () => void; exportPdf: () => void; print: () => void; zoomIn: () => void; zoomOut: () => void }
 
 /** Text fields keep their own undo; the resume's undo applies everywhere else. */
 function isTyping(target: EventTarget | null): boolean {
@@ -11,7 +11,7 @@ function isTyping(target: EventTarget | null): boolean {
   return !!el && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')
 }
 
-/** Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y) undo and redo, Ctrl+S exports, Ctrl+= and Ctrl+- zoom. */
+/** Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y) undo and redo, Ctrl+S exports, Ctrl+P prints, Ctrl+= and Ctrl+- zoom. */
 export function useBuilderHotkeys(shortcuts: BuilderShortcuts) {
   const latest = useRef(shortcuts)
   latest.current = shortcuts
@@ -26,8 +26,9 @@ export function useBuilderHotkeys(shortcuts: BuilderShortcuts) {
     }
     const pick = (e: KeyboardEvent): (() => void) | undefined => {
       const key = e.key.toLowerCase()
-      const { undo, redo, exportPdf, zoomIn, zoomOut } = latest.current
+      const { undo, redo, exportPdf, print, zoomIn, zoomOut } = latest.current
       if (key === 's') return exportPdf
+      if (key === 'p') return print
       if (key === '=' || key === '+') return zoomIn
       if (key === '-') return zoomOut
       if (isTyping(e.target)) return undefined

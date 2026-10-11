@@ -3,7 +3,8 @@
 
 import { findEntry, getEntries, resolveSection } from '@reactive-resume/web/features/resume/editor/write/model'
 import { Modal } from '../../../components/Modal'
-import { useResume, useUpdate } from '../editorContext'
+import { useEditor, useResume, useUpdate } from '../editorContext'
+import { ReadOnly } from '../ui/ReadOnly'
 import { EntryForm } from './EntryForm'
 import { FIELD_SETS } from './fieldSets'
 
@@ -11,6 +12,7 @@ import { FIELD_SETS } from './fieldSets'
 export function EntryModal({ sectionId, entryId, sectionTitle, onClose }: { sectionId: string; entryId: string; sectionTitle: string; onClose: () => void }) {
   const data = useResume()
   const update = useUpdate()
+  const locked = useEditor((s) => s.locked)
   const section = resolveSection(data, sectionId)
   const entry = findEntry(data, sectionId, entryId)
   if (!section || !entry) return null
@@ -23,7 +25,9 @@ export function EntryModal({ sectionId, entryId, sectionTitle, onClose }: { sect
 
   return (
     <Modal title={sectionTitle} onClose={onClose} width="max-w-2xl">
-      <EntryForm fields={FIELD_SETS[section.type]} values={entry as unknown as Record<string, unknown>} onChange={setField} />
+      <ReadOnly when={locked}>
+        <EntryForm fields={FIELD_SETS[section.type]} values={entry as unknown as Record<string, unknown>} onChange={setField} />
+      </ReadOnly>
       <div className="mt-6 flex justify-end">
         <button type="button" className="btn btn-primary" onClick={onClose}>
           Done

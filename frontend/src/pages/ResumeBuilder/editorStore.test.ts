@@ -102,4 +102,20 @@ describe('editor store', () => {
     expect(store.getState().canUndo()).toBe(false)
     expect(store.getState().saveState).toBe('saved')
   })
+
+  it('ignores edits, undo and redo while locked', () => {
+    const { calls, save } = manualSaver()
+    const store = createEditorStore(newResumeData('blank', 'onyx'), save)
+    store.getState().update(setName('Ada'))
+    store.getState().setLocked(true)
+    store.getState().update(setName('Grace'))
+    store.getState().undo()
+    expect(store.getState().data.basics.name).toBe('Ada')
+    expect(store.getState().locked).toBe(true)
+
+    store.getState().setLocked(false)
+    store.getState().update(setName('Grace'))
+    expect(store.getState().data.basics.name).toBe('Grace')
+    expect(calls).toHaveLength(0)
+  })
 })

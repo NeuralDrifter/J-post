@@ -3,7 +3,7 @@
 
 import type { MouseEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { Briefcase, Star } from 'lucide-react'
+import { Briefcase, Lock, Star } from 'lucide-react'
 import { Chip } from '../../components/Chip'
 import type { app } from '../../lib/backend'
 import { timeAgo } from '../../lib/format'
@@ -34,13 +34,18 @@ export function DocumentCard({ doc, isDefault, dimmed = false, label, tailoredFo
     >
       <button type="button" onClick={onOpen ?? ((e) => onContextMenu(e))} className="relative block text-left" aria-label={`Open ${doc.name}`}>
         <Thumbnail doc={doc} template={template} />
-        {isDefault && (
-          <span className="absolute top-2 left-2">
+        <span className="absolute top-2 left-2 flex gap-1">
+          {isDefault && (
             <Chip tone="accent">
               <Star size={11} className="fill-current" /> Default
             </Chip>
-          </span>
-        )}
+          )}
+          {doc.locked && (
+            <Chip tone="warn" title="Locked against editing">
+              <Lock size={11} /> Locked
+            </Chip>
+          )}
+        </span>
       </button>
       <div className="min-w-0 border-t border-line px-3 py-2.5">
         <p className="truncate text-sm font-semibold" title={doc.name}>

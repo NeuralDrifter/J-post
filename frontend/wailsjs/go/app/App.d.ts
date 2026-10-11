@@ -192,6 +192,8 @@ export function SearchOccupations(arg1:string):Promise<Array<marketdata.Option>>
 
 export function SetDefaultResume(arg1:string):Promise<void>;
 
+export function SetDocumentLocked(arg1:string,arg2:boolean):Promise<void>;
+
 export function ShowAttachmentInFolder(arg1:string):Promise<void>;
 
 export function TailorResumeForJob(arg1:string,arg2:string):Promise<app.Document>;

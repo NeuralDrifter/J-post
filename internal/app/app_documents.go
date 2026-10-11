@@ -132,3 +132,8 @@ func (a *App) DeleteDocumentVersion(id string) error { return a.repo.DeleteDocum
 func (a *App) RestoreDocumentVersion(documentID, versionID string) (Document, error) {
 	return a.repo.RestoreDocumentVersion(documentID, versionID)
 }
+
+// SetDocumentLocked locks a document against edits, or unlocks it.
+func (a *App) SetDocumentLocked(id string, locked bool) error {
+	return a.repo.SetDocumentLocked(id, locked)
+}

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 
-export function IconButton({ label, onClick, disabled = false, children }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode }) {
+export function IconButton({ label, onClick, disabled = false, children }: { label: string; onClick: (e: MouseEvent<HTMLButtonElement>) => void; disabled?: boolean; children: ReactNode }) {
   return (
     <button
       type="button"
