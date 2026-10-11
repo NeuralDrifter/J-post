@@ -16,13 +16,28 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
+/** A size scaled down (never up) so its long side is at most `max`. */
+export function fitWithin(width: number, height: number, max: number): { width: number; height: number } {
+  const scale = Math.min(1, max / Math.max(width, height))
+  return { width: Math.round(width * scale), height: Math.round(height * scale) }
+}
+
+/** The whole image, uncropped, as a JPEG data URL no larger than MAX_PHOTO_PIXELS. */
+export async function wholePhoto(source: string): Promise<string> {
+  const image = await loadImage(source)
+  return drawPhoto(image, { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight })
+}
+
 /** The cropped part of an image as a JPEG data URL no larger than MAX_PHOTO_PIXELS. */
 export async function cropPhoto(source: string, area: CropArea): Promise<string> {
-  const image = await loadImage(source)
-  const scale = Math.min(1, MAX_PHOTO_PIXELS / Math.max(area.width, area.height))
+  return drawPhoto(await loadImage(source), area)
+}
+
+function drawPhoto(image: HTMLImageElement, area: CropArea): string {
+  const size = fitWithin(area.width, area.height, MAX_PHOTO_PIXELS)
   const canvas = document.createElement('canvas')
-  canvas.width = Math.round(area.width * scale)
-  canvas.height = Math.round(area.height * scale)
+  canvas.width = size.width
+  canvas.height = size.height
   const context = canvas.getContext('2d')
   if (!context) throw new Error('This system cannot draw images')
   context.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, canvas.width, canvas.height)

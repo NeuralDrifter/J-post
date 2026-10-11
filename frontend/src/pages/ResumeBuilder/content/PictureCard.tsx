@@ -3,9 +3,12 @@
 
 import { useRef, useState } from 'react'
 import Cropper from 'react-easy-crop'
-import { ImagePlus, Trash2, UserRound } from 'lucide-react'
+import { ImagePlus, Link2, Trash2, UserRound } from 'lucide-react'
+import { promptDialog } from '../../../components/ConfirmDialog'
 import { Modal } from '../../../components/Modal'
-import { cropPhoto, readFileAsDataUrl, type CropArea } from '../../../lib/resumes/photo'
+import { errorMessage } from '../../../lib/api'
+import { FetchPicture } from '../../../lib/backend'
+import { cropPhoto, readFileAsDataUrl, wholePhoto, type CropArea } from '../../../lib/resumes/photo'
 import { toast } from '../../../lib/toast'
 import { useResume, useUpdate } from '../editorContext'
 import { ColorField } from '../ui/ColorField'
@@ -28,6 +31,17 @@ export function PictureCard() {
     }
   }
 
+  // The download goes through the app's guarded fetcher: public web addresses only, images only.
+  const fromLink = async () => {
+    const url = (await promptDialog({ title: 'Photo from a link', label: 'Image address (https://…)', confirmLabel: 'Download' }))?.trim()
+    if (!url) return
+    try {
+      setCropping(await FetchPicture(url))
+    } catch (err) {
+      toast.error(`The photo couldn't be downloaded: ${errorMessage(err)}`)
+    }
+  }
+
   return (
     <Fold title="Picture" icon={<UserRound size={15} className="shrink-0 text-indigo-300" />}>
       <div className="flex items-center gap-3">
@@ -37,6 +51,9 @@ export function PictureCard() {
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn btn-ghost py-1 text-xs" onClick={() => fileInput.current?.click()}>
             <ImagePlus size={13} /> {picture.url ? 'Replace' : 'Add photo'}
+          </button>
+          <button type="button" className="btn btn-ghost py-1 text-xs" onClick={() => void fromLink()}>
+            <Link2 size={13} /> From a link
           </button>
           {picture.url && (
             <button type="button" className="btn btn-ghost py-1 text-xs" onClick={() => set('url', '')}>
@@ -80,12 +97,11 @@ function CropModal({ source, aspect, onClose, onDone }: { source: string; aspect
   const [zoom, setZoom] = useState(1)
   const [area, setArea] = useState<CropArea | null>(null)
 
-  const done = async () => {
-    if (!area) return
+  const finish = async (draw: () => Promise<string>) => {
     try {
-      onDone(await cropPhoto(source, area))
+      onDone(await draw())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not crop the photo')
+      toast.error(err instanceof Error ? err.message : 'Could not use the photo')
     }
   }
 
@@ -101,7 +117,10 @@ function CropModal({ source, aspect, onClose, onDone }: { source: string; aspect
         <button type="button" className="btn btn-ghost" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="btn btn-primary" onClick={done} disabled={!area}>
+        <button type="button" className="btn btn-ghost" onClick={() => void finish(() => wholePhoto(source))}>
+          Use without cropping
+        </button>
+        <button type="button" className="btn btn-primary" onClick={() => area && void finish(() => cropPhoto(source, area))} disabled={!area}>
           Use photo
         </button>
       </div>
