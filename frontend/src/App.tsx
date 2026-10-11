@@ -4,6 +4,7 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { HashRouter, Route, Routes, useParams } from 'react-router'
 import { AppShell } from './components/AppShell'
+import { CommandPalette } from './components/CommandPalette'
 import { ConfirmHost } from './components/ConfirmDialog'
 import { ContextMenuHost } from './components/ContextMenu'
 import { StartupErrorScreen } from './components/StartupErrorScreen'
@@ -77,6 +78,7 @@ export default function App() {
       <Toaster />
       <ConfirmHost />
       <ContextMenuHost />
+      <CommandPalette />
     </HashRouter>
   )
 }
