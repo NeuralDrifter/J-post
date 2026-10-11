@@ -5,10 +5,12 @@ import { Plus, Trash2 } from 'lucide-react'
 import { EMPTY_RESUME_DATES, type ResumeDates } from '@reactive-resume/schema/resume/dates'
 import type { RoleItem } from '@reactive-resume/schema/resume/data'
 import { generateId } from '@reactive-resume/utils/string'
+import { Field } from '../../../components/Field'
 import { IconButton } from '../../../components/IconButton'
 import { useResume } from '../editorContext'
 import { DatesField, KeywordsField, LevelField, TextInput, WebsiteField, type DateSettings, type Website } from './fields'
 import type { FieldSpec } from './fieldSets'
+import { IconPicker } from '../ui/IconPicker'
 import { RichTextField } from './RichTextField'
 
 type Values = Record<string, unknown>
@@ -47,7 +49,11 @@ function FieldControl({ field, value, dateSettings, onChange }: ControlProps) {
     case 'dates':
       return <DatesField dates={(value as ResumeDates | undefined) ?? EMPTY_RESUME_DATES} single={field.single} settings={dateSettings} onChange={onChange} />
     case 'icon':
-      return <TextInput label="Icon" value={String(value ?? '')} placeholder="Phosphor icon name, e.g. code" onChange={onChange} />
+      return (
+        <Field label="Icon">
+          <IconPicker label="Icon" value={String(value ?? '')} onChange={onChange} />
+        </Field>
+      )
     case 'roles':
       return <RolesField roles={(value as RoleItem[] | undefined) ?? []} onChange={onChange} />
   }

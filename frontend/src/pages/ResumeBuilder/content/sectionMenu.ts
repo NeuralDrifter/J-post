@@ -4,7 +4,7 @@
 // A section's options menu. Behaviour follows Reactive Resume's section row
 // (apps/web/src/features/resume/editor/write/section-row.tsx, MIT).
 import type { Draft } from 'immer'
-import { ArrowDown, ArrowUp, CalendarArrowDown, Columns3, Eraser, Eye, EyeOff, FileStack, Heading, List, Pencil, Plus, Rows3, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarArrowDown, Columns3, Eraser, Eye, EyeOff, FileStack, Heading, List, Pencil, Plus, Rows3, Shapes, Trash2 } from 'lucide-react'
 import type { ResumeData } from '@reactive-resume/schema/resume/data'
 import { sortSectionItemsByPeriod } from '@reactive-resume/resume/section-sort'
 import { createEntry, getEntries, getSectionObject, moveSection, type OutlineRow, type WriteSection } from '@reactive-resume/web/features/resume/editor/write/model'
@@ -24,6 +24,8 @@ export type SectionMenuContext = {
   next?: OutlineRow
   update: Update
   onEntryAdded: (entryId: string) => void
+  /** Opens the icon picker for the section's heading. */
+  onPickIcon: () => void
 }
 
 const COLUMN_CHOICES = [1, 2, 3, 4, 5, 6] as const
@@ -47,6 +49,7 @@ export function sectionMenu(ctx: SectionMenuContext): MenuEntry[] {
     { label: 'Move down', icon: ArrowDown, disabled: !next, onSelect: () => next && ctx.update((d) => moveSection(d, section.id, next, 'down')) },
     'separator',
     { label: 'Rename…', icon: Pencil, onSelect: () => rename(ctx, edit) },
+    { label: 'Icon…', icon: Shapes, onSelect: ctx.onPickIcon },
     columnsMenu(ctx, edit),
     ...(section.type === 'skills' ? [keywordLayoutMenu(ctx, edit)] : []),
     { label: settings.showHeading === false ? 'Show heading' : 'Hide heading', icon: Heading, onSelect: () => edit((s) => void (s.showHeading = settings.showHeading === false)) },

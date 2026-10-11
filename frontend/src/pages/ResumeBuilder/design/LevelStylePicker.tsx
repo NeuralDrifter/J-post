@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react'
 import { Star } from 'lucide-react'
 import { levelDesignSchema } from '@reactive-resume/schema/resume/data'
+import { IconPicker } from '../ui/IconPicker'
 import { useDesign } from './designContext'
 
 type LevelType = (typeof levelDesignSchema.shape.type.options)[number]
@@ -42,6 +43,12 @@ export function LevelStylePicker() {
           </button>
         ))}
       </div>
+      {level.type === 'icon' && (
+        <div className="flex items-center gap-2 pt-1 text-xs text-ink-2">
+          <IconPicker label="Level icon" value={level.icon} onChange={(icon) => updateMetadata((m) => void (m.design.level.icon = icon))} />
+          Icon for each level step
+        </div>
+      )}
     </div>
   )
 }

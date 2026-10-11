@@ -1,12 +1,15 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
+import { useState } from 'react'
 import { EyeOff, MoreHorizontal, Plus } from 'lucide-react'
 import { getResumeSectionTitle } from '@reactive-resume/pdf/section-title'
 import { createEntry, getEntries, getSectionObject, type OutlineRow, type WriteSection } from '@reactive-resume/web/features/resume/editor/write/model'
+import { Modal } from '../../../components/Modal'
 import { openMenu } from '../../../lib/menu'
 import { useResume, useUpdate } from '../editorContext'
 import { Collapsible } from '../ui/controls'
+import { IconGrid } from '../ui/IconPicker'
 import { EntryList } from './EntryList'
 import { RichTextField } from './RichTextField'
 import { SECTION_ICONS } from './sectionIcons'
@@ -25,6 +28,7 @@ type Props = {
 export function SectionCard({ section, open, onToggle, previous, next, onOpenEntry }: Props) {
   const data = useResume()
   const update = useUpdate()
+  const [pickingIcon, setPickingIcon] = useState(false)
   const settings = getSectionObject(data, section)
   if (!settings) return null
   const title = getResumeSectionTitle(data, section.id)
@@ -37,7 +41,14 @@ export function SectionCard({ section, open, onToggle, previous, next, onOpenEnt
     onOpenEntry(section.id, entry.id)
   }
   const showMenu = (e: React.MouseEvent) =>
-    openMenu(e, sectionMenu({ section, settings, title, previous, next, update, onEntryAdded: (id) => onOpenEntry(section.id, id) }))
+    openMenu(e, sectionMenu({ section, settings, title, previous, next, update, onEntryAdded: (id) => onOpenEntry(section.id, id), onPickIcon: () => setPickingIcon(true) }))
+  const setIcon = (icon: string) => {
+    update((d) => {
+      const target = getSectionObject(d, section)
+      if (target) target.icon = icon
+    })
+    setPickingIcon(false)
+  }
 
   return (
     <div data-block={section.id} className="scroll-mt-3" onContextMenu={showMenu}>
@@ -69,6 +80,14 @@ export function SectionCard({ section, open, onToggle, previous, next, onOpenEnt
           </>
         )}
       </Collapsible>
+      {pickingIcon && (
+        <Modal title={`Icon for ${title}`} onClose={() => setPickingIcon(false)} width="max-w-sm">
+          <IconGrid value={settings.icon} onChange={setIcon} noneValue="none" noneLabel="No icon" />
+          <button type="button" className="btn btn-ghost mt-3 w-full py-1.5 text-xs" onClick={() => setIcon('')}>
+            Use the template's icon
+          </button>
+        </Modal>
+      )}
     </div>
   )
 }

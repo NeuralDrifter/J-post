@@ -7,6 +7,7 @@ import { generateId } from '@reactive-resume/utils/string'
 import { IconButton } from '../../../components/IconButton'
 import { useResume, useUpdate } from '../editorContext'
 import { Fold } from '../ui/controls'
+import { IconPicker } from '../ui/IconPicker'
 import { TextInput } from './fields'
 
 type TextKey = 'name' | 'headline' | 'email' | 'phone' | 'location'
@@ -65,7 +66,8 @@ function CustomFields({ fields, edit }: { fields: CustomField[]; edit: EditBasic
         </button>
       </div>
       {fields.map((field) => (
-        <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+        <div key={field.id} className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-2">
+          <IconPicker label="Icon" value={field.icon} onChange={(icon) => setField(field.id, { icon })} />
           <input className="field py-1.5 text-xs" placeholder="Text, e.g. Open to relocation" value={field.text} onChange={(e) => setField(field.id, { text: e.target.value })} aria-label="Text" />
           <input className="field py-1.5 text-xs" placeholder="Link (optional)" value={field.link} onChange={(e) => setField(field.id, { link: e.target.value })} aria-label="Link" />
           <IconButton label="Remove line" onClick={() => edit((b) => void (b.customFields = b.customFields.filter((f) => f.id !== field.id)))}>

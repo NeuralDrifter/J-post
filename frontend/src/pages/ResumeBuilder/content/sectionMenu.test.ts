@@ -10,7 +10,7 @@ import { sectionMenu } from './sectionMenu'
 
 function menuFor(data: ResumeData, sectionId: string, apply: (recipe: (d: Draft<ResumeData>) => void) => void) {
   const section = resolveSection(data, sectionId)!
-  return sectionMenu({ section, settings: getSectionObject(data, section)!, title: sectionId, update: apply, onEntryAdded: () => undefined })
+  return sectionMenu({ section, settings: getSectionObject(data, section)!, title: sectionId, update: apply, onEntryAdded: () => undefined, onPickIcon: () => undefined })
 }
 
 const find = (entries: MenuEntry[] | undefined, label: string) => (entries ?? []).find((e): e is MenuItem => e !== 'separator' && e.label.startsWith(label))
