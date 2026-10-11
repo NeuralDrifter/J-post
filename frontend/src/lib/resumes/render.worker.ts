@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 // Renders resumes off the main thread, so typing in the builder never waits for a PDF.
-import { renderPdfBytes, type RenderRequest } from './renderCore'
+import { renderPdfBytes, type RenderedPdf, type RenderRequest } from './renderCore'
 
 export type WorkerRequest = RenderRequest & { id: number }
-export type WorkerResponse = { id: number; pdf: Uint8Array<ArrayBuffer>; missingFonts: string[] } | { id: number; error: string }
+export type WorkerResponse = ({ id: number } & RenderedPdf) | { id: number; error: string }
 
 self.addEventListener('message', async ({ data: request }: MessageEvent<WorkerRequest>) => {
   try {
-    const { pdf, missingFonts } = await renderPdfBytes(request)
-    self.postMessage({ id: request.id, pdf, missingFonts } satisfies WorkerResponse, { transfer: [pdf.buffer] })
+    const rendered = await renderPdfBytes(request)
+    self.postMessage({ id: request.id, ...rendered } satisfies WorkerResponse, { transfer: [rendered.pdf.buffer] })
   } catch (err) {
     self.postMessage({ id: request.id, error: err instanceof Error ? err.message : String(err) } satisfies WorkerResponse)
   }

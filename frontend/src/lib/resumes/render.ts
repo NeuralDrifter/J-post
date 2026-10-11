@@ -4,12 +4,13 @@
 // Renders resumes to PDF in a Web Worker (render.worker.ts); if the worker
 // can't start, on the main thread instead.
 import type { ResumeRenderOptions } from '@reactive-resume/pdf/context'
+import type { PageMap } from '@reactive-resume/pdf/page-map'
 import type { ResumeData } from './document'
 import type { RenderedPdf, RenderRequest } from './renderCore'
 import type { WorkerRequest, WorkerResponse } from './render.worker'
 
 /** A render for the screen. Missing fonts fall back to standard PDF fonts instead of failing. */
-export type ResumePreview = { pdf: Blob; missingFonts: string[] }
+export type ResumePreview = { pdf: Blob; missingFonts: string[]; pageMap: PageMap }
 
 type Pending = { request: RenderRequest; resolve: (rendered: RenderedPdf) => void; reject: (error: Error) => void }
 
@@ -26,8 +27,8 @@ export async function renderResumePdf(data: ResumeData, renderOptions?: ResumeRe
 
 /** The PDF for the live preview and thumbnails, which should render offline too. */
 export async function renderResumePreview(data: ResumeData, renderOptions?: ResumeRenderOptions): Promise<ResumePreview> {
-  const { pdf, missingFonts } = await render({ data, strict: false, renderOptions })
-  return { pdf: new Blob([pdf], { type: PDF_TYPE }), missingFonts }
+  const { pdf, missingFonts, pageMap } = await render({ data, strict: false, renderOptions })
+  return { pdf: new Blob([pdf], { type: PDF_TYPE }), missingFonts, pageMap }
 }
 
 function render(request: RenderRequest): Promise<RenderedPdf> {
@@ -63,7 +64,7 @@ function settle(response: WorkerResponse) {
   if (!request) return
   pending.delete(response.id)
   if ('error' in response) request.reject(new Error(response.error))
-  else request.resolve({ pdf: response.pdf, missingFonts: response.missingFonts })
+  else request.resolve({ pdf: response.pdf, missingFonts: response.missingFonts, pageMap: response.pageMap })
 }
 
 /** Every render is caught inside the worker, so an error event means it couldn't start. */

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router'
 import { Star } from 'lucide-react'
 import { syncResumeDates } from '@reactive-resume/schema/resume/dates'
@@ -12,6 +12,7 @@ import { resumeExportable } from '../../lib/resumes/stored'
 import { parseStoredResume, resumePlainText, serializeResume, type ResumeData } from '../../lib/resumes/document'
 import { useLoad } from '../../lib/useLoad'
 import { BuilderTopBar, useEditorControls } from './BuilderTopBar'
+import { CheckPanel } from './check/CheckPanel'
 import { ContentPanel } from './content/ContentPanel'
 import { DesignContext, type DesignEditor } from './design/designContext'
 import { ResumeDesignPanel } from './design/DesignPanel'
@@ -19,13 +20,22 @@ import { EditorContext, useEditor, useEditorStore } from './editorContext'
 import { createEditorStore } from './editorStore'
 import { EditorShell } from './EditorShell'
 import { exportMenuItems } from './exportMenu'
-import { PreviewCanvas } from './PreviewCanvas'
 import { RepairView } from './RepairView'
+import { ResumeCanvas } from './ResumeCanvas'
+import { Segmented } from './ui/controls'
 import { useBuilderHotkeys } from './useBuilderHotkeys'
 import { useSaveOnClose } from './useSaveOnClose'
+import { useBuilderView } from './viewStore'
 import { zoomIn, zoomOut, type Zoom } from './zoom'
 
 const BACK = { to: '/resumes', label: 'Resumes' }
+
+type RightPanel = 'design' | 'check'
+
+const RIGHT_PANELS: { value: RightPanel; label: string }[] = [
+  { value: 'design', label: 'Design' },
+  { value: 'check', label: 'Check' },
+]
 
 /** /resumes/:id — remounted per resume so no editing state leaks between them. */
 export default function ResumeBuilderPage() {
@@ -57,6 +67,8 @@ function Workspace({ doc, initial, isDefault }: { doc: app.Document; initial: Re
     ),
   )
   useSaveOnClose(store)
+  // What the builder shows (selection, Check's state) belongs to this visit only.
+  useEffect(() => () => useBuilderView.getState().reset(), [])
   return (
     <EditorContext value={store}>
       <ResumeEditor doc={doc} isDefault={isDefault} />
@@ -66,6 +78,7 @@ function Workspace({ doc, initial, isDefault }: { doc: app.Document; initial: Re
 
 function ResumeEditor({ doc, isDefault }: { doc: app.Document; isDefault: boolean }) {
   const [zoom, setZoom] = useState<Zoom>('fit')
+  const [rightPanel, setRightPanel] = useState<RightPanel>('design')
   const data = useEditor((s) => s.data)
   const update = useEditor((s) => s.update)
   const controls = useEditorControls(useEditorStore())
@@ -90,9 +103,17 @@ function ResumeEditor({ doc, isDefault }: { doc: app.Document; isDefault: boolea
           />
         )}
         left={{ title: 'Content', content: <ContentPanel /> }}
-        right={{ title: 'Design', content: <ResumeDesignPanel /> }}
+        right={{
+          title: rightPanel === 'check' ? 'Check' : 'Design',
+          content: (
+            <div className="space-y-3">
+              <Segmented label="Panel" options={RIGHT_PANELS} value={rightPanel} onChange={setRightPanel} />
+              {rightPanel === 'check' ? <CheckPanel doc={doc} /> : <ResumeDesignPanel />}
+            </div>
+          ),
+        }}
       >
-        <PreviewCanvas zoom={zoom} data={data} />
+        <ResumeCanvas zoom={zoom} checking={rightPanel === 'check'} />
       </EditorShell>
     </DesignContext>
   )

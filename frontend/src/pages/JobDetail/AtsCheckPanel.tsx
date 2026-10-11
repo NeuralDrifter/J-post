@@ -14,7 +14,7 @@ import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 
 // Loaded once there's a report to show: it carries the findings' wording.
-const AtsReportView = lazy(() => import('./AtsReportView'))
+const AtsReportView = lazy(() => import('../../components/AtsReportView'))
 
 /** Checks how applicant tracking systems read the resume for this job, against its description. */
 export function AtsCheckPanel({ job }: { job: app.Job }) {

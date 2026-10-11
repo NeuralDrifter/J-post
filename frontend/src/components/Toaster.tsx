@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CircleAlert, CircleCheck, Info, X } from 'lucide-react'
-import { dismissToast, useToasts, type ToastKind } from '../lib/toast'
+import { dismissToast, runToastAction, useToasts, type ToastKind } from '../lib/toast'
 
 const STYLE: Record<ToastKind, string> = {
   error: 'border-danger/40 bg-rose-950/80 text-rose-100',
@@ -26,6 +26,11 @@ export function Toaster() {
           >
             <Icon size={16} className="mt-0.5 shrink-0" />
             <p className="flex-1 break-words">{t.message}</p>
+            {t.action && (
+              <button type="button" className="shrink-0 rounded-md px-1.5 text-xs font-semibold text-indigo-200 hover:bg-white/10" onClick={() => runToastAction(t)}>
+                {t.action.label}
+              </button>
+            )}
             <button className="opacity-60 hover:opacity-100" onClick={() => dismissToast(t.id)} aria-label="Dismiss">
               <X size={14} />
             </button>

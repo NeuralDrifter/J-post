@@ -7,9 +7,9 @@
 import { AlertOctagon, AlertTriangle, Lightbulb, type LucideIcon } from 'lucide-react'
 import type { PdfFinding, PdfSeverity } from '@reactive-resume/resume/ats-pdf'
 import { getPdfCategoryDescription, getPdfCategoryLabel, getPdfFindingMessage } from '@reactive-resume/web/features/ats-checker/messages'
-import { Chip } from '../../components/Chip'
-import { matchBand } from '../../lib/match'
-import type { PdfAtsReport } from '../../lib/resumes/atsCheck'
+import { Chip } from './Chip'
+import { matchBand } from '../lib/match'
+import type { PdfAtsReport } from '../lib/resumes/atsCheck'
 
 const SCORE_TONE: Record<string, string> = { good: 'text-emerald-300', fair: 'text-amber-300', low: 'text-rose-300' }
 const BAR_TONE: Record<string, string> = { good: 'bg-success', fair: 'bg-warn', low: 'bg-danger' }
