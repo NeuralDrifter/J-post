@@ -385,6 +385,20 @@ var migrations = []string{
 		source TEXT NOT NULL,
 		checked_at TEXT NOT NULL
 	);`,
+	// 13: each document's version history (see document_versions.go).
+	`CREATE TABLE document_versions (
+		id TEXT PRIMARY KEY,
+		document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+		kind TEXT NOT NULL,
+		name TEXT NOT NULL DEFAULT '',
+		data TEXT NOT NULL,
+		plain_text TEXT NOT NULL DEFAULT '',
+		session_id TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL
+	);
+	CREATE INDEX idx_document_versions_doc ON document_versions(document_id, kind, created_at);
+	INSERT INTO document_versions (id, document_id, kind, data, plain_text, created_at)
+		SELECT lower(hex(randomblob(8))), id, 'created', data, plain_text, updated_at FROM documents;`,
 }
 
 func openDB(path string) (*sql.DB, error) {

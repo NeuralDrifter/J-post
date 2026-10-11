@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"jobtrack/internal/settings"
@@ -53,9 +54,24 @@ func (r *Repo) CreateDocument(kind, name, data, plainText string) (Document, err
 	}
 	now := ts(r.now())
 	d := Document{ID: newID(), Kind: kind, Name: name, Data: data, PlainText: plainText, CreatedAt: now, UpdatedAt: now}
-	_, err := r.db.Exec(`INSERT INTO documents (id, kind, name, data, plain_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		d.ID, d.Kind, d.Name, d.Data, d.PlainText, d.CreatedAt, d.UpdatedAt)
-	return d, err
+	tx, err := r.db.Begin()
+	if err != nil {
+		return Document{}, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`INSERT INTO documents (id, kind, name, data, plain_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		d.ID, d.Kind, d.Name, d.Data, d.PlainText, d.CreatedAt, d.UpdatedAt); err != nil {
+		return Document{}, err
+	}
+	if err := insertCreatedVersion(tx, d); err != nil {
+		return Document{}, err
+	}
+	return d, tx.Commit()
+}
+
+// insertCreatedVersion starts a new document's history with its first content.
+func insertCreatedVersion(tx execer, d Document) error {
+	return insertVersion(tx, DocumentVersion{ID: newID(), DocumentID: d.ID, Kind: VersionCreated, CreatedAt: d.CreatedAt}, d.Data, d.PlainText, "")
 }
 
 func (r *Repo) GetDocument(id string) (Document, error) {
@@ -75,8 +91,9 @@ func (r *Repo) ListDocuments(kind string, trashed bool) ([]Document, error) {
 	return queryAll(r.db, scanDocument, `SELECT `+documentColumns+` FROM documents WHERE kind = ? AND `+where+` ORDER BY updated_at DESC, rowid DESC`, kind)
 }
 
-// SaveDocument replaces a document's data and text.
-func (r *Repo) SaveDocument(id, data, plainText string) (Document, error) {
+// SaveDocument replaces a document's data and text. sessionID names the
+// editing session, whose autosave in the history it refreshes.
+func (r *Repo) SaveDocument(id, data, plainText, sessionID string) (Document, error) {
 	if err := validateDocumentData(data); err != nil {
 		return Document{}, err
 	}
@@ -84,7 +101,15 @@ func (r *Repo) SaveDocument(id, data, plainText string) (Document, error) {
 	if err := expectOneRow(res, err, "document", id); err != nil {
 		return Document{}, err
 	}
-	return r.GetDocument(id)
+	doc, err := r.GetDocument(id)
+	if err != nil {
+		return Document{}, err
+	}
+	// History is a convenience: failing to snapshot must not fail the save.
+	if err := r.saveSessionVersion(doc, sessionID); err != nil {
+		log.Printf("document %s: autosave version: %v", id, err)
+	}
+	return doc, nil
 }
 
 func (r *Repo) RenameDocument(id, name string) error {
@@ -220,9 +245,11 @@ func insertTailoredCopy(tx *sql.Tx, original Document, job Job, now string) (Doc
 	copy := original
 	copy.ID, copy.Name, copy.SourceID, copy.JobID = newID(), original.Name+" · "+job.Company, original.ID, job.ID
 	copy.CreatedAt, copy.UpdatedAt, copy.DeletedAt = now, now, ""
-	_, err := tx.Exec(`INSERT INTO documents (id, kind, name, data, plain_text, source_id, job_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		copy.ID, copy.Kind, copy.Name, copy.Data, copy.PlainText, copy.SourceID, copy.JobID, copy.CreatedAt, copy.UpdatedAt)
-	return copy, err
+	if _, err := tx.Exec(`INSERT INTO documents (id, kind, name, data, plain_text, source_id, job_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		copy.ID, copy.Kind, copy.Name, copy.Data, copy.PlainText, copy.SourceID, copy.JobID, copy.CreatedAt, copy.UpdatedAt); err != nil {
+		return Document{}, err
+	}
+	return copy, insertCreatedVersion(tx, copy)
 }
 
 // resumeTextFor is the resume text AI features read: the given resume, else

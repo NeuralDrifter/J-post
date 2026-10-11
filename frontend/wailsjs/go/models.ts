@@ -273,6 +273,30 @@ export namespace app {
 	        this.deletedAt = source["deletedAt"];
 	    }
 	}
+	export class DocumentVersion {
+	    id: string;
+	    documentId: string;
+	    kind: string;
+	    name: string;
+	    data: string;
+	    plainText: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DocumentVersion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.documentId = source["documentId"];
+	        this.kind = source["kind"];
+	        this.name = source["name"];
+	        this.data = source["data"];
+	        this.plainText = source["plainText"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class InboxCounts {
 	    new: number;
 	    inbox: number;

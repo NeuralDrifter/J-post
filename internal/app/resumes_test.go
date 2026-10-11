@@ -84,17 +84,17 @@ func TestSaveDocumentUpdatesDataTextAndTime(t *testing.T) {
 	r := newTestRepo(t)
 	d := mustCreateDocument(t, r, DocumentResume, "Backend")
 	setNow(r, 2026, time.October, 3, 9)
-	saved, err := r.SaveDocument(d.ID, `{"basics":{"name":"Grace"}}`, "Grace")
+	saved, err := r.SaveDocument(d.ID, `{"basics":{"name":"Grace"}}`, "Grace", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if saved.PlainText != "Grace" || !strings.Contains(saved.Data, "Grace") || saved.UpdatedAt == d.UpdatedAt || saved.CreatedAt != d.CreatedAt {
 		t.Fatalf("saved = %+v", saved)
 	}
-	if _, err := r.SaveDocument(d.ID, "nope", ""); err == nil {
+	if _, err := r.SaveDocument(d.ID, "nope", "", ""); err == nil {
 		t.Error("invalid JSON saved")
 	}
-	if _, err := r.SaveDocument("missing", sampleData, ""); !errors.Is(err, ErrNotFound) {
+	if _, err := r.SaveDocument("missing", sampleData, "", ""); !errors.Is(err, ErrNotFound) {
 		t.Errorf("missing document: err = %v", err)
 	}
 }

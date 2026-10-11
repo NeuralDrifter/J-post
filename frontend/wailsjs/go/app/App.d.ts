@@ -24,6 +24,8 @@ export function DeleteContact(arg1:string):Promise<void>;
 
 export function DeleteDocumentForever(arg1:string):Promise<void>;
 
+export function DeleteDocumentVersion(arg1:string):Promise<void>;
+
 export function DeleteInterview(arg1:string):Promise<void>;
 
 export function DeleteInterviewRecording(arg1:string):Promise<void>;
@@ -55,6 +57,8 @@ export function GetAtsReport(arg1:string):Promise<app.AtsReport>;
 export function GetCurrentComp():Promise<comp.CompPackage>;
 
 export function GetDocument(arg1:string):Promise<app.Document>;
+
+export function GetDocumentVersion(arg1:string):Promise<app.DocumentVersion>;
 
 export function GetInterviewRecording(arg1:string):Promise<string>;
 
@@ -88,6 +92,8 @@ export function ListComparisons():Promise<Array<app.ComparisonItem>>;
 
 export function ListContacts(arg1:string):Promise<Array<app.Contact>>;
 
+export function ListDocumentVersions(arg1:string):Promise<Array<app.DocumentVersion>>;
+
 export function ListDocuments(arg1:string,arg2:boolean):Promise<Array<app.Document>>;
 
 export function ListInterviewOptions():Promise<app.InterviewOptions>;
@@ -114,6 +120,8 @@ export function MarkPostingSeen(arg1:string):Promise<void>;
 
 export function MarketSources():Promise<app.DataSources>;
 
+export function NameDocumentVersion(arg1:string,arg2:string):Promise<app.DocumentVersion>;
+
 export function NewEstimate(arg1:string):Promise<comp.CompPackage>;
 
 export function NudgeAnswer(arg1:string,arg2:string,arg3:string,arg4:number):Promise<app.Nudge>;
@@ -138,9 +146,13 @@ export function RenameAttachment(arg1:string,arg2:string):Promise<void>;
 
 export function RenameDocument(arg1:string,arg2:string):Promise<void>;
 
+export function RenameDocumentVersion(arg1:string,arg2:string):Promise<void>;
+
 export function RescoreOutdated():Promise<app.MatchRun>;
 
 export function RestoreDocument(arg1:string):Promise<void>;
+
+export function RestoreDocumentVersion(arg1:string,arg2:string):Promise<app.Document>;
 
 export function RestorePosting(arg1:string):Promise<void>;
 
@@ -152,7 +164,7 @@ export function SaveCompPackage(arg1:comp.CompPackage):Promise<comp.CompPackage>
 
 export function SaveContact(arg1:app.Contact):Promise<app.Contact>;
 
-export function SaveDocument(arg1:string,arg2:string,arg3:string):Promise<app.Document>;
+export function SaveDocument(arg1:string,arg2:string,arg3:string,arg4:string):Promise<app.Document>;
 
 export function SaveExportedFile(arg1:string,arg2:string):Promise<string>;
 

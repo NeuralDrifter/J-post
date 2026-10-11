@@ -168,7 +168,7 @@ func TestAppScoresKeepTheResumeTheyWereGradedAgainst(t *testing.T) {
 	if list, _ = a.ListPostings(PostingFilter{Tab: "inbox"}); list[0].Match.Outdated {
 		t.Fatal("changing the default resume outdated a score graded against another resume")
 	}
-	a.repo.SaveDocument(chosen.ID, `{}`, "Jane Doe, Rust and C")
+	a.repo.SaveDocument(chosen.ID, `{}`, "Jane Doe, Rust and C", "")
 	if list, _ = a.ListPostings(PostingFilter{Tab: "inbox"}); !list[0].Match.Outdated {
 		t.Fatal("changing the chosen resume must outdate its scores")
 	}

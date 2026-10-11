@@ -38,6 +38,10 @@ export function DeleteDocumentForever(arg1) {
   return window['go']['app']['App']['DeleteDocumentForever'](arg1);
 }
 
+export function DeleteDocumentVersion(arg1) {
+  return window['go']['app']['App']['DeleteDocumentVersion'](arg1);
+}
+
 export function DeleteInterview(arg1) {
   return window['go']['app']['App']['DeleteInterview'](arg1);
 }
@@ -100,6 +104,10 @@ export function GetCurrentComp() {
 
 export function GetDocument(arg1) {
   return window['go']['app']['App']['GetDocument'](arg1);
+}
+
+export function GetDocumentVersion(arg1) {
+  return window['go']['app']['App']['GetDocumentVersion'](arg1);
 }
 
 export function GetInterviewRecording(arg1) {
@@ -166,6 +174,10 @@ export function ListContacts(arg1) {
   return window['go']['app']['App']['ListContacts'](arg1);
 }
 
+export function ListDocumentVersions(arg1) {
+  return window['go']['app']['App']['ListDocumentVersions'](arg1);
+}
+
 export function ListDocuments(arg1, arg2) {
   return window['go']['app']['App']['ListDocuments'](arg1, arg2);
 }
@@ -218,6 +230,10 @@ export function MarketSources() {
   return window['go']['app']['App']['MarketSources']();
 }
 
+export function NameDocumentVersion(arg1, arg2) {
+  return window['go']['app']['App']['NameDocumentVersion'](arg1, arg2);
+}
+
 export function NewEstimate(arg1) {
   return window['go']['app']['App']['NewEstimate'](arg1);
 }
@@ -266,12 +282,20 @@ export function RenameDocument(arg1, arg2) {
   return window['go']['app']['App']['RenameDocument'](arg1, arg2);
 }
 
+export function RenameDocumentVersion(arg1, arg2) {
+  return window['go']['app']['App']['RenameDocumentVersion'](arg1, arg2);
+}
+
 export function RescoreOutdated() {
   return window['go']['app']['App']['RescoreOutdated']();
 }
 
 export function RestoreDocument(arg1) {
   return window['go']['app']['App']['RestoreDocument'](arg1);
+}
+
+export function RestoreDocumentVersion(arg1, arg2) {
+  return window['go']['app']['App']['RestoreDocumentVersion'](arg1, arg2);
 }
 
 export function RestorePosting(arg1) {
@@ -294,8 +318,8 @@ export function SaveContact(arg1) {
   return window['go']['app']['App']['SaveContact'](arg1);
 }
 
-export function SaveDocument(arg1, arg2, arg3) {
-  return window['go']['app']['App']['SaveDocument'](arg1, arg2, arg3);
+export function SaveDocument(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SaveDocument'](arg1, arg2, arg3, arg4);
 }
 
 export function SaveExportedFile(arg1, arg2) {

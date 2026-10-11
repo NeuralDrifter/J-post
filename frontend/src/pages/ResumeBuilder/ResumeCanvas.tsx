@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { useCallback } from 'react'
+import type { ResumeData } from '../../lib/resumes/document'
 import { CheckPageLayer, PageViewToggle } from './check/CheckPageLayer'
 import { ParserView } from './check/ParserView'
+import { VersionBanner } from './history/VersionBanner'
 import { useResume } from './editorContext'
 import { PreviewCanvas, type RenderedPreview } from './PreviewCanvas'
 import { SelectionLayer } from './SelectionLayer'
@@ -14,17 +16,21 @@ import type { Zoom } from './zoom'
  * The resume's pages: click a block to edit it. While Check is open, its marks lie over them,
  * or the text a parser reads replaces them.
  */
-export function ResumeCanvas({ zoom, checking }: { zoom: Zoom; checking: boolean }) {
-  const data = useResume()
+/** A version from History, shown read-only instead of the resume as it is. */
+export type ResumeVersion = { title: string; data: ResumeData }
+
+export function ResumeCanvas({ zoom, checking, version }: { zoom: Zoom; checking: boolean; version?: ResumeVersion }) {
+  const live = useResume()
   const pageMap = useBuilderView((s) => s.rendered.pageMap)
   const pageView = useBuilderView((s) => s.pageView)
   const onRendered = useCallback(({ pdf, pageMap, pageCount }: RenderedPreview) => useBuilderView.getState().setRendered({ file: pdf, pageMap, pageCount }), [])
   const parser = checking && pageView === 'parser'
+  if (version) return <VersionCanvas zoom={zoom} version={version} />
   return (
     <div className="relative min-h-0">
       <PreviewCanvas
         zoom={zoom}
-        data={data}
+        data={live}
         toolbar={checking && <PageViewToggle />}
         pageLayer={(pageIndex) =>
           pageMap && (
@@ -46,4 +52,9 @@ export function ResumeCanvas({ zoom, checking }: { zoom: Zoom; checking: boolean
       )}
     </div>
   )
+}
+
+/** A past version on the page: read-only, so nothing on it can be picked or fixed. */
+function VersionCanvas({ zoom, version }: { zoom: Zoom; version: ResumeVersion }) {
+  return <PreviewCanvas zoom={zoom} data={version.data} toolbar={<VersionBanner title={version.title} />} />
 }

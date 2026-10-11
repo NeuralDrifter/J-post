@@ -23,8 +23,8 @@ func (a *App) CreateDocument(kind, name, data, plainText string) (Document, erro
 	return a.repo.CreateDocument(kind, name, data, plainText)
 }
 
-func (a *App) SaveDocument(id, data, plainText string) (Document, error) {
-	return a.repo.SaveDocument(id, data, plainText)
+func (a *App) SaveDocument(id, data, plainText, sessionID string) (Document, error) {
+	return a.repo.SaveDocument(id, data, plainText, sessionID)
 }
 
 func (a *App) RenameDocument(id, name string) error { return a.repo.RenameDocument(id, name) }
@@ -108,4 +108,27 @@ func (a *App) SaveExportedFile(suggestedName, contentBase64 string) (string, err
 		return "", err
 	}
 	return path, os.WriteFile(path, content, 0o644)
+}
+
+// ListDocumentVersions lists a document's history, newest first, without the content.
+func (a *App) ListDocumentVersions(documentID string) ([]DocumentVersion, error) {
+	return a.repo.ListDocumentVersions(documentID)
+}
+
+func (a *App) GetDocumentVersion(id string) (DocumentVersion, error) {
+	return a.repo.GetDocumentVersion(id)
+}
+
+func (a *App) NameDocumentVersion(documentID, name string) (DocumentVersion, error) {
+	return a.repo.NameDocumentVersion(documentID, name)
+}
+
+func (a *App) RenameDocumentVersion(id, name string) error {
+	return a.repo.RenameDocumentVersion(id, name)
+}
+
+func (a *App) DeleteDocumentVersion(id string) error { return a.repo.DeleteDocumentVersion(id) }
+
+func (a *App) RestoreDocumentVersion(documentID, versionID string) (Document, error) {
+	return a.repo.RestoreDocumentVersion(documentID, versionID)
 }

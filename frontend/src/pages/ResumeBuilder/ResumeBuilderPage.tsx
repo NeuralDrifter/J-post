@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router'
 import { Star } from 'lucide-react'
 import { syncResumeDates } from '@reactive-resume/schema/resume/dates'
@@ -9,6 +9,7 @@ import { api, apiOk } from '../../lib/api'
 import { GetDocument, GetSettings, SaveDocument, type app } from '../../lib/backend'
 import { exportDocument, setDefaultResume, type ExportFormat } from '../../lib/resumes/actions'
 import { resumeExportable } from '../../lib/resumes/stored'
+import { newEditingSession } from '../../lib/resumes/versions'
 import { parseStoredResume, resumePlainText, serializeResume, type ResumeData } from '../../lib/resumes/document'
 import { useLoad } from '../../lib/useLoad'
 import { BuilderTopBar, useEditorControls } from './BuilderTopBar'
@@ -20,8 +21,10 @@ import { EditorContext, useEditor, useEditorStore } from './editorContext'
 import { createEditorStore } from './editorStore'
 import { EditorShell } from './EditorShell'
 import { exportMenuItems } from './exportMenu'
+import { HistoryPanel, type PreviewedVersion } from './history/HistoryPanel'
+import { useVersionHistory } from './history/useVersionHistory'
 import { RepairView } from './RepairView'
-import { ResumeCanvas } from './ResumeCanvas'
+import { ResumeCanvas, type ResumeVersion } from './ResumeCanvas'
 import { Segmented } from './ui/controls'
 import { useBuilderHotkeys } from './useBuilderHotkeys'
 import { useSaveOnClose } from './useSaveOnClose'
@@ -30,11 +33,12 @@ import { zoomIn, zoomOut, type Zoom } from './zoom'
 
 const BACK = { to: '/resumes', label: 'Resumes' }
 
-type RightPanel = 'design' | 'check'
+type RightPanel = 'design' | 'check' | 'history'
 
 const RIGHT_PANELS: { value: RightPanel; label: string }[] = [
   { value: 'design', label: 'Design' },
   { value: 'check', label: 'Check' },
+  { value: 'history', label: 'History' },
 ]
 
 /** /resumes/:id — remounted per resume so no editing state leaks between them. */
@@ -46,22 +50,38 @@ export default function ResumeBuilderPage() {
 function ResumeBuilder({ id }: { id: string }) {
   const { data: doc } = useLoad(() => api(GetDocument(id)), [id])
   const { data: settings } = useLoad(() => api(GetSettings()), [])
+  // Restoring a version reopens the editor on the restored content.
+  const [restored, setRestored] = useState<app.Document | null>(null)
   if (!doc) return null
-  return <LoadedResume doc={doc} isDefault={settings?.defaultResumeId === doc.id} />
+  return (
+    <LoadedResume
+      key={restored?.updatedAt ?? 'loaded'}
+      doc={doc}
+      data={restored?.data ?? doc.data}
+      isDefault={settings?.defaultResumeId === doc.id}
+      reopened={restored !== null}
+      onRestored={setRestored}
+    />
+  )
 }
+
+/** `reopened`: the editor reopened after a restore, so it opens on History again. */
+type EditorProps = { doc: app.Document; isDefault: boolean; reopened: boolean; onRestored: (doc: app.Document) => void }
 
 /** Reads the stored resume once: from then on the editor owns its content (later reloads only refresh the name). */
-function LoadedResume({ doc, isDefault }: { doc: app.Document; isDefault: boolean }) {
-  const [content] = useState(() => parseStoredResume(doc.data))
-  if (!content.ok) return <RepairView doc={doc} error={content.error} back={BACK} />
-  return <Workspace doc={doc} initial={content.data} isDefault={isDefault} />
+function LoadedResume({ data, ...props }: EditorProps & { data: string }) {
+  const [content] = useState(() => parseStoredResume(data))
+  if (!content.ok) return <RepairView doc={props.doc} error={content.error} back={BACK} />
+  return <Workspace {...props} initial={content.data} />
 }
 
-function Workspace({ doc, initial, isDefault }: { doc: app.Document; initial: ResumeData; isDefault: boolean }) {
+function Workspace({ initial, ...props }: EditorProps & { initial: ResumeData }) {
+  const { doc } = props
+  const [session] = useState(newEditingSession)
   const [store] = useState(() =>
     createEditorStore(
       initial,
-      (data) => apiOk(SaveDocument(doc.id, serializeResume(data), resumePlainText(data))),
+      (data) => apiOk(SaveDocument(doc.id, serializeResume(data), resumePlainText(data), session)),
       // The printed date text ("Mar 2022 – Present") follows the structured dates, as upstream keeps it.
       (draft) => syncResumeDates(draft as ResumeData),
     ),
@@ -71,17 +91,21 @@ function Workspace({ doc, initial, isDefault }: { doc: app.Document; initial: Re
   useEffect(() => () => useBuilderView.getState().reset(), [])
   return (
     <EditorContext value={store}>
-      <ResumeEditor doc={doc} isDefault={isDefault} />
+      <ResumeEditor {...props} />
     </EditorContext>
   )
 }
 
-function ResumeEditor({ doc, isDefault }: { doc: app.Document; isDefault: boolean }) {
+function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const [zoom, setZoom] = useState<Zoom>('fit')
-  const [rightPanel, setRightPanel] = useState<RightPanel>('design')
+  const [rightPanel, setRightPanel] = useState<RightPanel>(reopened ? 'history' : 'design')
   const data = useEditor((s) => s.data)
   const update = useEditor((s) => s.update)
-  const controls = useEditorControls(useEditorStore())
+  const store = useEditorStore()
+  const controls = useEditorControls(store)
+  const history = useVersionHistory(doc.id, store, onRestored)
+  const previewed = usePreviewedResume(rightPanel === 'history' ? history.previewed : null)
+  const panels: Record<RightPanel, ReactNode> = { design: <ResumeDesignPanel />, check: <CheckPanel doc={doc} />, history: <HistoryPanel {...history} /> }
   const design = useMemo<DesignEditor>(() => ({ metadata: data.metadata, updateMetadata: (recipe) => update((d) => recipe(d.metadata)) }), [data.metadata, update])
   const exportAs = (format: ExportFormat) => exportDocument(resumeExportable(doc.name, data), format)
   useBuilderHotkeys({ undo: controls.undo, redo: controls.redo, exportPdf: () => void exportAs('pdf'), zoomIn: () => setZoom(zoomIn), zoomOut: () => setZoom(zoomOut) })
@@ -104,19 +128,28 @@ function ResumeEditor({ doc, isDefault }: { doc: app.Document; isDefault: boolea
         )}
         left={{ title: 'Content', content: <ContentPanel /> }}
         right={{
-          title: rightPanel === 'check' ? 'Check' : 'Design',
+          title: RIGHT_PANELS.find((p) => p.value === rightPanel)?.label ?? 'Design',
           content: (
             <div className="space-y-3">
               <Segmented label="Panel" options={RIGHT_PANELS} value={rightPanel} onChange={setRightPanel} />
-              {rightPanel === 'check' ? <CheckPanel doc={doc} /> : <ResumeDesignPanel />}
+              {panels[rightPanel]}
             </div>
           ),
         }}
       >
-        <ResumeCanvas zoom={zoom} checking={rightPanel === 'check'} />
+        <ResumeCanvas zoom={zoom} checking={rightPanel === 'check'} version={previewed} />
       </EditorShell>
     </DesignContext>
   )
+}
+
+/** The version previewed in History, read as a resume; undefined when none is shown or it can't be read. */
+function usePreviewedResume(version: PreviewedVersion | null): ResumeVersion | undefined {
+  return useMemo(() => {
+    if (!version) return undefined
+    const parsed = parseStoredResume(version.data)
+    return parsed.ok ? { title: version.title, data: parsed.data } : undefined
+  }, [version])
 }
 
 function DefaultResumeButton({ docId, isDefault }: { docId: string; isDefault: boolean }) {
