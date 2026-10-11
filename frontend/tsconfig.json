@@ -21,6 +21,9 @@
     "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
     "paths": {
+      "@reactive-resume/ui/components/icon": [
+        "./src/vendor/uiIconShim.ts"
+      ],
       "@reactive-resume/resume/stylesheet/types": [
         "./src/vendor/reactive-resume/resume/stylesheet/semantic-types.ts"
       ],
@@ -41,6 +44,12 @@
       ],
       "@lingui/core/macro": [
         "./src/vendor/linguiMacro.ts"
+      ],
+      "@/*": [
+        "./src/vendor/reactive-resume/web/*"
+      ],
+      "@lingui/core": [
+        "./src/vendor/linguiCore.ts"
       ]
     }
   },

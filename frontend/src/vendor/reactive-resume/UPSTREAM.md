@@ -30,11 +30,19 @@ the aliases in `frontend/vite.config.ts` and `paths` in `frontend/tsconfig.json`
 | `web/features/ats-checker/extract-client.ts` | `apps/web` | Reads a PDF's text layer with pdf.js, for importing PDFs and the ATS check |
 | `web/features/ats-checker/run-ats-check.ts` | `apps/web` | Runs the ATS analysis on a PDF, optionally against a job description |
 | `web/features/ats-checker/messages.ts` | `apps/web` | The ATS findings, categories and severities in words |
+| `web/features/resume/editor/check/issues.ts` | `apps/web` | The builder's live Check issues, with their fixes |
+| `web/features/resume/editor/store.ts` | `apps/web` | Upstream's editor store; vendored for the types other files share (Job Track has its own store) |
+| `web/features/resume/stylesheet/{color-tokens,targets}.ts` | `apps/web` | Custom CSS colour swatches, and the CSS selector for a block clicked on the page |
+| `web/features/letters/length.ts` | `apps/web` | A letter's length in words, and whether it's in the usual range |
+| `web/components/typography/get-next-weights.ts` | `apps/web` | Which font weights to keep when the family changes |
+| `web/libs/resume/{section,move-item}.ts(x)` | `apps/web` | Section titles, and moving an entry to another section or page |
 | `web/templates/*.jpg` | `apps/web/public/templates/jpg` | Template preview images |
 
 Upstream writes its messages with Lingui's `t` macro. Job Track is English-only, so
 `@lingui/core/macro` resolves to `frontend/src/vendor/linguiMacro.ts`, which reads each
-message as written; the vendored files stay unchanged.
+message as written (`@lingui/core`, used by upstream's tests, resolves to a no-op
+`linguiCore.ts`); `@reactive-resume/ui/components/icon`, a type-only import, resolves to
+`uiIconShim.ts`; and `@/…` resolves to `web/`. The vendored files stay unchanged.
 
 Not taken: `ai`, `api`, `auth`, `db`, `email`, `env`, `mcp`, `dsh-plugin`, `ui`,
 `config`, `apps/server`, and the rest of `apps/web`, which is a behavioural reference

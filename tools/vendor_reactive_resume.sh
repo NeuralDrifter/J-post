@@ -24,6 +24,16 @@ web_files=(
 	features/ats-checker/extract-client.ts
 	features/ats-checker/run-ats-check.ts
 	features/ats-checker/messages.ts
+	features/resume/editor/store.ts
+	features/resume/editor/check/issues.ts
+	features/resume/editor/check/issues.test.ts
+	features/resume/stylesheet/color-tokens.ts
+	features/resume/stylesheet/targets.ts
+	features/letters/length.ts
+	components/typography/get-next-weights.ts
+	libs/resume/section.tsx
+	libs/resume/move-item.ts
+	libs/resume/move-item-round-trip.test.ts
 )
 commit=$(git -C "$upstream" rev-parse --short=7 HEAD)
 header="// Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit $commit.

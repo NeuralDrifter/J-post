@@ -8,6 +8,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 const vendorDir = fileURLToPath(new URL('./src/vendor/reactive-resume', import.meta.url))
 const linguiShim = fileURLToPath(new URL('./src/vendor/linguiMacro.ts', import.meta.url))
+const linguiCoreShim = fileURLToPath(new URL('./src/vendor/linguiCore.ts', import.meta.url))
+const uiIconShim = fileURLToPath(new URL('./src/vendor/uiIconShim.ts', import.meta.url))
 
 // Reactive Resume's own import names, resolved to the vendored source. Most
 // subpaths are file paths; these four are renamed by upstream's export maps.
@@ -20,6 +22,11 @@ const reactiveResumeAliases = [
   { find: /^@reactive-resume\/(.*)$/, replacement: `${vendorDir}/$1` },
   // Vendored messages are English as written (see linguiMacro.ts).
   { find: /^@lingui\/core\/macro$/, replacement: linguiShim },
+  { find: /^@lingui\/core$/, replacement: linguiCoreShim },
+  // Upstream's icon names are plain strings here (see uiIconShim.ts).
+  { find: /^@reactive-resume\/ui\/components\/icon$/, replacement: uiIconShim },
+  // Vendored web-app files import each other as "@/…".
+  { find: /^@\/(.*)$/, replacement: `${vendorDir}/web/$1` },
 ]
 
 // Upstream's test setup: Node by default, happy-dom for the importers, and its
