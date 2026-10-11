@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { FileText, FileUp, Mail, Plus, Trash2, type LucideIcon } from 'lucide-react'
+import { FileText, FileUp, Mail, Plus, ScanText, Trash2, type LucideIcon } from 'lucide-react'
 import { confirmThen } from '../../components/ConfirmDialog'
 import { PageTitle } from '../../components/PageTitle'
 import { api } from '../../lib/api'
@@ -54,6 +54,9 @@ export default function ResumesPage() {
       <PageTitle title="Resumes" subtitle="Your default resume is the one match scores and mock interviews read.">
         {tab !== 'trash' && (
           <div className="flex gap-2">
+            <button className="btn btn-ghost" onClick={() => navigate('/resumes/check')}>
+              <ScanText size={16} /> ATS check
+            </button>
             <button className="btn btn-ghost" onClick={() => setImporting(true)}>
               <FileUp size={16} /> Import
             </button>

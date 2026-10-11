@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import { atsSources, parseStoredReport } from './atsCheck'
+import { atsErrorMessage, atsSources, parseStoredReport, standaloneSourceLabel } from './atsCheck'
 
 const resumes = [
   { id: 'r1', name: 'Backend' },
@@ -41,3 +41,46 @@ describe('parseStoredReport', () => {
     expect(parseStoredReport('{"version":2}')).toBeNull()
   })
 })
+
+describe('atsErrorMessage', () => {
+  it('explains password protection in plain words', () => {
+    const err = new Error('password required')
+    err.name = 'PdfPasswordRequiredError'
+    expect(atsErrorMessage(err)).toBe('This PDF is password-protected. Unlock it before checking.')
+  })
+
+  it('explains oversized files in plain words', () => {
+    const err = new Error('This PDF is too large to check in the browser.')
+    err.name = 'PdfTooLargeError'
+    expect(atsErrorMessage(err)).toBe('This PDF is too large to check in the browser (maximum 25 MB).')
+  })
+
+  it('explains unreadable files in plain words', () => {
+    const err = new Error('This file could not be read as a PDF.')
+    err.name = 'PdfUnreadableError'
+    expect(atsErrorMessage(err)).toBe('This file could not be read as a PDF.')
+  })
+
+  it('explains missing text layer in plain words', () => {
+    expect(atsErrorMessage(new Error('No text layer found in document'))).toBe(
+      'No text could be read from this PDF. Export it as a text PDF rather than an image or scan.',
+    )
+  })
+
+  it('preserves generic errors', () => {
+    expect(atsErrorMessage(new Error('Network disconnected'))).toBe('Network disconnected')
+    expect(atsErrorMessage('unexpected failure')).toBe('unexpected failure')
+  })
+})
+
+describe('standaloneSourceLabel', () => {
+  it('labels uploaded files by their file name', () => {
+    const file = new File(['%PDF'], 'candidate.pdf', { type: 'application/pdf' })
+    expect(standaloneSourceLabel({ kind: 'file', file })).toBe('candidate.pdf')
+  })
+
+  it('labels library resumes with a hint', () => {
+    expect(standaloneSourceLabel({ kind: 'document', id: 'r1', name: 'Full Stack' })).toBe('Full Stack (from library)')
+  })
+})
+
