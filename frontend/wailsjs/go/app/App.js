@@ -378,6 +378,10 @@ export function SetDocumentLocked(arg1, arg2) {
   return window['go']['app']['App']['SetDocumentLocked'](arg1, arg2);
 }
 
+export function SetLetterSource(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SetLetterSource'](arg1, arg2, arg3, arg4);
+}
+
 export function ShowAttachmentInFolder(arg1) {
   return window['go']['app']['App']['ShowAttachmentInFolder'](arg1);
 }

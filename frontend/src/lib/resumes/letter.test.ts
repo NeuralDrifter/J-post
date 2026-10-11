@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { newResumeData } from './document'
-import { composedLetter, letterPageData, letterPlainText, newLetterData, parseStoredLetter, serializeLetter, type LetterData } from './letter'
+import { composedLetter, letterPageData, withLinkedStyle, letterPlainText, newLetterData, parseStoredLetter, serializeLetter, type LetterData } from './letter'
 
 const fromSample = () => newLetterData(newResumeData('sample', 'gengar'))
 
@@ -78,5 +78,26 @@ describe('parseStoredLetter', () => {
   it('reports data that is not a letter', () => {
     const parsed = parseStoredLetter(JSON.stringify({ format: 'something-else' }))
     expect(parsed.ok).toBe(false)
+  })
+})
+
+describe('a letter following its resume', () => {
+  const resume = { ...newResumeData('sample', 'onyx'), basics: { ...newResumeData('sample', 'onyx').basics, name: 'Ada Lovelace' } }
+  const letter = newLetterData(newResumeData('blank', 'kakuna'))
+
+  it('takes the sender details from the resume', () => {
+    const linked = withLinkedStyle(letter, resume, { sender: true, design: false })
+    expect(linked.style.basics.name).toBe('Ada Lovelace')
+    expect(linked.style.metadata.template).toBe('kakuna')
+  })
+
+  it('takes the design from the resume', () => {
+    const linked = withLinkedStyle(letter, resume, { sender: false, design: true })
+    expect(linked.style.metadata.template).toBe('onyx')
+    expect(linked.style.basics.name).toBe(letter.style.basics.name)
+  })
+
+  it('keeps its own copy when it follows nothing', () => {
+    expect(withLinkedStyle(letter, resume, { sender: false, design: false })).toBe(letter)
   })
 })

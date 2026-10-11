@@ -194,6 +194,8 @@ export function SetDefaultResume(arg1:string):Promise<void>;
 
 export function SetDocumentLocked(arg1:string,arg2:boolean):Promise<void>;
 
+export function SetLetterSource(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<void>;
+
 export function ShowAttachmentInFolder(arg1:string):Promise<void>;
 
 export function TailorResumeForJob(arg1:string,arg2:string):Promise<app.Document>;

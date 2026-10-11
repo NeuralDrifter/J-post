@@ -137,3 +137,8 @@ func (a *App) RestoreDocumentVersion(documentID, versionID string) (Document, er
 func (a *App) SetDocumentLocked(id string, locked bool) error {
 	return a.repo.SetDocumentLocked(id, locked)
 }
+
+// SetLetterSource sets the resume a letter follows and what it takes from it.
+func (a *App) SetLetterSource(letterID, resumeID string, senderLinked, designLinked bool) error {
+	return a.repo.SetLetterSource(letterID, resumeID, senderLinked, designLinked)
+}

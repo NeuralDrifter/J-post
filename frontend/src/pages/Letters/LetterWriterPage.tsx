@@ -8,7 +8,8 @@ import { api, apiOk } from '../../lib/api'
 import { GetDocument, SaveDocument, type app } from '../../lib/backend'
 import { exportDocument, setDocumentLocked, type ExportFormat } from '../../lib/resumes/actions'
 import type { Template } from '../../lib/resumes/document'
-import { LETTER_RENDER_OPTIONS, letterPageData, letterPlainText, parseStoredLetter, serializeLetter, type LetterData } from '../../lib/resumes/letter'
+import type { ResumeData } from '../../lib/resumes/document'
+import { LETTER_RENDER_OPTIONS, letterPageData, letterPlainText, parseStoredLetter, serializeLetter, withLinkedStyle, type LetterData } from '../../lib/resumes/letter'
 import { letterExportable } from '../../lib/resumes/stored'
 import { newEditingSession } from '../../lib/resumes/versions'
 import { useLoad } from '../../lib/useLoad'
@@ -29,6 +30,7 @@ import { ReadOnly } from '../ResumeBuilder/ui/ReadOnly'
 import { useBuilderHotkeys } from '../ResumeBuilder/useBuilderHotkeys'
 import { useSaveOnClose } from '../ResumeBuilder/useSaveOnClose'
 import { zoomIn, zoomOut, type Zoom } from '../ResumeBuilder/zoom'
+import { linksOf, loadSourceResume } from './LetterLinks'
 import { WritePanel } from './WritePanel'
 
 const BACK = { to: '/resumes?tab=letters', label: 'Cover letters' }
@@ -57,11 +59,19 @@ function LetterWriter({ id }: { id: string }) {
   return <LoadedLetter key={restored?.updatedAt ?? 'loaded'} doc={doc} data={restored?.data ?? doc.data} reopened={restored !== null} onRestored={setRestored} />
 }
 
+/** Waits for the resume the letter follows, if any, so the letter opens with its current sender and design. */
+function LoadedLetter(props: EditorProps & { data: string }) {
+  const { data: source, loading } = useLoad(() => loadSourceResume(props.doc), [props.doc.sourceId])
+  if (source === undefined && loading) return null
+  return <ParsedLetter {...props} source={source ?? null} />
+}
+
 /** Reads the stored letter once: from then on the editor owns its content. */
-function LoadedLetter({ data, ...props }: EditorProps & { data: string }) {
+function ParsedLetter({ data, source, ...props }: EditorProps & { data: string; source: ResumeData | null }) {
   const [content] = useState(() => parseStoredLetter(data))
   if (!content.ok) return <RepairView doc={props.doc} error={content.error} back={BACK} />
-  return <Workspace {...props} initial={content.data} />
+  const initial = source ? withLinkedStyle(content.data, source, linksOf(props.doc)) : content.data
+  return <Workspace {...props} initial={initial} />
 }
 
 function Workspace({ initial, ...props }: EditorProps & { initial: LetterData }) {
@@ -82,7 +92,14 @@ function LetterEditor({ doc, store, reopened, onRestored }: EditorProps & { stor
   const previewed = usePreviewedLetter(rightPanel === 'history' ? history.previewed : null)
   const locked = doc.locked
   const panels: Record<RightPanel, ReactNode> = {
-    design: <ReadOnly when={locked}><LetterDesignPanel /></ReadOnly>,
+    design: (
+      <div className="space-y-2">
+        {doc.designLinked && <p className="text-xs text-ink-3">The design comes from the resume this letter follows; change it there.</p>}
+        <ReadOnly when={locked || doc.designLinked}>
+          <LetterDesignPanel />
+        </ReadOnly>
+      </div>
+    ),
     history: <HistoryPanel {...history} />,
   }
   const [pageCount, setPageCount] = useState(0)
@@ -118,7 +135,7 @@ function LetterEditor({ doc, store, reopened, onRestored }: EditorProps & { stor
           title: 'Write',
           content: (
             <ReadOnly when={locked}>
-              <WritePanel letter={letter} update={update} />
+              <WritePanel doc={doc} letter={letter} update={update} />
             </ReadOnly>
           ),
         }}

@@ -255,6 +255,8 @@ export namespace app {
 	    updatedAt: string;
 	    deletedAt: string;
 	    locked: boolean;
+	    senderLinked: boolean;
+	    designLinked: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Document(source);
@@ -273,6 +275,8 @@ export namespace app {
 	        this.updatedAt = source["updatedAt"];
 	        this.deletedAt = source["deletedAt"];
 	        this.locked = source["locked"];
+	        this.senderLinked = source["senderLinked"];
+	        this.designLinked = source["designLinked"];
 	    }
 	}
 	export class DocumentVersion {

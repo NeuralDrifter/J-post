@@ -78,3 +78,34 @@ func TestLockingAMissingDocument(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestLinkingALetterToItsResume(t *testing.T) {
+	r := newTestRepo(t)
+	resume := mustCreateDocument(t, r, DocumentResume, "Backend")
+	letter := mustCreateDocument(t, r, DocumentLetter, "Acme letter")
+	if err := r.SetLetterSource(letter.ID, resume.ID, true, false); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := r.GetDocument(letter.ID)
+	if got.SourceID != resume.ID || !got.SenderLinked || got.DesignLinked {
+		t.Fatalf("letter = %+v", got)
+	}
+	if err := r.SetLetterSource(letter.ID, "", false, false); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := r.GetDocument(letter.ID); got.SourceID != "" || got.SenderLinked {
+		t.Fatalf("unlinked letter = %+v", got)
+	}
+}
+
+func TestOnlyLettersFollowResumes(t *testing.T) {
+	r := newTestRepo(t)
+	resume := mustCreateDocument(t, r, DocumentResume, "Backend")
+	letter := mustCreateDocument(t, r, DocumentLetter, "Acme letter")
+	if err := r.SetLetterSource(resume.ID, resume.ID, true, true); err == nil {
+		t.Fatal("a resume was linked to a resume")
+	}
+	if err := r.SetLetterSource(letter.ID, letter.ID, true, true); err == nil {
+		t.Fatal("a letter was linked to a letter")
+	}
+}

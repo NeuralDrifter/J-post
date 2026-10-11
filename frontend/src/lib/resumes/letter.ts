@@ -84,3 +84,18 @@ export function letterPlainText(letter: LetterData): string {
   const { recipient, content } = composedLetter(letter)
   return `${htmlToMarkdown(recipient)}\n\n${htmlToMarkdown(content)}`.trim()
 }
+
+/** What a letter takes live from its resume: the sender's details (name, contacts, photo) and the design. */
+export type LetterLinks = { sender: boolean; design: boolean }
+
+/** The letter with its sender details and/or design taken from `source` as it is now. */
+export function withLinkedStyle(letter: LetterData, source: ResumeData, links: LetterLinks): LetterData {
+  if (!links.sender && !links.design) return letter
+  const fromResume = copyCoverLetterStyle(source, letter.style.sectionId, letter.style.itemId)
+  const style = {
+    ...letter.style,
+    ...(links.sender ? { basics: fromResume.basics, picture: fromResume.picture } : {}),
+    ...(links.design ? { metadata: fromResume.metadata } : {}),
+  }
+  return { ...letter, style }
+}

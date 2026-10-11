@@ -32,19 +32,22 @@ type Document struct {
 	Name      string `json:"name"`
 	Data      string `json:"data"`
 	PlainText string `json:"plainText"`
-	SourceID  string `json:"sourceId"` // a tailored copy's original
+	SourceID  string `json:"sourceId"` // a tailored copy's original; a letter's resume
 	JobID     string `json:"jobId"`    // a tailored copy's job
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
 	DeletedAt string `json:"deletedAt"` // "" unless in Trash
 	Locked    bool   `json:"locked"`    // refuses edits, renaming, Trash and restores
+	// A letter's sender details and design can follow its resume (SourceID) instead of its own copy.
+	SenderLinked bool `json:"senderLinked"`
+	DesignLinked bool `json:"designLinked"`
 }
 
-const documentColumns = `id, kind, name, data, plain_text, source_id, COALESCE(job_id, ''), created_at, updated_at, deleted_at, locked`
+const documentColumns = `id, kind, name, data, plain_text, source_id, COALESCE(job_id, ''), created_at, updated_at, deleted_at, locked, sender_linked, design_linked`
 
 func scanDocument(row rowScanner) (Document, error) {
 	var d Document
-	err := row.Scan(&d.ID, &d.Kind, &d.Name, &d.Data, &d.PlainText, &d.SourceID, &d.JobID, &d.CreatedAt, &d.UpdatedAt, &d.DeletedAt, &d.Locked)
+	err := row.Scan(&d.ID, &d.Kind, &d.Name, &d.Data, &d.PlainText, &d.SourceID, &d.JobID, &d.CreatedAt, &d.UpdatedAt, &d.DeletedAt, &d.Locked, &d.SenderLinked, &d.DesignLinked)
 	return d, err
 }
 

@@ -401,6 +401,9 @@ var migrations = []string{
 		SELECT lower(hex(randomblob(8))), id, 'created', data, plain_text, updated_at FROM documents;`,
 	// 14: documents locked against editing (see document_lock.go).
 	`ALTER TABLE documents ADD COLUMN locked INTEGER NOT NULL DEFAULT 0;`,
+	// 15: a letter's sender details and design can follow its source resume (see letters.go).
+	`ALTER TABLE documents ADD COLUMN sender_linked INTEGER NOT NULL DEFAULT 0;
+	ALTER TABLE documents ADD COLUMN design_linked INTEGER NOT NULL DEFAULT 0;`,
 }
 
 func openDB(path string) (*sql.DB, error) {
