@@ -35,10 +35,12 @@ type FontCache struct {
 }
 
 // NewFontCache keeps fonts in dir. fontList is the catalogue
-// (webfontlist.json): an array of families, each with a "files" map of URLs.
+// (webfontlist.json): an array of families, each with a "files" map of URLs
+// and a "preview" URL the font picker shows the family's name in.
 func NewFontCache(dir string, fontList []byte) (*FontCache, error) {
 	var families []struct {
-		Files map[string]string `json:"files"`
+		Preview string            `json:"preview"`
+		Files   map[string]string `json:"files"`
 	}
 	if err := json.Unmarshal(fontList, &families); err != nil {
 		return nil, fmt.Errorf("font catalogue: %w", err)
@@ -47,6 +49,9 @@ func NewFontCache(dir string, fontList []byte) (*FontCache, error) {
 	for _, family := range families {
 		for _, url := range family.Files {
 			allowed[url] = true
+		}
+		if family.Preview != "" {
+			allowed[family.Preview] = true
 		}
 	}
 	return &FontCache{dir: dir, allowed: allowed}, nil

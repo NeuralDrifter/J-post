@@ -124,3 +124,15 @@ func TestNewFontCacheRejectsBadList(t *testing.T) {
 		t.Fatal("no error for a malformed font list")
 	}
 }
+
+func TestFontCacheServesListedPreviews(t *testing.T) {
+	srv, _ := fontServer(t)
+	list := fmt.Sprintf(`[{"family":"Inter","preview":"%[1]s/inter-preview.ttf","files":{"400":"%[1]s/inter-400.ttf"}}]`, srv.URL)
+	cache, err := NewFontCache(t.TempDir(), []byte(list))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := fetchFont(cache, http.MethodGet, srv.URL+"/inter-preview.ttf"); rec.Code != http.StatusOK {
+		t.Fatalf("preview = %d", rec.Code)
+	}
+}

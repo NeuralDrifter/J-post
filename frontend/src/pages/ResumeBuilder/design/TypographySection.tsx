@@ -1,36 +1,33 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useId, useState } from 'react'
-import { fontList, getFont, type FontWeight } from '@reactive-resume/fonts'
+import type { FontWeight } from '@reactive-resume/fonts'
+import { getNextWeights } from '@reactive-resume/web/components/typography/get-next-weights'
 import { applyFontPairing, applyTextSize, FONT_PAIRINGS, matchFontPairing, TEXT_SIZE, type FontPairingId } from '@reactive-resume/web/features/resume/editor/design/presets'
-import { Field } from '../../../components/Field'
-import { useDesign } from './designContext'
+import { fontWeights, toggleWeight } from '../../../lib/resumes/fonts'
+import { FontCombobox } from '../ui/FontCombobox'
 import { Segmented, Slider, Toggle } from '../ui/controls'
+import { useDesign } from './designContext'
 
 type Role = 'body' | 'heading'
 
 const PAIRING_OPTIONS = FONT_PAIRINGS.map((p) => ({ value: p.id, label: p.label }))
 
-/** The weights a newly chosen family starts with: Regular and Bold for text, the boldest for headings. */
-function defaultWeights(family: string, role: Role): FontWeight[] {
-  const weights = (getFont(family)?.weights ?? ['400']) as FontWeight[]
-  if (role === 'heading') return [weights.includes('700') ? '700' : (weights.at(-1) ?? '700')]
-  const regularAndBold = weights.filter((w) => w === '400' || w === '700')
-  return regularAndBold.length ? regularAndBold : [weights[0] ?? '400']
-}
+const WEIGHT_NAMES: Record<string, string> = { '100': 'Thin', '200': 'Extra light', '300': 'Light', '400': 'Regular', '500': 'Medium', '600': 'Semibold', '700': 'Bold', '800': 'Extra bold', '900': 'Black' }
 
-/** Font pairing presets, then each family, the text size and line spacing. */
+/** Font pairing presets, then each family with its weights, the text size and line spacing. */
 export function TypographySection() {
   const { metadata, updateMetadata } = useDesign()
   const typography = metadata.typography
   const pairing = matchFontPairing({ typography })
 
+  // A new family starts with Reactive Resume's choice of weights: regular and bold for text, one for headings.
   const setFamily = (role: Role, family: string) =>
     updateMetadata((m) => {
       m.typography[role].fontFamily = family
-      m.typography[role].fontWeights = defaultWeights(family, role)
+      m.typography[role].fontWeights = getNextWeights(family, role === 'heading') ?? ['400']
     })
+  const setWeights = (role: Role, weight: FontWeight) => updateMetadata((m) => void (m.typography[role].fontWeights = toggleWeight(m.typography[role].fontWeights as FontWeight[], weight)))
 
   return (
     <div className="space-y-4">
@@ -38,8 +35,13 @@ export function TypographySection() {
         <span className="label-mono">Pairing</span>
         <Segmented<FontPairingId> label="Font pairing" options={PAIRING_OPTIONS} value={pairing} onChange={(id) => updateMetadata((m) => applyFontPairing(m, id))} />
       </div>
-      <FontPicker label="Headings" family={typography.heading.fontFamily} onChange={(f) => setFamily('heading', f)} />
-      <FontPicker label="Text" family={typography.body.fontFamily} onChange={(f) => setFamily('body', f)} />
+      {(['heading', 'body'] as const).map((role) => (
+        <div key={role} className="space-y-1.5">
+          <span className="label-mono">{role === 'heading' ? 'Headings' : 'Text'}</span>
+          <FontCombobox label={role === 'heading' ? 'Heading font' : 'Text font'} value={typography[role].fontFamily} onChange={(f) => setFamily(role, f)} />
+          <WeightChips family={typography[role].fontFamily} selected={typography[role].fontWeights as FontWeight[]} onToggle={(w) => setWeights(role, w)} />
+        </div>
+      ))}
       <Slider
         label="Text size"
         value={typography.body.fontSize}
@@ -55,30 +57,27 @@ export function TypographySection() {
   )
 }
 
-/** Any of the template fonts, searched by typing; applied once the name matches a font. */
-function FontPicker({ label, family, onChange }: { label: string; family: string; onChange: (family: string) => void }) {
-  const listId = useId()
-  const [typed, setTyped] = useState<string | null>(null)
+/** The family's weights as toggles: the ones the page loads, the last being its bold. */
+function WeightChips({ family, selected, onToggle }: { family: string; selected: FontWeight[]; onToggle: (weight: FontWeight) => void }) {
+  const available = fontWeights(family)
+  if (available.length < 2) return null
   return (
-    <Field label={label}>
-      <input
-        className="field"
-        list={listId}
-        value={typed ?? family}
-        style={{ fontFamily: family }}
-        onChange={(e) => {
-          setTyped(e.target.value)
-          if (getFont(e.target.value)) onChange(e.target.value)
-        }}
-        onBlur={() => setTyped(null)}
-      />
-      <datalist id={listId}>
-        {fontList.map((font) => (
-          <option key={font.family} value={font.family}>
-            {font.category}
-          </option>
-        ))}
-      </datalist>
-    </Field>
+    <div role="group" aria-label="Weights" className="flex flex-wrap gap-1">
+      {available.map((weight) => {
+        const on = selected.includes(weight)
+        return (
+          <button
+            key={weight}
+            type="button"
+            aria-pressed={on}
+            title={WEIGHT_NAMES[weight] ?? weight}
+            onClick={() => onToggle(weight)}
+            className={`rounded-md border px-1.5 py-0.5 font-mono text-[10px] transition ${on ? 'border-accent bg-accent/20 text-indigo-100' : 'border-line text-ink-3 hover:text-ink-2'}`}
+          >
+            {weight}
+          </button>
+        )
+      })}
+    </div>
   )
 }
