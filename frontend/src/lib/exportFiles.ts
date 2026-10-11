@@ -86,14 +86,24 @@ export function buildCalendar(events: CalendarEvent[], now = new Date()): string
 
 /** A job's interviews as calendar events: "Phone screen · Acme — Staff Engineer". */
 export function interviewEvents(interviews: app.Interview[], job: app.Job, kindLabel: (kind: string) => string): CalendarEvent[] {
-  return interviews.map((iv) => ({
+  return interviews.map((iv) => interviewEvent(iv, job, kindLabel))
+}
+
+function interviewEvent(iv: app.Interview, job: { company: string; position: string }, kindLabel: (kind: string) => string): CalendarEvent {
+  return {
     uid: iv.id,
     title: `${kindLabel(iv.kind)} · ${job.company} — ${job.position}`,
     start: new Date(iv.scheduledAt),
     minutes: iv.durationMin || DEFAULT_INTERVIEW_MINUTES,
     location: iv.locationOrLink,
     description: iv.notes,
-  }))
+  }
+}
+
+/** Saves every job's interviews as one calendar file. */
+export function exportAllInterviews(interviews: app.ScheduledInterview[], kindLabel: (kind: string) => string): Promise<boolean> {
+  const ics = buildCalendar(interviews.map((iv) => interviewEvent(iv, iv, kindLabel)))
+  return saveExport('Job Track interviews.ics', new Blob([ics], { type: 'text/calendar' }))
 }
 
 const DEFAULT_INTERVIEW_MINUTES = 60

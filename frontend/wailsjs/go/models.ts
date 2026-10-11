@@ -1362,6 +1362,38 @@ export namespace app {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class ScheduledInterview {
+	    id: string;
+	    jobId: string;
+	    kind: string;
+	    scheduledAt: string;
+	    durationMin: number;
+	    locationOrLink: string;
+	    notes: string;
+	    completed: boolean;
+	    company: string;
+	    position: string;
+	    jobStatus: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ScheduledInterview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.jobId = source["jobId"];
+	        this.kind = source["kind"];
+	        this.scheduledAt = source["scheduledAt"];
+	        this.durationMin = source["durationMin"];
+	        this.locationOrLink = source["locationOrLink"];
+	        this.notes = source["notes"];
+	        this.completed = source["completed"];
+	        this.company = source["company"];
+	        this.position = source["position"];
+	        this.jobStatus = source["jobStatus"];
+	    }
+	}
 	
 	
 	

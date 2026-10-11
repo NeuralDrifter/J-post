@@ -17,6 +17,8 @@ import { averageScore, filterByJob } from '../../lib/interview'
 import { kindLabel, useInterviewOptions } from '../../lib/interviewOptions'
 import { openMenu } from '../../lib/menu'
 import { useLoad } from '../../lib/useLoad'
+import { Segmented } from '../ResumeBuilder/ui/controls'
+import { InterviewCalendar } from './InterviewCalendar'
 
 const STATUS_CHIP: Record<string, { label: string; tone: 'info' | 'danger' | 'neutral' }> = {
   live: { label: 'Not finished', tone: 'neutral' },
@@ -25,8 +27,30 @@ const STATUS_CHIP: Record<string, { label: string; tone: 'info' | 'danger' | 'ne
   unscored: { label: 'Not scored', tone: 'neutral' },
 }
 
-/** Every mock interview across all jobs, so past sessions are easy to find and review. */
+type View = 'calendar' | 'mock'
+
+const VIEWS: { value: View; label: string }[] = [
+  { value: 'calendar', label: 'Calendar' },
+  { value: 'mock', label: 'Mock interviews' },
+]
+
+/** Interviews: the real ones on a calendar, and every mock interview to review. */
 export default function InterviewsPage() {
+  const [view, setView] = useState<View>('calendar')
+  return (
+    <div className="space-y-4">
+      <PageTitle title="Interviews" subtitle="Your scheduled interviews across every job, and the mock interviews you've practised.">
+        <div className="w-72">
+          <Segmented label="Interviews view" options={VIEWS} value={view} onChange={setView} />
+        </div>
+      </PageTitle>
+      {view === 'calendar' ? <InterviewCalendar /> : <MockInterviews />}
+    </div>
+  )
+}
+
+/** Every mock interview across all jobs, so past sessions are easy to find and review. */
+function MockInterviews() {
   const navigate = useNavigate()
   const options = useInterviewOptions()
   const { data: interviews } = useLoad(() => api(ListAllMockInterviews()), [])
@@ -53,7 +77,6 @@ export default function InterviewsPage() {
 
   return (
     <div className="space-y-4">
-      <PageTitle title="Interviews" subtitle="Every mock interview you've done: recordings, tips and scorecards, ready to review." />
       {jobs.length > 1 && (
         <select className="field w-auto py-1 text-xs" value={jobFilter} onChange={(e) => setJobFilter(e.target.value)} aria-label="Filter by job">
           <option value="">All jobs</option>

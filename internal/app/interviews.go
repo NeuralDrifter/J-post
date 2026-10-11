@@ -37,6 +37,24 @@ func (r *Repo) ListInterviews(jobID string) ([]Interview, error) {
 	return queryAll(r.db, scanInterview, `SELECT `+interviewColumns+` FROM interviews WHERE job_id = ? ORDER BY completed, scheduled_at`, jobID)
 }
 
+// ScheduledInterview is an interview with the job it's for, for the calendar.
+type ScheduledInterview struct {
+	Interview
+	Company   string `json:"company"`
+	Position  string `json:"position"`
+	JobStatus string `json:"jobStatus"`
+}
+
+// ListAllInterviews lists every job's interviews, soonest first.
+func (r *Repo) ListAllInterviews() ([]ScheduledInterview, error) {
+	return queryAll(r.db, func(row rowScanner) (ScheduledInterview, error) {
+		var s ScheduledInterview
+		err := row.Scan(&s.ID, &s.JobID, &s.Kind, &s.ScheduledAt, &s.DurationMin, &s.LocationOrLink, &s.Notes, &s.Completed, &s.Company, &s.Position, &s.JobStatus)
+		return s, err
+	}, `SELECT i.id, i.job_id, i.kind, i.scheduled_at, i.duration_min, i.location_or_link, i.notes, i.completed, j.company, j.position, j.status
+		FROM interviews i JOIN jobs j ON j.id = i.job_id ORDER BY i.scheduled_at, i.rowid`)
+}
+
 func (r *Repo) SaveInterview(iv Interview) (Interview, error) {
 	if !slices.Contains(ScheduledInterviewKinds, iv.Kind) {
 		return iv, fmt.Errorf("invalid interview kind %q", iv.Kind)

@@ -154,6 +154,10 @@ export function ListAIProviders() {
   return window['go']['app']['App']['ListAIProviders']();
 }
 
+export function ListAllInterviews() {
+  return window['go']['app']['App']['ListAllInterviews']();
+}
+
 export function ListAllMockInterviews() {
   return window['go']['app']['App']['ListAllMockInterviews']();
 }

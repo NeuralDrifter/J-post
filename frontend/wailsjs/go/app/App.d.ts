@@ -82,6 +82,8 @@ export function ListAIModels(arg1:string,arg2:settings.Settings):Promise<Array<s
 
 export function ListAIProviders():Promise<Array<ai.AIProvider>>;
 
+export function ListAllInterviews():Promise<Array<app.ScheduledInterview>>;
+
 export function ListAllMockInterviews():Promise<Array<app.MockInterviewSummary>>;
 
 export function ListAllStageEvents():Promise<Array<app.StageEvent>>;

@@ -155,6 +155,9 @@ func (a *App) DeleteJob(id string) error {
 	return a.repo.DeleteJob(id)
 }
 
+// ListAllInterviews lists every job's interviews, for the calendar.
+func (a *App) ListAllInterviews() ([]ScheduledInterview, error) { return a.repo.ListAllInterviews() }
+
 // ListAllStageEvents is every job's stage history, for Insights.
 func (a *App) ListAllStageEvents() ([]StageEvent, error) { return a.repo.ListAllStageEvents() }
 

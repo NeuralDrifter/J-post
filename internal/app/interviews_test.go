@@ -54,3 +54,23 @@ func TestInterviewValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestListAllInterviewsAcrossJobs(t *testing.T) {
+	r := newTestRepo(t)
+	acme := mustCreate(t, r, Job{Company: "Acme", Position: "Dev"})
+	globex := mustCreate(t, r, Job{Company: "Globex", Position: "SRE"})
+	late := time.Date(2026, 10, 9, 10, 0, 0, 0, time.Local).Format(time.RFC3339)
+	early := time.Date(2026, 10, 2, 15, 0, 0, 0, time.Local).Format(time.RFC3339)
+	for _, iv := range []Interview{{JobID: acme.ID, Kind: "technical", ScheduledAt: late}, {JobID: globex.ID, Kind: "phone_screen", ScheduledAt: early}} {
+		if _, err := r.SaveInterview(iv); err != nil {
+			t.Fatal(err)
+		}
+	}
+	all, err := r.ListAllInterviews()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 || all[0].Company != "Globex" || all[0].Position != "SRE" || all[1].Company != "Acme" {
+		t.Fatalf("all = %+v", all)
+	}
+}
