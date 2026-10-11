@@ -5,12 +5,14 @@ import type { MouseEvent } from 'react'
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Copy, Eye, EyeOff, GripVertical, Trash2 } from 'lucide-react'
+import { Copy, Eye, EyeOff, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react'
 import { generateId } from '@reactive-resume/utils/string'
 import { describeEntry, getEntries, isDraftEntry, type Entry, type WriteSection } from '@reactive-resume/web/features/resume/editor/write/model'
 import { Chip } from '../../../components/Chip'
 import { openMenu } from '../../../lib/menu'
 import { useResume, useUpdate } from '../editorContext'
+import { useEditWithUndo } from '../useEditWithUndo'
+import { moveEntry, moveToMenu } from './entryMenu'
 
 /** A section's entries: click to edit, drag to reorder, right-click for more. */
 export function EntryList({ section, onOpen }: { section: WriteSection; onOpen: (entryId: string) => void }) {
@@ -45,7 +47,9 @@ export function EntryList({ section, onOpen }: { section: WriteSection; onOpen: 
 }
 
 function EntryRow({ section, entry, onOpen }: { section: WriteSection; entry: Entry; onOpen: () => void }) {
+  const data = useResume()
   const update = useUpdate()
+  const editWithUndo = useEditWithUndo()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: entry.id })
   const { title, meta } = describeEntry(section.type, entry)
   const draft = isDraftEntry(section.type, entry)
@@ -57,12 +61,18 @@ function EntryRow({ section, entry, onOpen }: { section: WriteSection; entry: En
       if (index >= 0) mutate(list, index)
     })
   const toggleHidden = () => editEntry((list, i) => void (list[i]!.hidden = !entry.hidden))
+  const remove = () =>
+    editWithUndo((d) => {
+      const list = getEntries(d, section)
+      list.splice(list.findIndex((e) => e.id === entry.id), 1)
+    }, `${title ? `“${title}”` : 'Entry'} deleted`)
   const menu = (e: MouseEvent) =>
     openMenu(e, [
       { label: entry.hidden ? 'Show on the page' : 'Hide from the page', icon: entry.hidden ? Eye : EyeOff, onSelect: toggleHidden },
       { label: 'Duplicate', icon: Copy, onSelect: () => editEntry((list, i) => list.splice(i + 1, 0, { ...structuredClone(entry), id: generateId() })) },
+      moveToMenu(data, section, (target) => update(moveEntry(section, entry.id, target))),
       'separator',
-      { label: 'Delete', icon: Trash2, danger: true, onSelect: () => editEntry((list, i) => list.splice(i, 1)) },
+      { label: 'Delete', icon: Trash2, danger: true, onSelect: remove },
     ])
 
   return (
@@ -80,6 +90,14 @@ function EntryRow({ section, entry, onOpen }: { section: WriteSection; entry: En
         {meta && <span className="block truncate text-[11px] text-ink-3">{meta}</span>}
       </button>
       {draft && <Chip tone="warn" title="Fill in the first field to print this entry">Draft</Chip>}
+      <button
+        type="button"
+        onClick={menu}
+        aria-label={`Options for ${title || 'entry'}`}
+        className="grid h-6 w-6 place-items-center rounded-md text-ink-3 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-ink focus:opacity-100"
+      >
+        <MoreHorizontal size={13} />
+      </button>
       <button
         type="button"
         onClick={toggleHidden}
