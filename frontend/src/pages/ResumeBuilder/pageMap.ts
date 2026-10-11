@@ -36,6 +36,11 @@ export function nodeAt(pageMap: PageMap, pageIndex: number, x: number, y: number
   return hits.sort((a, b) => a.width * a.height - b.width * b.height)[0]
 }
 
+/** A pointer position on a drawn page, in the page's PDF points (the page map's units). */
+export function toPagePoint(client: { x: number; y: number }, drawn: { left: number; top: number; width: number; height: number }, page: PageSize) {
+  return { x: ((client.x - drawn.left) / drawn.width) * page.width, y: ((client.y - drawn.top) / drawn.height) * page.height }
+}
+
 /** A box placed over its page, in percentages, so it follows the page at any zoom. */
 export function boxStyle(box: Box, page: PageSize): CSSProperties {
   return {

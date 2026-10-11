@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Plus } from 'lucide-react'
 import { getResumeSectionTitle } from '@reactive-resume/pdf/section-title'
 import type { CustomSectionType, SectionType } from '@reactive-resume/schema/resume/data'
@@ -16,6 +16,7 @@ import {
 } from '@reactive-resume/web/features/resume/editor/write/model'
 import { openMenu, type MenuEntry } from '../../../lib/menu'
 import { useResume, useUpdate } from '../editorContext'
+import { useBuilderView, type EditorSelection } from '../viewStore'
 import { BasicsCard } from './BasicsCard'
 import { EntryModal } from './EntryModal'
 import { PictureCard } from './PictureCard'
@@ -38,6 +39,16 @@ export function ContentPanel() {
   const reveal = (id: string) => {
     setAdded((ids) => new Set(ids).add(id))
     setOpenSections((open) => new Set(open).add(id))
+  }
+  useRevealSelection((selection) => {
+    if (selection.kind === 'header') return scrollToBlock('header')
+    reveal(selection.sectionId)
+    if (selection.kind === 'item') setOpenEntry({ sectionId: selection.sectionId, entryId: selection.itemId })
+    else scrollToBlock(selection.sectionId)
+  })
+  const closeEntry = () => {
+    setOpenEntry(null)
+    useBuilderView.getState().select(null)
   }
   const openNewEntry = (sectionId: string, entryId: string | null) => {
     reveal(sectionId)
@@ -83,11 +94,28 @@ export function ContentPanel() {
           sectionId={openEntry.sectionId}
           entryId={openEntry.entryId}
           sectionTitle={getResumeSectionTitle(data, openEntry.sectionId)}
-          onClose={() => setOpenEntry(null)}
+          onClose={closeEntry}
         />
       )}
     </div>
   )
+}
+
+/** Runs `reveal` each time a block is picked on the page (or by a Check fix), so its fields come into view. */
+function useRevealSelection(reveal: (selection: EditorSelection) => void) {
+  const selection = useBuilderView((s) => s.selection)
+  const latest = useRef(reveal)
+  latest.current = reveal
+  useEffect(() => {
+    if (selection) latest.current(selection)
+  }, [selection])
+}
+
+/** Scrolls the panel to a block's card: "header" for the basics, else a section id. */
+function scrollToBlock(block: string) {
+  requestAnimationFrame(() => {
+    document.querySelector(`[data-block="${CSS.escape(block)}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  })
 }
 
 function withToggled(set: ReadonlySet<string>, id: string): ReadonlySet<string> {

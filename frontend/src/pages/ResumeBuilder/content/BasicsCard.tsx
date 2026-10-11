@@ -26,9 +26,11 @@ export function BasicsCard() {
   const basics = useResume().basics
   const update = useUpdate()
   return (
-    <Fold title="Basics" icon={<IdCard size={15} className="shrink-0 text-indigo-300" />} defaultOpen>
-      <BasicsForm basics={basics} edit={(mutate) => update((d) => mutate(d.basics))} />
-    </Fold>
+    <div data-block="header" className="scroll-mt-3">
+      <Fold title="Basics" icon={<IdCard size={15} className="shrink-0 text-indigo-300" />} defaultOpen>
+        <BasicsForm basics={basics} edit={(mutate) => update((d) => mutate(d.basics))} />
+      </Fold>
+    </div>
   )
 }
 

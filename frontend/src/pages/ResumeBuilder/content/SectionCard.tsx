@@ -40,7 +40,7 @@ export function SectionCard({ section, open, onToggle, previous, next, onOpenEnt
     openMenu(e, sectionMenu({ section, settings, title, previous, next, update, onEntryAdded: (id) => onOpenEntry(section.id, id) }))
 
   return (
-    <div onContextMenu={showMenu}>
+    <div data-block={section.id} className="scroll-mt-3" onContextMenu={showMenu}>
       <Collapsible
         title={
           <span className="flex items-center gap-2">

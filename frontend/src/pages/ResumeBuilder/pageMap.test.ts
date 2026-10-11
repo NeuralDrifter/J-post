@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import { boxStyle, firstNodeFor, marginStyle, nodeAt, nodesOnPage, placeMarkers, type PageMap, type PageMapNode } from './pageMap'
+import { boxStyle, firstNodeFor, marginStyle, nodeAt, nodesOnPage, placeMarkers, toPagePoint, type PageMap, type PageMapNode } from './pageMap'
 
 const header: PageMapNode = { kind: 'header', key: 'header', page: 0, x: 40, y: 40, width: 500, height: 80 }
 const experience: PageMapNode = { kind: 'section', sectionId: 'experience', key: 'exp', page: 0, x: 40, y: 140, width: 500, height: 400 }
@@ -25,6 +25,10 @@ describe('page map', () => {
     expect(nodeAt(pageMap, 0, 100, 400)).toBe(experience)
     expect(nodeAt(pageMap, 0, 100, 60)).toBe(header)
     expect(nodeAt(pageMap, 0, 5, 5)).toBeUndefined()
+  })
+
+  it('converts a click on a page drawn at any size to PDF points', () => {
+    expect(toPagePoint({ x: 160, y: 420 }, { left: 10, top: 20, width: 300, height: 400 }, { width: 600, height: 800 })).toEqual({ x: 300, y: 800 })
   })
 
   it('places boxes in percentages of the page', () => {
