@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react'
 import type { ResumeData } from '../../lib/resumes/document'
 import { CheckPageLayer, PageViewToggle } from './check/CheckPageLayer'
 import { ParserView } from './check/ParserView'
+import { FitChip } from './design/FitChip'
 import { VersionBanner } from './history/VersionBanner'
 import { useResume } from './editorContext'
 import { PreviewCanvas, type RenderedPreview } from './PreviewCanvas'
@@ -31,7 +32,12 @@ export function ResumeCanvas({ zoom, checking, version }: { zoom: Zoom; checking
       <PreviewCanvas
         zoom={zoom}
         data={live}
-        toolbar={checking && <PageViewToggle />}
+        toolbar={
+          <span className="flex flex-wrap items-center gap-2">
+            {checking && <PageViewToggle />}
+            <FitChip />
+          </span>
+        }
         pageLayer={(pageIndex) =>
           pageMap && (
             <>
