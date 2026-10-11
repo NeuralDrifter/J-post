@@ -158,6 +158,10 @@ export function ListAllMockInterviews() {
   return window['go']['app']['App']['ListAllMockInterviews']();
 }
 
+export function ListAllStageEvents() {
+  return window['go']['app']['App']['ListAllStageEvents']();
+}
+
 export function ListAttachments(arg1) {
   return window['go']['app']['App']['ListAttachments'](arg1);
 }

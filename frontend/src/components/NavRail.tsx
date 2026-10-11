@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NavLink, useLocation } from 'react-router'
-import { BadgeDollarSign, FileText, Mic, Search, Settings, SquareKanban } from 'lucide-react'
+import { BadgeDollarSign, ChartNoAxesColumn, FileText, Mic, Search, Settings, SquareKanban } from 'lucide-react'
 
 // `also`: other paths that belong to the item, e.g. letters live under Resumes.
 const ITEMS = [
@@ -10,6 +10,7 @@ const ITEMS = [
   { to: '/discover', label: 'Discover', icon: Search, end: false, also: [] },
   { to: '/resumes', label: 'Resumes', icon: FileText, end: false, also: ['/letters'] },
   { to: '/offers', label: 'Offers', icon: BadgeDollarSign, end: false, also: [] },
+  { to: '/insights', label: 'Insights', icon: ChartNoAxesColumn, end: false, also: [] },
   { to: '/interviews', label: 'Interviews', icon: Mic, end: false, also: [] },
   { to: '/settings', label: 'Settings', icon: Settings, end: false, also: [] },
 ]

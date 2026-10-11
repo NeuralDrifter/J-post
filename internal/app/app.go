@@ -155,6 +155,9 @@ func (a *App) DeleteJob(id string) error {
 	return a.repo.DeleteJob(id)
 }
 
+// ListAllStageEvents is every job's stage history, for Insights.
+func (a *App) ListAllStageEvents() ([]StageEvent, error) { return a.repo.ListAllStageEvents() }
+
 func (a *App) ListStageEvents(jobID string) ([]StageEvent, error) {
 	return a.repo.ListStageEvents(jobID)
 }

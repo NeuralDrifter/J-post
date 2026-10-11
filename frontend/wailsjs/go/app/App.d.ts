@@ -84,6 +84,8 @@ export function ListAIProviders():Promise<Array<ai.AIProvider>>;
 
 export function ListAllMockInterviews():Promise<Array<app.MockInterviewSummary>>;
 
+export function ListAllStageEvents():Promise<Array<app.StageEvent>>;
+
 export function ListAttachments(arg1:string):Promise<Array<app.Attachment>>;
 
 export function ListCompForJob(arg1:string):Promise<Array<app.ComparisonItem>>;

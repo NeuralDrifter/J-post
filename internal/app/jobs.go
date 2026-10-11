@@ -277,6 +277,12 @@ func (r *Repo) ListStageEvents(jobID string) ([]StageEvent, error) {
 		FROM stage_events WHERE job_id = ? ORDER BY at, rowid`, jobID)
 }
 
+// ListAllStageEvents is every job's stage history, oldest first, for Insights.
+func (r *Repo) ListAllStageEvents() ([]StageEvent, error) {
+	return queryAll(r.db, scanStageEvent, `SELECT id, job_id, from_status, to_status, close_reason, at, note
+		FROM stage_events ORDER BY at, rowid`)
+}
+
 func scanStageEvent(s rowScanner) (StageEvent, error) {
 	var e StageEvent
 	var from sql.NullString

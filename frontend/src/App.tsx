@@ -26,6 +26,7 @@ const LicensesPage = lazy(() => import('./pages/Licenses/LicensesPage'))
 const ResumesPage = lazy(() => import('./pages/Resumes/ResumesPage'))
 const ResumeBuilderPage = lazy(() => import('./pages/ResumeBuilder/ResumeBuilderPage'))
 const LetterWriterPage = lazy(() => import('./pages/Letters/LetterWriterPage'))
+const InsightsPage = lazy(() => import('./pages/Insights/InsightsPage'))
 
 // Remount the detail page per job so no state leaks between jobs.
 function JobDetailRoute() {
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="jobs/:id" element={<JobDetailRoute />} />
           <Route path="discover" element={<DiscoverPage />} />
           <Route path="offers" element={<OffersPage />} />
+          <Route path="insights" element={<Lazy page={<InsightsPage />} />} />
           <Route path="interviews" element={<InterviewsPage />} />
           <Route path="interviews/:id/live" element={<LiveInterviewPage />} />
           <Route path="interviews/:id" element={<InterviewReviewRoute />} />

@@ -200,3 +200,23 @@ func TestMigration4RenamesWishlistToInterested(t *testing.T) {
 		t.Fatalf("events = %+v", events)
 	}
 }
+
+func TestListAllStageEvents(t *testing.T) {
+	r := newTestRepo(t)
+	a := mustCreateJob(t, r)
+	b := mustCreateJob(t, r)
+	if _, err := r.ChangeStatus(a.ID, StatusInterviewing, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	events, err := r.ListAllStageEvents()
+	if err != nil {
+		t.Fatal(err)
+	}
+	perJob := map[string]int{}
+	for _, e := range events {
+		perJob[e.JobID]++
+	}
+	if perJob[a.ID] != 2 || perJob[b.ID] != 1 {
+		t.Fatalf("events per job = %v", perJob)
+	}
+}
