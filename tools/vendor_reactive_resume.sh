@@ -34,6 +34,9 @@ web_files=(
 	libs/resume/section.tsx
 	libs/resume/move-item.ts
 	libs/resume/move-item-round-trip.test.ts
+	components/input/rich-text-extensions.ts
+	components/input/paragraph-indent.ts
+	components/input/rich-input-whitespace.ts
 )
 commit=$(git -C "$upstream" rev-parse --short=7 HEAD)
 header="// Derived from Reactive Resume (https://github.com/reactive-resume/reactive-resume), commit $commit.
