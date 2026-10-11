@@ -1,54 +1,89 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useEffect, useMemo, useRef } from 'react'
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
-import { css } from '@codemirror/lang-css'
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { EditorState } from '@codemirror/state'
-import { EditorView, keymap, placeholder } from '@codemirror/view'
-import { tags } from '@lezer/highlight'
-import { compileStylesheet, isFatalStylesheetDiagnostic } from '@reactive-resume/resume/stylesheet'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type { EditorView } from '@codemirror/view'
+import { Copy, Crosshair, Maximize2, Wand2 } from 'lucide-react'
+import type { SemanticCssColorToken } from '@reactive-resume/web/features/resume/stylesheet/color-tokens'
+import { revealStyleRule } from '@reactive-resume/web/features/resume/stylesheet/editor-extensions'
+import { formatEditorDocument } from '@reactive-resume/web/features/resume/stylesheet/formatter'
+import { matchedNodeKeys } from '@reactive-resume/web/features/resume/stylesheet/highlight'
+import { styleTargetFor } from '@reactive-resume/web/features/resume/stylesheet/targets'
+import { Modal } from '../../../components/Modal'
 import { BrowserOpenURL } from '../../../lib/backend'
+import { toast } from '../../../lib/toast'
+import { useStylePick } from '../stylePick'
+import { useBuilderView } from '../viewStore'
+import { CssCodeEditor } from './CssCodeEditor'
 import { useDesign } from './designContext'
+import { compileForEditor, editorMetadata, replaceColor, STYLESHEET_LANGUAGE_VERSION } from './stylesheetModel'
 
-const STYLESHEET_LANGUAGE_VERSION = 1
 const DOCS_URL = 'https://docs.rxresu.me/applying-custom-styles'
-
-// The editor in Job Track's colours (index.css @theme tokens).
-const theme = EditorView.theme(
-  {
-    '&': { backgroundColor: 'rgb(0 0 0 / 0.3)', color: 'var(--color-ink)', borderRadius: '0.5rem', border: '1px solid var(--color-line)', fontSize: '12px' },
-    '&.cm-focused': { outline: 'none', borderColor: 'var(--color-accent)', boxShadow: '0 0 0 3px rgb(99 102 241 / 0.2)' },
-    '.cm-content': { fontFamily: 'var(--font-mono)', caretColor: 'var(--color-ink)', minHeight: '10rem' },
-    '.cm-gutters': { display: 'none' },
-    '.cm-activeLine': { backgroundColor: 'rgb(255 255 255 / 0.03)' },
-    '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': { backgroundColor: 'rgb(99 102 241 / 0.3) !important' },
-    '.cm-placeholder': { color: 'var(--color-ink-3)' },
-  },
-  { dark: true },
-)
-const highlight = HighlightStyle.define([
-  { tag: [tags.className, tags.tagName], color: '#a5b4fc' },
-  { tag: tags.propertyName, color: '#67e8f9' },
-  { tag: [tags.number, tags.unit, tags.color], color: '#fbbf24' },
-  { tag: [tags.string, tags.keyword], color: '#6ee7b7' },
-  { tag: tags.comment, color: 'var(--color-ink-3)', fontStyle: 'italic' },
-])
 
 /** Reactive Resume's PDF-safe CSS, for styling beyond the design controls. */
 export function CustomCssSection() {
-  const { metadata, updateMetadata } = useDesign()
-  const stylesheet = metadata.stylesheet
-  const text = stylesheet?.source.text ?? ''
-  const errors = useMemo(() => fatalErrors(text), [text])
+  const { metadata, updateMetadata, page } = useDesign()
+  const text = metadata.stylesheet?.source.text ?? ''
+  const { errors, colorTokens } = useMemo(() => compileForEditor(text), [text])
+  const editorMeta = useMemo(() => editorMetadata(page.data), [page.data])
+  const view = useRef<EditorView | null>(null)
+  const [focusMode, setFocusMode] = useState(false)
+  const [colorEdit, setColorEdit] = useState<{ token: SemanticCssColorToken; rect: DOMRect } | null>(null)
+  const picking = useStylePick((s) => s.onPick !== null)
 
-  const setText = (next: string) =>
-    updateMetadata((m) => void (m.stylesheet = { mode: 'semantic', source: { languageVersion: STYLESHEET_LANGUAGE_VERSION, text: next } }))
+  const setText = (next: string) => updateMetadata((m) => void (m.stylesheet = { mode: 'semantic', source: { languageVersion: STYLESHEET_LANGUAGE_VERSION, text: next } }))
+  // The rule under the cursor outlines the blocks it styles on the page; nothing once the editor closes.
+  const highlightAt = (offset: number | null) => useBuilderView.getState().setStyleHighlight(offset === null ? [] : matchedNodeKeys(text, offset, editorMeta.semanticTree))
+  useEffect(
+    () => () => {
+      useBuilderView.getState().setStyleHighlight([])
+      useStylePick.getState().setOnPick(null)
+    },
+    [],
+  )
+
+  const startPick = () =>
+    useStylePick.getState().setOnPick((target) => {
+      if (view.current) revealStyleRule(view.current, styleTargetFor(page.data, target))
+    })
+  const copy = () => navigator.clipboard.writeText(text).then(() => toast.success('Stylesheet copied'), () => toast.error("The stylesheet couldn't be copied."))
+  const format = () => {
+    if (view.current) formatEditorDocument(view.current).catch(() => toast.error("The stylesheet couldn't be formatted; check it for errors."))
+  }
+
+  const editor = (
+    <CssCodeEditor
+      value={text}
+      onChange={setText}
+      metadata={editorMeta}
+      colorTokens={colorTokens}
+      onColorSelect={(token, rect) => setColorEdit({ token, rect })}
+      onCursor={highlightAt}
+      viewRef={view}
+    />
+  )
+  const toolbar = (
+    <div role="toolbar" aria-label="Stylesheet editor" className="flex flex-wrap gap-1">
+      <ToolButton label="Copy stylesheet" onClick={() => void copy()} icon={<Copy size={13} />} />
+      <ToolButton label="Format stylesheet" onClick={format} icon={<Wand2 size={13} />} />
+      <ToolButton label={picking ? 'Click a block on the page…' : 'Pick a block on the page'} onClick={startPick} icon={<Crosshair size={13} />} active={picking} />
+      <ToolButton label="Focus mode" onClick={() => setFocusMode(true)} icon={<Maximize2 size={13} />} />
+    </div>
+  )
 
   return (
     <div className="space-y-2">
-      <CodeEditor value={text} onChange={setText} />
+      {toolbar}
+      {focusMode ? <p className="text-xs text-ink-3">Editing in focus mode.</p> : <div className="h-56">{editor}</div>}
+      {focusMode && (
+        <Modal title="Custom CSS" onClose={() => setFocusMode(false)} width="max-w-4xl">
+          <div className="space-y-2">
+            {toolbar}
+            <div className="h-[60vh]">{editor}</div>
+          </div>
+        </Modal>
+      )}
+      {colorEdit && <ColorEdit edit={colorEdit} onPick={(color) => setText(replaceColor(text, colorEdit.token, color))} onClose={() => setColorEdit(null)} />}
       {errors.length > 0 && (
         <div role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-rose-200">
           <p className="mb-1 font-semibold">These styles aren't applied until the errors are fixed:</p>
@@ -69,44 +104,23 @@ export function CustomCssSection() {
   )
 }
 
-function fatalErrors(text: string): string[] {
-  if (!text.trim()) return []
-  return compileStylesheet({ languageVersion: STYLESHEET_LANGUAGE_VERSION, text }).diagnostics.filter(isFatalStylesheetDiagnostic).map((diagnostic) => diagnostic.message)
+function ToolButton({ label, onClick, icon, active = false }: { label: string; onClick: () => void; icon: ReactNode; active?: boolean }) {
+  return (
+    <button type="button" title={label} aria-label={label} aria-pressed={active} onClick={onClick} className={`btn btn-ghost py-1 text-xs ${active ? 'border-accent text-indigo-100' : ''}`}>
+      {icon}
+    </button>
+  )
 }
 
-/** A CodeMirror CSS editor; outside changes (undo) replace its text unless it already shows them. */
-function CodeEditor({ value, onChange }: { value: string; onChange: (text: string) => void }) {
-  const host = useRef<HTMLDivElement>(null)
-  const view = useRef<EditorView | null>(null)
-  const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
-
-  useEffect(() => {
-    if (!host.current) return
-    view.current = new EditorView({
-      parent: host.current,
-      state: EditorState.create({
-        doc: value,
-        extensions: [
-          history(),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
-          css(),
-          syntaxHighlighting(highlight),
-          theme,
-          EditorView.lineWrapping,
-          placeholder('.section-title { letter-spacing: 0.08em; }'),
-          EditorView.updateListener.of((u) => u.docChanged && onChangeRef.current(u.state.doc.toString())),
-        ],
-      }),
-    })
-    return () => view.current?.destroy()
-    // Created once; later values arrive through the effect below.
-  }, [])
-
-  useEffect(() => {
-    const editor = view.current
-    if (editor && editor.state.doc.toString() !== value) editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value } })
-  }, [value])
-
-  return <div ref={host} />
+/** A swatch was clicked: the system colour picker, beside it, replaces that colour in the stylesheet. */
+function ColorEdit({ edit, onPick, onClose }: { edit: { token: SemanticCssColorToken; rect: DOMRect }; onPick: (color: string) => void; onClose: () => void }) {
+  const hex = /^#[\da-f]{6}$/i.test(edit.token.value) ? edit.token.value : '#000000'
+  return (
+    <div className="glass fixed z-[70] flex items-center gap-2 rounded-xl bg-raised/95 p-2 text-xs shadow-2xl" style={{ left: edit.rect.left, top: edit.rect.bottom + 4 }}>
+      <input type="color" aria-label={`Edit color ${edit.token.value}`} defaultValue={hex} onChange={(e) => onPick(e.target.value)} className="h-7 w-10 cursor-pointer bg-transparent" />
+      <button type="button" className="btn btn-ghost py-0.5 text-xs" onClick={onClose}>
+        Done
+      </button>
+    </div>
+  )
 }
