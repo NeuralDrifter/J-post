@@ -23,6 +23,8 @@ type resumeAITask struct {
 	instruction string
 	schema      map[string]any
 	role        ai.Role
+	// sendsResume: the run also sends the sender's resume (the letter's own, else the default) and the job's notes.
+	sendsResume bool
 	// fixEdit, when set, reshapes each edit the model answers into what the
 	// builder reads; an edit it rejects is dropped.
 	fixEdit func(json.RawMessage) (json.RawMessage, bool)
@@ -34,6 +36,7 @@ var resumeAITasks = map[string]resumeAITask{
 	settings.TaskResumeTailor:  tailorTask,
 	settings.TaskResumeReview:  reviewTask,
 	settings.TaskResumeImport:  importTask,
+	settings.TaskLetterDraft:   letterTask,
 }
 
 // ResumeAIRequest is one run of a resume AI task.
@@ -63,19 +66,19 @@ func runResumeAI(ctx context.Context, r *Repo, s settings.Settings, req ResumeAI
 	if err := r.checkEditable(req.DocumentID); err != nil {
 		return AIGeneration{}, err
 	}
-	posting, err := r.postingFor(req)
+	src, err := r.sourcesFor(s, task, req)
 	if err != nil {
 		return AIGeneration{}, err
 	}
 	choice := overrideChoice(s, req.Task, req.Provider, req.Model)
 	var answer editsAnswer
-	t := ai.Task{Name: req.Task, Instruction: task.instruction, Input: resumeAIInput(req.Input, posting), Schema: task.schema, Role: task.role}
+	t := ai.Task{Name: req.Task, Instruction: task.instruction, Input: resumeAIInput(req.Input, src), Schema: task.schema, Role: task.role}
 	model, err := ai.RunTask(ctx, s, choice, t, &answer)
 	if err != nil {
 		return AIGeneration{}, err
 	}
 	answer.Edits = task.fixEdits(answer.Edits)
-	return r.keepGeneration(req, posting, choice.Provider, model, answer)
+	return r.keepGeneration(req, src.posting, choice.Provider, model, answer)
 }
 
 func (t resumeAITask) fixEdits(edits []json.RawMessage) []json.RawMessage {
@@ -103,15 +106,28 @@ func (r *Repo) checkEditable(documentID string) error {
 }
 
 // postingFor is the posting a run reads: the job's description, else the pasted one.
-func (r *Repo) postingFor(req ResumeAIRequest) (string, error) {
-	if req.JobID == "" {
-		return strings.TrimSpace(req.Posting), nil
+// aiSources is what a run reads besides the builder's material.
+type aiSources struct{ posting, resume, notes string }
+
+func (r *Repo) sourcesFor(s settings.Settings, task resumeAITask, req ResumeAIRequest) (aiSources, error) {
+	src := aiSources{posting: strings.TrimSpace(req.Posting)}
+	if req.JobID != "" {
+		job, err := r.GetJob(req.JobID)
+		if err != nil {
+			return src, err
+		}
+		src.posting, src.notes = strings.TrimSpace(job.Description), strings.TrimSpace(job.Notes)
 	}
-	job, err := r.GetJob(req.JobID)
+	if !task.sendsResume {
+		src.notes = ""
+		return src, nil
+	}
+	doc, err := r.GetDocument(req.DocumentID)
 	if err != nil {
-		return "", err
+		return src, err
 	}
-	return strings.TrimSpace(job.Description), nil
+	src.resume, err = r.resumeTextFor(s, doc.SourceID)
+	return src, err
 }
 
 // overrideChoice is the task's setting, or a one-run provider and model.
@@ -123,13 +139,19 @@ func overrideChoice(s settings.Settings, task, provider, model string) settings.
 	return c
 }
 
-// resumeAIInput wraps the builder's material (and the posting) in markers, so
+// resumeAIInput wraps the builder's material (and the posting, resume and notes) in markers, so
 // nothing inside them can pass for instructions.
-func resumeAIInput(material, posting string) string {
+func resumeAIInput(material string, src aiSources) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "The material, as JSON:\n<<<MATERIAL_START>>>\n%s\n<<<MATERIAL_END>>>\n", material)
-	if posting != "" {
-		fmt.Fprintf(&b, "\nThe job posting:\n<<<POSTING_START>>>\n%s\n<<<POSTING_END>>>\n", posting)
+	for _, part := range []struct{ title, marker, text string }{
+		{"The job posting", "POSTING", src.posting},
+		{"The candidate's resume", "RESUME", src.resume},
+		{"The candidate's notes on this job", "NOTES", src.notes},
+	} {
+		if part.text != "" {
+			fmt.Fprintf(&b, "\n%s:\n<<<%s_START>>>\n%s\n<<<%s_END>>>\n", part.title, part.marker, part.text, part.marker)
+		}
 	}
 	return b.String()
 }

@@ -12,7 +12,11 @@ import type { ResumeData } from '../../lib/resumes/document'
 import { LETTER_RENDER_OPTIONS, letterPageData, letterPlainText, parseStoredLetter, serializeLetter, withLinkedStyle, type LetterData } from '../../lib/resumes/letter'
 import { letterExportable } from '../../lib/resumes/stored'
 import { newEditingSession } from '../../lib/resumes/versions'
+import { compileLetterGeneration, letterPassages, letterSectionTitle } from '../../lib/resumes/ai/letterChanges'
 import { useLoad } from '../../lib/useLoad'
+import type { AIDocument } from '../ResumeBuilder/ai/aiDocument'
+import { ReviewBar } from '../ResumeBuilder/ai/ReviewBar'
+import { AIReviewProvider } from '../ResumeBuilder/ai/ReviewContext'
 import { BuilderTopBar, useEditorControls } from '../ResumeBuilder/BuilderTopBar'
 import { DesignContext, type DesignEditor } from '../ResumeBuilder/design/designContext'
 import { useDocumentMenu } from '../ResumeBuilder/DocumentMenu'
@@ -82,7 +86,15 @@ function Workspace({ initial, ...props }: EditorProps & { initial: LetterData })
   useEffect(() => {
     store.getState().setLocked(doc.locked)
   }, [store, doc.locked])
-  return <LetterEditor {...props} store={store} />
+  const aiDoc = useMemo<AIDocument<LetterData>>(
+    () => ({ docId: doc.id, editor: store, compile: compileLetterGeneration, serialize: serializeLetter, plainText: letterPlainText, sectionTitle: letterSectionTitle, passages: letterPassages }),
+    [doc.id, store],
+  )
+  return (
+    <AIReviewProvider doc={aiDoc}>
+      <LetterEditor {...props} store={store} />
+    </AIReviewProvider>
+  )
 }
 
 function LetterEditor({ doc, store, reopened, onRestored }: EditorProps & { store: StoreApi<EditorState<LetterData>> }) {
@@ -129,7 +141,7 @@ function LetterEditor({ doc, store, reopened, onRestored }: EditorProps & { stor
     <DesignContext value={design}>
       <EditorShell
         renderTopBar={(togglePanel) => (
-          <BuilderTopBar docId={doc.id} name={doc.name} back={BACK} controls={controls} exportItems={exportMenuItems(exportAs, 'Ctrl+S')} documentItems={menu.items} locked={locked} onUnlock={() => void setDocumentLocked(doc, false)} zoom={zoom} onZoom={setZoom} onTogglePanel={togglePanel} />
+          <BuilderTopBar docId={doc.id} name={doc.name} back={BACK} controls={controls} exportItems={exportMenuItems(exportAs, 'Ctrl+S')} documentItems={menu.items} actions={<ReviewBar />} locked={locked} onUnlock={() => void setDocumentLocked(doc, false)} zoom={zoom} onZoom={setZoom} onTogglePanel={togglePanel} />
         )}
         left={{
           title: 'Write',

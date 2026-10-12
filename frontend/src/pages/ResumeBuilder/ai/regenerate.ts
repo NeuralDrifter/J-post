@@ -4,7 +4,9 @@
 import type { Passage } from '@reactive-resume/resume/proposals'
 import type { app } from '../../../lib/backend'
 import type { ResumeData } from '../../../lib/resumes/document'
+import type { LetterData } from '../../../lib/resumes/letter'
 import { improveAgain } from '../../../lib/resumes/ai/improve'
+import { letterDraftAgain } from '../../../lib/resumes/ai/letterChanges'
 import type { SectionReview } from '../../../lib/resumes/ai/review'
 import { parseTailorTerms, tailorMaterial } from '../../../lib/resumes/ai/tailor'
 import { SETTINGS_TASK } from '../../../lib/resumes/ai/tasks'
@@ -24,6 +26,7 @@ export const REGENERATORS: Partial<Record<string, Regenerator>> = {
   [SETTINGS_TASK.improve]: ({ gen, passages, avoid }) => improveAgain(gen.context, passages, avoid),
   [SETTINGS_TASK.tailor]: ({ data, gen, passages, sectionId, avoid }) => tailorMaterial(data as ResumeData, passages, parseTailorTerms(gen.context), { section: sectionId, avoid }),
   [SETTINGS_TASK.review]: ({ passages, sectionId, avoid }) => writingReviewMaterial(passages, { section: sectionId, avoid }),
+  [SETTINGS_TASK.letter]: ({ data, gen, avoid }) => letterDraftAgain(data as LetterData, gen.context, avoid),
 }
 
 export const sectionRunKey = (sectionId: string) => `section:${sectionId}`

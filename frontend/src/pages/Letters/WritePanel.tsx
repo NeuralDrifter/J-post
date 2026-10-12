@@ -3,6 +3,7 @@
 
 import type { Draft } from 'immer'
 import { IdCard, Mail } from 'lucide-react'
+import { LETTER_SECTION_ID, type ProposalTarget } from '@reactive-resume/resume/proposals'
 import { countWords, LETTER_LENGTH, letterLength, type LetterLength } from '@reactive-resume/web/features/letters/length'
 import { Field } from '../../components/Field'
 import type { app } from '../../lib/backend'
@@ -11,10 +12,14 @@ import { BasicsForm } from '../ResumeBuilder/content/BasicsCard'
 import { RichTextField } from '../ResumeBuilder/content/RichTextField'
 import { Fold, Segmented } from '../ResumeBuilder/ui/controls'
 import { ReadOnly } from '../ResumeBuilder/ui/ReadOnly'
+import { SectionChanges } from '../ResumeBuilder/ai/SectionChanges'
+import { DraftWithAI } from './DraftWithAI'
 import { JobLink, SourceResume } from './LetterLinks'
 
 type Update = (recipe: (draft: Draft<LetterData>) => void) => void
 type Layout = LetterData['layout']
+
+const LETTER_BODY: ProposalTarget = { sectionId: LETTER_SECTION_ID, field: 'content' }
 
 const LAYOUTS: { value: Layout; label: string }[] = [
   { value: 'structured', label: 'With greeting' },
@@ -29,7 +34,15 @@ export function WritePanel({ doc, letter, update }: { doc: app.Document; letter:
         <JobLink doc={doc} update={update} />
         <Segmented<Layout> label="Letter style" options={LAYOUTS} value={letter.layout} onChange={(v) => update((d) => void (d.layout = v))} />
         {letter.layout === 'structured' ? <StructuredRecipient letter={letter} update={update} /> : <FreeformRecipient letter={letter} update={update} />}
-        <RichTextField label={letter.layout === 'structured' ? 'Body (between the greeting and the sign-off)' : 'Letter'} html={letter.content} onChange={(html) => update((d) => void (d.content = html))} minHeight="min-h-72" />
+        <DraftWithAI doc={doc} letter={letter} />
+        <RichTextField
+          label={letter.layout === 'structured' ? 'Body (between the greeting and the sign-off)' : 'Letter'}
+          html={letter.content}
+          onChange={(html) => update((d) => void (d.content = html))}
+          minHeight="min-h-72"
+          ai={LETTER_BODY}
+        />
+        <SectionChanges sectionId={LETTER_SECTION_ID} />
         <LengthMeter html={letter.content} />
       </Fold>
       <Fold title="Sender" icon={<IdCard size={15} className="shrink-0 text-indigo-300" />}>

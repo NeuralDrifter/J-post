@@ -6,6 +6,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -249,5 +250,38 @@ func TestImportTidyKeepsSectionsAsItems(t *testing.T) {
 	items := answer.Edits[0]["items"].([]any)
 	if items[0].(map[string]any)["company"] != "Babbage & Co" {
 		t.Fatalf("items = %v", items)
+	}
+}
+
+func TestLetterDraftSendsTheResumeAndNotes(t *testing.T) {
+	r := newTestRepo(t)
+	letter, _ := r.CreateDocument(DocumentLetter, "Letter", "{}", "")
+	s := aitest.WithTask(aitest.AnthropicSettings, settings.TaskLetterDraft, settings.ProviderAnthropic)
+	req := ResumeAIRequest{Task: settings.TaskLetterDraft, DocumentID: letter.ID, Input: `{"passages":[]}`}
+	fakeEdits(t, `{"edits":[{"kind":"setBody","text":"Dear team","why":"a first draft"}]}`)
+	if _, err := runResumeAI(context.Background(), r, s, req); !errors.Is(err, ErrNeedsResume) {
+		t.Fatalf("without a resume: err = %v", err)
+	}
+
+	resume, _ := r.CreateDocument(DocumentResume, "CV", sampleData, "Ada Lovelace, analyst")
+	s.DefaultResumeID = resume.ID
+	job := mustCreateJob(t, r)
+	job.Description = "We need an analyst."
+	if _, err := r.UpdateJob(job); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.UpdateJobNotes(job.ID, "Met the team at a meetup."); err != nil {
+		t.Fatal(err)
+	}
+	bodies := fakeEdits(t, `{"edits":[{"kind":"setBody","text":"Dear team","why":"a first draft"}]}`)
+	req.JobID = job.ID
+	if _, err := runResumeAI(context.Background(), r, s, req); err != nil {
+		t.Fatal(err)
+	}
+	input := (*bodies)[0]["messages"].([]any)[0].(map[string]any)["content"].([]any)[0].(map[string]any)["text"].(string)
+	for _, want := range []string{"<<<RESUME_START>>>\nAda Lovelace, analyst", "<<<POSTING_START>>>\nWe need an analyst.", "<<<NOTES_START>>>\nMet the team"} {
+		if !strings.Contains(input, want) {
+			t.Fatalf("input lacks %q: %s", want, input)
+		}
 	}
 }
