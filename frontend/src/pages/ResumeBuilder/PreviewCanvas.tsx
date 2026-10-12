@@ -37,7 +37,8 @@ export function PreviewCanvas({ zoom, data, renderOptions, toolbar, pageLayer, o
   const { rendered, error, rendering } = useRenderedPdf(data, renderOptions, onRendered)
   const container = useRef<HTMLDivElement>(null)
   const width = useWidth(container)
-  const scale = !rendered ? 1 : zoom === 'fit' ? Math.max(0.2, (width - CANVAS_PADDING_PX * 2) / rendered.width) : zoom
+  const padding = width < 500 ? 12 : CANVAS_PADDING_PX
+  const scale = !rendered ? 1 : zoom === 'fit' ? Math.max(0.2, (width - padding * 2) / rendered.width) : zoom
 
   return (
     <div ref={container} className="relative h-full overflow-auto bg-void/60">
@@ -61,7 +62,7 @@ export function PreviewCanvas({ zoom, data, renderOptions, toolbar, pageLayer, o
         </div>
       )}
       {rendered && (
-        <div className="flex flex-col items-center" style={{ gap: PAGE_GAP_PX, padding: CANVAS_PADDING_PX }}>
+        <div className="flex flex-col items-center" style={{ gap: PAGE_GAP_PX, padding }}>
           {Array.from({ length: rendered.pageCount }, (_, i) => (
             <PdfPage key={i} doc={rendered.doc} pageNumber={i + 1} pageCount={rendered.pageCount} width={rendered.width * scale} height={rendered.height * scale} scale={scale}>
               {pageLayer?.(i)}

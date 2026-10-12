@@ -61,13 +61,13 @@ export function BuilderTopBar({ docId, name, back, controls, exportItems, docume
       <IconButton label="Document menu" onClick={(e) => openMenu(e, documentItems)}>
         <ChevronDown size={14} />
       </IconButton>
+      <span className="min-[1000px]:hidden">
+        <IconButton label="Content panel" onClick={() => onTogglePanel('left')}>
+          <PanelLeft size={15} />
+        </IconButton>
+      </span>
       {locked ? <LockedChip onUnlock={onUnlock} /> : <SaveIndicator state={controls.saveState} onRetry={() => void controls.saveNow()} />}
       <div className="ml-auto flex items-center gap-1">
-        <span className="min-[1100px]:hidden">
-          <IconButton label="Show the left panel" onClick={() => onTogglePanel('left')}>
-            <PanelLeft size={15} />
-          </IconButton>
-        </span>
         <IconButton label="Undo (Ctrl+Z)" onClick={controls.undo} disabled={!controls.canUndo}>
           <Undo2 size={15} />
         </IconButton>
@@ -79,8 +79,8 @@ export function BuilderTopBar({ docId, name, back, controls, exportItems, docume
         <button type="button" className="btn btn-primary py-1 text-xs" onClick={exportMenu}>
           <Download size={13} /> Export
         </button>
-        <span className="min-[1100px]:hidden">
-          <IconButton label="Show the right panel" onClick={() => onTogglePanel('right')}>
+        <span className="min-[1000px]:hidden">
+          <IconButton label="Design and Check panel" onClick={() => onTogglePanel('right')}>
             <PanelRight size={15} />
           </IconButton>
         </span>

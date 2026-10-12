@@ -25,8 +25,8 @@ func Run(dataDir string, assets fs.FS, fontList []byte) error {
 	// fit the actual screen before showing it.
 	return wails.Run(&options.App{
 		Title:            "Job Track",
-		Width:            1024,
-		Height:           640,
+		Width:            1440,
+		Height:           900,
 		StartHidden:      true,
 		AssetServer:      &assetserver.Options{Assets: assets, Middleware: fontMiddleware(dataDir, fontList)},
 		BackgroundColour: &options.RGBA{R: 7, G: 9, B: 14, A: 1},

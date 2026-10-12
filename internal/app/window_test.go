@@ -16,14 +16,15 @@ func TestPlanWindow(t *testing.T) {
 		saved settings.WindowState
 		want  windowPlan
 	}{
-		{"1080p", 1920, 1080, settings.WindowState{}, windowPlan{1600, 918, 900, 600, false}},
-		{"1440p capped", 2560, 1440, settings.WindowState{}, windowPlan{1600, 1000, 900, 600, false}},
-		{"small laptop", 1366, 768, settings.WindowState{}, windowPlan{1161, 652, 900, 600, false}},
-		{"720p logical", 1280, 720, settings.WindowState{}, windowPlan{1088, 612, 900, 600, true}},
+		{"1080p", 1920, 1080, settings.WindowState{}, windowPlan{1600, 918, 1000, 640, false}},
+		{"1440p capped", 2560, 1440, settings.WindowState{}, windowPlan{1600, 1000, 1000, 640, false}},
+		{"small laptop", 1366, 768, settings.WindowState{}, windowPlan{1161, 652, 1000, 640, false}},
+		{"720p logical", 1280, 720, settings.WindowState{}, windowPlan{1088, 640, 1000, 640, true}},
 		{"tiny screen", 800, 600, settings.WindowState{}, windowPlan{800, 600, 800, 600, true}},
-		{"saved fits", 1920, 1080, settings.WindowState{Width: 1400, Height: 900, Maximised: true}, windowPlan{1400, 900, 900, 600, true}},
-		{"saved too big", 1366, 768, settings.WindowState{Width: 2400, Height: 1300}, windowPlan{1161, 652, 900, 600, false}},
-		{"saved below min", 1920, 1080, settings.WindowState{Width: 500, Height: 400}, windowPlan{900, 600, 900, 600, false}},
+		{"saved fits", 1920, 1080, settings.WindowState{Width: 1400, Height: 900, Maximised: true}, windowPlan{1400, 900, 1000, 640, true}},
+		{"saved too big", 1366, 768, settings.WindowState{Width: 2400, Height: 1300}, windowPlan{1161, 652, 1000, 640, false}},
+		{"saved legacy upgraded", 1920, 1080, settings.WindowState{Width: 1023, Height: 640}, windowPlan{1600, 918, 1000, 640, false}},
+		{"saved below min upgraded", 1920, 1080, settings.WindowState{Width: 500, Height: 400}, windowPlan{1600, 918, 1000, 640, false}},
 	}
 	for _, c := range cases {
 		if got := planWindow(c.w, c.h, c.saved); got != c.want {

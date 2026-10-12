@@ -24,7 +24,7 @@ export function EditorShell({ renderTopBar, left, right, children }: Props) {
   return (
     <div className="flex h-full flex-col">
       {renderTopBar(toggle)}
-      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] min-[1100px]:grid-cols-[minmax(320px,400px)_1fr_minmax(290px,340px)]">
+      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] min-[1000px]:grid-cols-[minmax(260px,340px)_1fr_minmax(260px,330px)] min-[1400px]:grid-cols-[minmax(290px,380px)_1fr_minmax(280px,340px)]">
         <SidePanel side="left" title={left.title} open={drawer === 'left'} onClose={() => setDrawer(null)}>
           {left.content}
         </SidePanel>
@@ -42,9 +42,9 @@ function SidePanel({ side, title, open, onClose, children }: { side: Side; title
   return (
     <aside
       aria-label={title}
-      className={`${open ? 'flex' : 'hidden'} absolute inset-y-0 z-20 w-[min(400px,90vw)] flex-col border-line bg-base/95 backdrop-blur-xl min-[1100px]:static min-[1100px]:flex min-[1100px]:w-auto min-[1100px]:bg-base/40 min-[1100px]:backdrop-blur-none ${edge}`}
+      className={`${open ? 'flex' : 'hidden'} absolute inset-y-0 z-20 w-[min(380px,85vw)] flex-col border-line bg-base/95 backdrop-blur-xl min-[1000px]:static min-[1000px]:flex min-[1000px]:w-auto min-[1000px]:bg-base/40 min-[1000px]:backdrop-blur-none ${edge}`}
     >
-      <div className="flex items-center justify-between px-3 pt-3 min-[1100px]:hidden">
+      <div className="flex items-center justify-between px-3 pt-3 min-[1000px]:hidden">
         <span className="label-mono">{title}</span>
         <button type="button" onClick={onClose} aria-label={`Close ${title}`} className="text-ink-2 hover:text-ink">
           <X size={16} />

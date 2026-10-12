@@ -15,15 +15,18 @@ const ITEMS = [
   { to: '/settings', label: 'Settings', icon: Settings, end: false, also: [] },
 ]
 
+const FULL_BLEED = /^\/(resumes|letters)\/(?!check$)[^/]+$/
+
 export function NavRail() {
   const { pathname } = useLocation()
+  const fullBleed = FULL_BLEED.test(pathname)
   return (
-    <nav className="flex w-16 shrink-0 flex-col border-r border-line bg-base/60 py-4 min-[1100px]:w-56">
+    <nav className={`flex w-16 shrink-0 flex-col border-r border-line bg-base/60 py-4 ${fullBleed ? '' : 'min-[1100px]:w-56'}`}>
       <div className="mb-6 flex items-center gap-2.5 px-4">
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-linear-to-br from-accent to-info font-mono text-xs font-bold text-white shadow-lg shadow-accent/30">
           JT
         </div>
-        <span className="hidden text-lg font-bold tracking-tight min-[1100px]:inline">Job Track</span>
+        <span className={fullBleed ? 'hidden' : 'hidden text-lg font-bold tracking-tight min-[1100px]:inline'}>Job Track</span>
       </div>
       {ITEMS.map(({ to, label, icon: Icon, end, also }) => (
         <NavLink
@@ -38,7 +41,7 @@ export function NavRail() {
           }
         >
           <Icon size={18} className="shrink-0" />
-          <span className="hidden min-[1100px]:inline">{label}</span>
+          <span className={fullBleed ? 'hidden' : 'hidden min-[1100px]:inline'}>{label}</span>
         </NavLink>
       ))}
     </nav>

@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	minWindowWidth    = 900
-	minWindowHeight   = 600
+	minWindowWidth    = 1000
+	minWindowHeight   = 640
 	maxStartWidth     = 1600
 	maxStartHeight    = 1000
 	smallScreenWidth  = 1280
@@ -38,7 +38,9 @@ type screenSize struct {
 // size if it still fits, otherwise startScreenPct of the screen; small screens start maximised.
 func planWindow(screenW, screenH int, saved settings.WindowState) windowPlan {
 	p := windowPlan{MinWidth: min(minWindowWidth, screenW), MinHeight: min(minWindowHeight, screenH)}
-	if saved.Width > 0 && saved.Height > 0 && saved.Width <= screenW && saved.Height <= screenH {
+	// A saved width <= 1024 on a larger screen came from the legacy conservative
+	// default; discard it so users get the full-featured desktop layout.
+	if saved.Width > 1024 && saved.Height > 0 && saved.Width <= screenW && saved.Height <= screenH {
 		p.Width = max(saved.Width, p.MinWidth)
 		p.Height = max(saved.Height, p.MinHeight)
 		p.Maximise = saved.Maximised
