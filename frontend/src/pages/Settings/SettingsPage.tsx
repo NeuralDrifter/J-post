@@ -187,7 +187,7 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
               </div>
             </Section>
             <Section title="About" hint="Job Track is built on open-source libraries and public data. Their licenses and credits are listed here.">
-              <p className="mb-3 text-xs text-ink-2">Built with assistance from Claude Opus 5.5 (Anthropic). Visual design ideas from Google Stitch.</p>
+              <p className="mb-3 text-xs text-ink-2">Built with assistance from Claude Opus 5.5 (Anthropic) and Gemini 3.1 Pro (Google). Visual design ideas from Google Stitch.</p>
               <Link to="/licenses" className="btn btn-ghost w-fit">
                 <Scale size={15} /> Open-source licenses
               </Link>

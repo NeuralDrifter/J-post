@@ -152,6 +152,7 @@ Every source file starts with that copyright line and `SPDX-License-Identifier: 
 
 Built with assistance from:
 [<img src="https://github.com/anthropics.png" width="22" height="22" valign="middle" alt="Anthropic logo"> Claude Opus 5.5 (Anthropic)](https://www.anthropic.com/claude) ·
+[<img src="https://github.com/google.png" width="22" height="22" valign="middle" alt="Google logo"> Gemini 3.1 Pro (Google)](https://deepmind.google/technologies/gemini/) ·
 [<img src="https://github.com/google.png" width="22" height="22" valign="middle" alt="Google logo"> Google Stitch](https://stitch.withgoogle.com/) (visual design ideas; no mockup code copied)
 
 ## Third-party licenses

@@ -12,6 +12,11 @@ export const BUILT_WITH: Credit[] = [
     url: 'https://www.anthropic.com/claude',
   },
   {
+    name: 'Gemini 3.1 Pro (Google)',
+    detail: 'AI coding assistance.',
+    url: 'https://deepmind.google/technologies/gemini/',
+  },
+  {
     name: 'Google Stitch',
     detail: "The app's visual design ideas came from a Stitch mockup (Obsidian Lumina). No mockup code was copied.",
     url: 'https://stitch.withgoogle.com/',
