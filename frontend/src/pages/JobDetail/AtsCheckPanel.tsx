@@ -8,10 +8,11 @@ import { api } from '../../lib/api'
 import { GetAtsReport, GetSettings, ListAttachments, ListDocuments, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { timeAgo } from '../../lib/format'
-import { atsSources, parseStoredReport, runAtsCheck } from '../../lib/resumes/atsCheck'
+import { atsSources, parseStoredReport, runAtsCheck, type AtsSource } from '../../lib/resumes/atsCheck'
 import { RESUME_KIND } from '../../lib/resumes/paths'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import type { ReportFix } from '../../components/AtsReportView'
 
 // Loaded once there's a report to show: it carries the findings' wording.
 const AtsReportView = lazy(() => import('../../components/AtsReportView'))
@@ -27,6 +28,7 @@ export function AtsCheckPanel({ job }: { job: app.Job }) {
   const [running, setRunning] = useState(false)
   const source = sources.find((s) => s.id === chosen) ?? sources[0]
   const report = stored ? parseStoredReport(stored.report) : null
+  const checked = sources.find((s) => s.label === stored?.source)
 
   const run = async () => {
     if (!source) return
@@ -63,7 +65,7 @@ export function AtsCheckPanel({ job }: { job: app.Job }) {
             {stored.source} · checked {timeAgo(stored.checkedAt)}
           </p>
           <Suspense fallback={null}>
-            <AtsReportView report={report} />
+            <AtsReportView report={report} fix={checked && reportFix(checked, job.id)} />
           </Suspense>
         </div>
       )}
@@ -71,3 +73,7 @@ export function AtsCheckPanel({ job }: { job: app.Job }) {
     </Panel>
   )
 }
+
+/** A library resume is fixed in the builder (with this job's keywords); an attached PDF by importing it. */
+const reportFix = (source: AtsSource, jobId: string): ReportFix =>
+  source.kind === 'document' ? { kind: 'builder', resumeId: source.id, jobId } : { kind: 'import' }

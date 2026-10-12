@@ -4,10 +4,13 @@
 // An ATS report in Job Track's style. What it shows follows Reactive Resume's
 // report (apps/web/src/features/ats-checker/report, MIT); the words come from
 // its messages.ts.
-import { AlertOctagon, AlertTriangle, Lightbulb, type LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Link } from 'react-router'
+import { AlertOctagon, AlertTriangle, Lightbulb, Wrench, type LucideIcon } from 'lucide-react'
 import type { PdfFinding, PdfSeverity } from '@reactive-resume/resume/ats-pdf'
 import { getPdfCategoryDescription, getPdfCategoryLabel, getPdfFindingMessage } from '@reactive-resume/web/features/ats-checker/messages'
 import { Chip } from './Chip'
+import { builderCheckPath, CHECK_MATCH } from '../lib/resumes/paths'
 import { matchBand } from '../lib/match'
 import type { PdfAtsReport } from '../lib/resumes/atsCheck'
 
@@ -20,14 +23,21 @@ const SEVERITY_GROUPS: { severity: PdfSeverity; title: string; icon: LucideIcon;
   { severity: 'tip', title: 'Tips (not scored)', icon: Lightbulb, tone: 'text-cyan-300' },
 ]
 
-export default function AtsReportView({ report }: { report: PdfAtsReport }) {
+/**
+ * Where a finding gets fixed: in the builder for a resume from the library (`jobId` adds Job match for the posting),
+ * or by importing a PDF that came from elsewhere.
+ */
+export type ReportFix = { kind: 'builder'; resumeId: string; jobId?: string } | { kind: 'import' }
+
+export default function AtsReportView({ report, fix }: { report: PdfAtsReport; fix?: ReportFix }) {
   return (
     <div className="space-y-5">
       <ScoreHeader report={report} />
       <Categories report={report} />
       {report.jd && <KeywordCoverage jd={report.jd} />}
+      {report.jd && fix?.kind === 'builder' && fix.jobId && <FixLink to={builderCheckPath(fix.resumeId, CHECK_MATCH, fix.jobId)}>Work on keywords in the builder</FixLink>}
       {SEVERITY_GROUPS.map((group) => (
-        <FindingGroup key={group.severity} {...group} findings={group.severity === 'tip' ? report.tips : report.findings.filter((f) => f.severity === group.severity)} />
+        <FindingGroup key={group.severity} {...group} fix={fix} findings={group.severity === 'tip' ? report.tips : report.findings.filter((f) => f.severity === group.severity)} />
       ))}
       <p className="font-mono text-[11px] text-ink-3">
         {report.passedChecks} of {report.applicableChecks} checks passed{report.skippedChecks > 0 && `, ${report.skippedChecks} couldn't run on this file`} · {report.document.pageCount}{' '}
@@ -101,7 +111,9 @@ function TermChips({ terms, tone }: { terms: readonly string[]; tone: 'success' 
   )
 }
 
-function FindingGroup({ title, icon: Icon, tone, findings }: { title: string; icon: LucideIcon; tone: string; findings: readonly PdfFinding[] }) {
+type GroupProps = { title: string; icon: LucideIcon; tone: string; findings: readonly PdfFinding[]; fix?: ReportFix }
+
+function FindingGroup({ title, icon: Icon, tone, findings, fix }: GroupProps) {
   if (findings.length === 0) return null
   return (
     <section className="space-y-2">
@@ -110,14 +122,14 @@ function FindingGroup({ title, icon: Icon, tone, findings }: { title: string; ic
       </h4>
       <ul className="space-y-2">
         {findings.map((finding, i) => (
-          <FindingRow key={`${finding.code}-${i}`} finding={finding} />
+          <FindingRow key={`${finding.code}-${i}`} finding={finding} fix={fix} />
         ))}
       </ul>
     </section>
   )
 }
 
-function FindingRow({ finding }: { finding: PdfFinding }) {
+function FindingRow({ finding, fix }: { finding: PdfFinding; fix?: ReportFix }) {
   const { title, action } = getPdfFindingMessage(finding.code)
   return (
     <li className="rounded-xl border border-line bg-white/[0.03] px-3 py-2">
@@ -128,6 +140,16 @@ function FindingRow({ finding }: { finding: PdfFinding }) {
           “{finding.evidence.snippet}”{finding.evidence.page ? ` · page ${finding.evidence.page}` : ''}
         </p>
       )}
+      {fix?.kind === 'builder' && <FixLink to={builderCheckPath(fix.resumeId, finding.category)}>Fix in builder</FixLink>}
+      {fix?.kind === 'import' && <FixLink to="/resumes?import=1">Import this PDF to fix it</FixLink>}
     </li>
+  )
+}
+
+function FixLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link to={to} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-indigo-300 hover:text-indigo-200">
+      <Wrench size={12} /> {children}
+    </Link>
   )
 }

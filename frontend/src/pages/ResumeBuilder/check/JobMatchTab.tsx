@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router'
 import { Briefcase, Check, ClipboardPaste, Plus } from 'lucide-react'
 import { api } from '../../../lib/api'
 import { CreateJob, ListJobSummaries, type app } from '../../../lib/backend'
@@ -22,7 +23,9 @@ const PASTED = ''
 export function JobMatchTab({ doc, data }: { doc: app.Document; data: ResumeData }) {
   const { data: summaries } = useLoad(() => api(ListJobSummaries()), [])
   const jobs = useMemo(() => jobsWithPostings((summaries ?? []).map((s) => s.job)), [summaries])
-  const [picked, setPicked] = useState<string | null>(null)
+  // A link from a job's ATS report (?check=match&job=) picks that job.
+  const search = useLocation().search
+  const [picked, setPicked] = useState<string | null>(() => new URLSearchParams(search).get('job'))
   const jobId = picked ?? defaultPostingJobId(doc, jobs)
   const pasted = useBuilderView((s) => s.pastedPosting)
   const posting = (jobs.find((job) => job.id === jobId)?.description ?? pasted).trim()

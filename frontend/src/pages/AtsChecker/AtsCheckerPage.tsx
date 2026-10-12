@@ -17,6 +17,7 @@ import {
 import { RESUME_KIND } from '../../lib/resumes/paths'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import type { ReportFix } from '../../components/AtsReportView'
 
 const AtsReportView = lazy(() => import('../../components/AtsReportView'))
 
@@ -26,6 +27,8 @@ type SourceMode = 'upload' | 'library'
 type VisitState = {
   report: PdfAtsReport | null
   sourceLabel: string
+  /** Where the report's findings get fixed: the builder for a library resume, an import for a file. */
+  fix?: ReportFix
   jobDescription: string
 }
 
@@ -44,6 +47,7 @@ export default function AtsCheckerPage() {
   const [running, setRunning] = useState(false)
   const [report, setReport] = useState<PdfAtsReport | null>(visitCache.report)
   const [sourceLabel, setSourceLabel] = useState(visitCache.sourceLabel)
+  const [fix, setFix] = useState(visitCache.fix)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -72,6 +76,7 @@ export default function AtsCheckerPage() {
     try {
       let targetFile: File
       let label: string
+      let fixIn: ReportFix
 
       if (mode === 'upload') {
         if (!file) {
@@ -81,6 +86,7 @@ export default function AtsCheckerPage() {
         }
         targetFile = file
         label = file.name
+        fixIn = { kind: 'import' }
       } else {
         const resume = resumes?.find((r) => r.id === selectedResumeId)
         if (!resume) {
@@ -89,15 +95,18 @@ export default function AtsCheckerPage() {
           return
         }
         label = resume.name
+        fixIn = { kind: 'builder', resumeId: resume.id }
         targetFile = await renderDocumentToPdfFile(resume.id, resume.name)
       }
 
       const generatedReport = await runStandaloneAtsCheck(targetFile, jobDescription)
       setReport(generatedReport)
       setSourceLabel(label)
+      setFix(fixIn)
       visitCache = {
         report: generatedReport,
         sourceLabel: label,
+        fix: fixIn,
         jobDescription,
       }
     } catch (err) {
@@ -289,7 +298,7 @@ export default function AtsCheckerPage() {
               </div>
             ) : report ? (
               <Suspense fallback={<div className="py-8 text-center text-xs text-ink-3">Loading report view…</div>}>
-                <AtsReportView report={report} />
+                <AtsReportView report={report} fix={fix} />
               </Suspense>
             ) : (
               <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-line p-8 text-center">

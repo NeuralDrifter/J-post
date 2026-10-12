@@ -121,8 +121,10 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const [zoom, setZoom] = useState<Zoom>('fit')
   const search = useLocation().search
   const [rightPanel, setRightPanel] = useState<RightPanel>(reopened ? 'history' : 'design')
-  // ?panel=tailor (from a job page or a section's menu) opens that panel.
-  const askedPanel = new URLSearchParams(search).get('panel')
+  // ?panel=tailor (from a job page or a section's menu) opens that panel;
+  // ?check= (from an ATS report) opens Check.
+  const params = new URLSearchParams(search)
+  const askedPanel = params.has('check') ? 'check' : params.get('panel')
   useEffect(() => {
     if (isRightPanel(askedPanel)) setRightPanel(askedPanel)
   }, [askedPanel])

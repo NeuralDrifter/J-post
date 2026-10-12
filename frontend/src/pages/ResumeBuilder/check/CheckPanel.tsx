@@ -4,7 +4,8 @@
 // Check: how reliably software reads the resume, live as it's edited, and
 // how it covers a job posting. What it shows follows Reactive Resume's Check
 // panel (MIT); the screens are Job Track's.
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useLocation } from 'react-router'
 import { ChevronDown, CircleAlert, CircleCheck, Zap } from 'lucide-react'
 import { ATS_CATEGORIES, type AtsCategory, type AtsReport } from '@reactive-resume/resume/ats'
 import { getCategoryDescription, getCategoryName } from '@reactive-resume/web/features/resume/editor/check/issues'
@@ -15,7 +16,8 @@ import { ExportCheck } from './ExportCheck'
 import { IssueCard } from './IssueCard'
 import { JobMatchTab } from './JobMatchTab'
 import { useCheck, type CheckResult } from './useCheck'
-import { useCheckActions } from './useCheckActions'
+import { checkLinkTarget } from './checkLink'
+import { scrollToIssue, useCheckActions } from './useCheckActions'
 import { WritingTab } from './WritingTab'
 
 /** Scores at or above this read cleanly. */
@@ -25,6 +27,7 @@ export function CheckPanel({ doc }: { doc: app.Document }) {
   const check = useCheck()
   const tab = useBuilderView((s) => s.checkTab)
   const setTab = useBuilderView((s) => s.setCheckTab)
+  useCheckLink(check.issues)
   const tabs: { value: CheckTab; label: string }[] = [
     { value: 'issues', label: `Issues · ${check.issues.length}` },
     { value: 'match', label: 'Job match' },
@@ -37,6 +40,22 @@ export function CheckPanel({ doc }: { doc: app.Document }) {
       {tab === 'match' ? <JobMatchTab doc={doc} data={check.data} /> : tab === 'writing' ? <WritingTab doc={doc} /> : <IssuesTab check={check} />}
     </div>
   )
+}
+
+/** Opens what `?check=` asks for, once per link: Job match, or the first issue of a category, scrolled to. */
+function useCheckLink(issues: CheckResult['issues']) {
+  const asked = new URLSearchParams(useLocation().search).get('check')
+  const latest = useRef(issues)
+  latest.current = issues
+  useEffect(() => {
+    if (!asked) return
+    const { tab, issueKey } = checkLinkTarget(asked, latest.current)
+    const view = useBuilderView.getState()
+    view.setCheckTab(tab)
+    if (!issueKey) return
+    view.setCheckIssue(issueKey)
+    scrollToIssue(issueKey, 'panel')
+  }, [asked])
 }
 
 const verdict = (score: number) => (score >= CLEAN_SCORE ? 'Reads cleanly' : score >= 50 ? 'Mostly readable' : 'Hard for software to read')
