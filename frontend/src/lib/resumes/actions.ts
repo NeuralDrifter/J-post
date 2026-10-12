@@ -10,6 +10,7 @@ import { exportFileName, saveExport } from '../exportFiles'
 import { toast } from '../toast'
 import { newResumeData, resumePlainText, serializeResume, type ResumeData, type ResumeStart, type Template } from './document'
 import type { ImportResult } from './importFile'
+import { keepImportText } from './importText'
 import { letterPlainText, newLetterData, serializeLetter, type LetterData } from './letter'
 import { renderResumePdf } from './render'
 import { LETTER_KIND, RESUME_KIND } from './paths'
@@ -40,7 +41,9 @@ export async function saveImport(result: ImportResult, name: string): Promise<ap
   if (result.kind === 'letter') return saveLetter(name, result.letter)
   const data = await withLocalPicture(result.data)
   const resume = await api(CreateDocument(RESUME_KIND, name, serializeResume(data), resumePlainText(data)))
-  if (resume) for (const letter of result.letters) await saveLetter(`${name} — ${letter.name}`, letter)
+  if (!resume) return undefined
+  if (result.sourceText) keepImportText(resume.id, result.sourceText)
+  for (const letter of result.letters) await saveLetter(`${name} — ${letter.name}`, letter)
   return resume
 }
 

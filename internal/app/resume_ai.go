@@ -23,6 +23,9 @@ type resumeAITask struct {
 	instruction string
 	schema      map[string]any
 	role        ai.Role
+	// fixEdit, when set, reshapes each edit the model answers into what the
+	// builder reads; an edit it rejects is dropped.
+	fixEdit func(json.RawMessage) (json.RawMessage, bool)
 }
 
 // resumeAITasks holds every resume AI task by its settings task id.
@@ -30,6 +33,7 @@ var resumeAITasks = map[string]resumeAITask{
 	settings.TaskResumeImprove: improveTask,
 	settings.TaskResumeTailor:  tailorTask,
 	settings.TaskResumeReview:  reviewTask,
+	settings.TaskResumeImport:  importTask,
 }
 
 // ResumeAIRequest is one run of a resume AI task.
@@ -70,7 +74,21 @@ func runResumeAI(ctx context.Context, r *Repo, s settings.Settings, req ResumeAI
 	if err != nil {
 		return AIGeneration{}, err
 	}
+	answer.Edits = task.fixEdits(answer.Edits)
 	return r.keepGeneration(req, posting, choice.Provider, model, answer)
+}
+
+func (t resumeAITask) fixEdits(edits []json.RawMessage) []json.RawMessage {
+	if t.fixEdit == nil {
+		return edits
+	}
+	fixed := make([]json.RawMessage, 0, len(edits))
+	for _, edit := range edits {
+		if e, ok := t.fixEdit(edit); ok {
+			fixed = append(fixed, e)
+		}
+	}
+	return fixed
 }
 
 func (r *Repo) checkEditable(documentID string) error {

@@ -78,6 +78,7 @@ describe('readImport', () => {
   it('reads a Word resume through its text', async () => {
     const result = await readImport('cv.docx', docx(['Ada Lovelace', 'ada@example.com', 'Experience', 'Analyst, Babbage & Co', '1842 - 1843']))
     expect(result.kind === 'resume' && result.data.basics.name).toBe('Ada Lovelace')
+    expect(result.kind === 'resume' && result.sourceText).toContain('Analyst, Babbage & Co')
   })
 })
 

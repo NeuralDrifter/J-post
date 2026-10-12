@@ -15,6 +15,7 @@ import { parseStoredResume, resumePlainText, serializeResume, type ResumeData } 
 import { useLoad } from '../../lib/useLoad'
 import { compileResumeGeneration, resumePassages, sectionTitle } from '../../lib/resumes/ai/resumeChanges'
 import type { AIDocument } from './ai/aiDocument'
+import { ImportTidyBanner } from './ai/ImportTidyBanner'
 import { ReviewBar } from './ai/ReviewBar'
 import { TailorPanel } from './ai/TailorPanel'
 import { AIReviewProvider } from './ai/ReviewContext'
@@ -183,6 +184,7 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
           title: 'Content',
           content: (
             <ReadOnly when={locked}>
+              <ImportTidyBanner doc={doc} />
               <ContentPanel />
             </ReadOnly>
           ),

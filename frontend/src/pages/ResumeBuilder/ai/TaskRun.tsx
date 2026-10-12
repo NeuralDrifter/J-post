@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { Loader2, Sparkles } from 'lucide-react'
+import { settingsLink } from '../../../lib/settingsNav'
 import type { ResumeData } from '../../../lib/resumes/document'
 import { useEditor } from '../editorContext'
 import { useReview } from './ReviewContext'
@@ -35,7 +37,14 @@ export function TaskRun({ task, runKey, label, busyLabel, sends, disabled, onRun
       <Note>
         Sends {sends} to {provider.label}. Every change waits for you to accept it.
       </Note>
-      {provider.unavailable && <p className="text-[11px] text-warn">{provider.unavailable}</p>}
+      {provider.unavailable && (
+        <p className="text-[11px] text-warn">
+          {provider.unavailable}{' '}
+          <Link to={settingsLink('features')} className="underline underline-offset-2">
+            Choose another in Settings
+          </Link>
+        </p>
+      )}
       {error && <p className="text-xs text-red-300">{error}</p>}
     </div>
   )

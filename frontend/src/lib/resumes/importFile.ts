@@ -19,7 +19,8 @@ import { newLetterData, type LetterData } from './letter'
 
 export type ImportKind = 'pdf' | 'docx' | 'linkedin' | 'reactive-resume-json' | 'reactive-resume-v4-json' | 'json-resume-json' | 'cover-letter-json'
 
-export type ImportResult = { kind: 'resume'; data: ResumeData; letters: LetterData[] } | { kind: 'letter'; letter: LetterData }
+/** A resume import; `sourceText` is the file's text when it was read line by line (PDF, Word), else ''. */
+export type ImportResult = { kind: 'resume'; data: ResumeData; letters: LetterData[]; sourceText: string } | { kind: 'letter'; letter: LetterData }
 
 /** An import failure worded for the person importing. */
 export class ImportError extends Error {}
@@ -92,21 +93,29 @@ function jsonShapeKind(parsed: unknown): ImportKind | null {
 export async function readImport(name: string, bytes: Uint8Array): Promise<ImportResult> {
   const kind = detectImportKind(name, bytes)
   if (kind === 'cover-letter-json') return { kind: 'letter', letter: coverLetterDocumentSchema.parse(JSON.parse(strFromU8(bytes))) }
-  const data = await readResumeData(kind, name, bytes)
-  return { kind: 'resume', data, letters: splitOutLetters(data) }
+  if (kind === 'pdf' || kind === 'docx') {
+    const sourceText = await TEXT_READERS[kind](name, bytes)
+    const data = parseResumeText(sourceText)
+    return { kind: 'resume', data, letters: splitOutLetters(data), sourceText }
+  }
+  const data = await READERS[kind](bytes)
+  return { kind: 'resume', data, letters: splitOutLetters(data), sourceText: '' }
 }
 
-const READERS: Record<Exclude<ImportKind, 'cover-letter-json'>, (name: string, bytes: Uint8Array) => ResumeData | Promise<ResumeData>> = {
-  'json-resume-json': (_, bytes) => parseJSONResume(strFromU8(bytes)),
-  'reactive-resume-json': (_, bytes) => withLegacyStylesConverted(parseReactiveResumeJSON(strFromU8(bytes))),
-  'reactive-resume-v4-json': (_, bytes) => parseReactiveResumeV4JSON(strFromU8(bytes)),
-  linkedin: async (_, bytes) => (await import('@reactive-resume/import/linkedin')).parseLinkedInExport(bytes),
-  docx: (_, bytes) => parseResumeText(docxText(bytes)),
-  pdf: (name, bytes) => readPdf(name, bytes),
+type StructuredKind = Exclude<ImportKind, 'cover-letter-json' | 'pdf' | 'docx'>
+
+/** Files that carry a resume's structure. */
+const READERS: Record<StructuredKind, (bytes: Uint8Array) => ResumeData | Promise<ResumeData>> = {
+  'json-resume-json': (bytes) => parseJSONResume(strFromU8(bytes)),
+  'reactive-resume-json': (bytes) => withLegacyStylesConverted(parseReactiveResumeJSON(strFromU8(bytes))),
+  'reactive-resume-v4-json': (bytes) => parseReactiveResumeV4JSON(strFromU8(bytes)),
+  linkedin: async (bytes) => (await import('@reactive-resume/import/linkedin')).parseLinkedInExport(bytes),
 }
 
-function readResumeData(kind: Exclude<ImportKind, 'cover-letter-json'>, name: string, bytes: Uint8Array): ResumeData | Promise<ResumeData> {
-  return READERS[kind](name, bytes)
+/** Files read as text, line by line; the structure is guessed from the lines. */
+const TEXT_READERS: Record<'pdf' | 'docx', (name: string, bytes: Uint8Array) => string | Promise<string>> = {
+  docx: (_, bytes) => docxText(bytes),
+  pdf: (name, bytes) => pdfText(name, bytes),
 }
 
 // Exports from before Semantic CSS carry style rules nothing renders any more: they come in converted.
@@ -114,7 +123,7 @@ function withLegacyStylesConverted(data: ResumeData): ResumeData {
   return needsLegacyStyleConversion(data.metadata) ? { ...data, metadata: { ...data.metadata, stylesheet: convertLegacyStylesheet(data) } } : data
 }
 
-async function readPdf(name: string, bytes: Uint8Array): Promise<ResumeData> {
+async function pdfText(name: string, bytes: Uint8Array): Promise<string> {
   const [{ extractPdf }, { buildExtractedDocument }, { documentToLines }] = await Promise.all([
     import('@reactive-resume/web/features/ats-checker/extract-client'),
     import('@reactive-resume/resume/ats-pdf'),
@@ -122,7 +131,7 @@ async function readPdf(name: string, bytes: Uint8Array): Promise<ResumeData> {
   ])
   const lines = documentToLines(buildExtractedDocument(await extractPdf(new File([bytes as Uint8Array<ArrayBuffer>], name), { operatorBudgetMs: 0 })))
   if (lines.length === 0) throw new ImportError("This PDF is a scanned image, so there's no text to read. Try the Word version, or start blank.")
-  return parseResumeText(lines.join('\n'))
+  return lines.join('\n')
 }
 
 /** A Word document's text, one paragraph per line. */

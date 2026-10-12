@@ -229,3 +229,25 @@ func TestWritingReviewOnlyRewrites(t *testing.T) {
 		t.Fatal("the writing review isn't registered as a writing task")
 	}
 }
+
+func TestImportTidyKeepsSectionsAsItems(t *testing.T) {
+	r := newTestRepo(t)
+	doc, _ := r.CreateDocument(DocumentResume, "CV", sampleData, "Ada")
+	fakeEdits(t, `{"edits":[`+
+		`{"kind":"replaceSection","sectionId":"experience","itemsJson":"[{\"company\":\"Babbage & Co\",\"position\":\"Analyst\"}]","why":"Two jobs had merged"},`+
+		`{"kind":"replaceSection","sectionId":"skills","itemsJson":"not json","why":"broken"}]}`)
+	s := aitest.WithTask(aitest.AnthropicSettings, settings.TaskResumeImport, settings.ProviderAnthropic)
+	g, err := runResumeAI(context.Background(), r, s, ResumeAIRequest{Task: settings.TaskResumeImport, DocumentID: doc.ID, Input: `{"text":"Ada"}`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var answer struct{ Edits []map[string]any }
+	json.Unmarshal([]byte(g.Edits), &answer)
+	if len(answer.Edits) != 1 || answer.Edits[0]["itemsJson"] != nil {
+		t.Fatalf("edits = %s", g.Edits)
+	}
+	items := answer.Edits[0]["items"].([]any)
+	if items[0].(map[string]any)["company"] != "Babbage & Co" {
+		t.Fatalf("items = %v", items)
+	}
+}
