@@ -68,8 +68,6 @@ export function GetMetrics():Promise<app.Metrics>;
 
 export function GetMockInterview(arg1:string):Promise<app.MockInterview>;
 
-export function GetProfile():Promise<app.Profile>;
-
 export function GetSettings():Promise<settings.Settings>;
 
 export function GetStartupError():Promise<string>;
@@ -215,9 +213,5 @@ export function TrashDocument(arg1:string):Promise<void>;
 export function UpdateJob(arg1:app.Job):Promise<app.Job>;
 
 export function UpdateJobNotes(arg1:string,arg2:string):Promise<void>;
-
-export function UpdateResumeText(arg1:string):Promise<void>;
-
-export function UploadResume():Promise<app.Profile>;
 
 export function VoicePreview(arg1:string):Promise<string>;

@@ -127,9 +127,26 @@ func TestMarkOutdated(t *testing.T) {
 	}
 }
 
+// useDefaultResume makes a resume holding text the default; the returned func changes its text.
+func useDefaultResume(t *testing.T, a *App, text string) func(string) {
+	t.Helper()
+	doc, err := a.repo.CreateDocument(DocumentResume, "Default", `{}`, text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SetDefaultResume(doc.ID); err != nil {
+		t.Fatal(err)
+	}
+	return func(next string) {
+		if _, err := a.repo.SaveDocument(doc.ID, `{}`, next, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestAppListPostingsFlagsOutdatedScores(t *testing.T) {
 	a := newTestApp(t)
-	a.repo.UpdateResumeText("Jane Doe, Go")
+	setResume := useDefaultResume(t, a, "Jane Doe, Go")
 	ps := addPostings(t, a.repo, "Go Dev")
 	s, err := a.settings.Load()
 	if err != nil {
@@ -140,7 +157,7 @@ func TestAppListPostingsFlagsOutdatedScores(t *testing.T) {
 	if list[0].Match == nil || list[0].Match.Outdated {
 		t.Fatalf("fresh score shown as outdated: %+v", list[0].Match)
 	}
-	a.repo.UpdateResumeText("Jane Doe, Rust")
+	setResume("Jane Doe, Rust")
 	list, _ = a.ListPostings(PostingFilter{Tab: "inbox"})
 	if !list[0].Match.Outdated {
 		t.Fatal("a resume change must mark the score outdated")
@@ -149,7 +166,7 @@ func TestAppListPostingsFlagsOutdatedScores(t *testing.T) {
 
 func TestAppScoresKeepTheResumeTheyWereGradedAgainst(t *testing.T) {
 	a := newTestApp(t)
-	a.repo.UpdateResumeText("Jane Doe, Go")
+	setDefault := useDefaultResume(t, a, "Jane Doe, Go")
 	chosen, err := a.repo.CreateDocument(DocumentResume, "Rust resume", `{}`, "Jane Doe, Rust")
 	if err != nil {
 		t.Fatal(err)
@@ -164,7 +181,7 @@ func TestAppScoresKeepTheResumeTheyWereGradedAgainst(t *testing.T) {
 	if m := list[0].Match; m == nil || m.ResumeID != chosen.ID || m.Outdated {
 		t.Fatalf("score graded against a chosen resume = %+v", m)
 	}
-	a.repo.UpdateResumeText("Jane Doe, Go and Python")
+	setDefault("Jane Doe, Go and Python")
 	if list, _ = a.ListPostings(PostingFilter{Tab: "inbox"}); list[0].Match.Outdated {
 		t.Fatal("changing the default resume outdated a score graded against another resume")
 	}

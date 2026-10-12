@@ -265,17 +265,33 @@ func insertTailoredCopy(tx *sql.Tx, original Document, job Job, now string) (Doc
 	return copy, insertCreatedVersion(tx, copy)
 }
 
+// ErrNeedsResume: a feature needs a resume and there's none to read. Its
+// message starts with "needs-resume:" so the frontend can offer the way to get one.
+var ErrNeedsResume = errors.New("needs-resume: This needs a resume. Choose a default resume, or create or import one.")
+
 // resumeTextFor is the resume text AI features read: the given resume, else
-// the default resume, else the uploaded resume. Trashed resumes are skipped.
+// the default resume. Trashed or blank resumes are skipped; with neither, it
+// fails with ErrNeedsResume.
 func (r *Repo) resumeTextFor(s settings.Settings, resumeID string) (string, error) {
 	for _, id := range []string{resumeID, s.DefaultResumeID} {
 		text, found, err := r.liveResumeText(id)
-		if err != nil || found {
-			return text, err
+		if err != nil {
+			return "", err
+		}
+		if found && strings.TrimSpace(text) != "" {
+			return text, nil
 		}
 	}
-	profile, err := r.GetProfile()
-	return profile.ResumeText, err
+	return "", ErrNeedsResume
+}
+
+// optionalResumeText is resumeTextFor for features that work without a resume: "" when there's none.
+func (r *Repo) optionalResumeText(s settings.Settings, resumeID string) (string, error) {
+	text, err := r.resumeTextFor(s, resumeID)
+	if errors.Is(err, ErrNeedsResume) {
+		return "", nil
+	}
+	return text, err
 }
 
 func (r *Repo) liveResumeText(id string) (text string, found bool, err error) {

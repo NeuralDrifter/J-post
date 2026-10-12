@@ -105,8 +105,10 @@ func (a *App) scoreAgainst(resumeID string, want func(Posting) bool) (MatchRun, 
 	return a.runMatchAgainst(s, resumeID, postings)
 }
 
+// runMatchAgainst scores postings against a resume. A missing resume is the
+// run's Error (like any problem the user can fix), not a failed call.
 func (a *App) runMatchAgainst(s settings.Settings, resumeID string, postings []Posting) (MatchRun, error) {
-	text, err := a.repo.resumeTextFor(s, resumeID)
+	text, err := a.repo.optionalResumeText(s, resumeID)
 	if err != nil {
 		return MatchRun{}, err
 	}
@@ -117,7 +119,7 @@ func (a *App) runMatchAgainst(s settings.Settings, resumeID string, postings []P
 func (a *App) matchFingerprints(s settings.Settings, resumeIDs []string) (map[string]string, error) {
 	fingerprints := map[string]string{}
 	for _, id := range append(resumeIDs, "") {
-		text, err := a.repo.resumeTextFor(s, id)
+		text, err := a.repo.optionalResumeText(s, id)
 		if err != nil {
 			return nil, err
 		}

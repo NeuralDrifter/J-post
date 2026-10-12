@@ -7,7 +7,7 @@ import { CircleCheck, CircleDot, FolderOpen, LoaderCircle, Scale } from 'lucide-
 import { PackageEditor } from '../../components/comp/PackageEditor'
 import { PageTitle } from '../../components/PageTitle'
 import { api, apiOk } from '../../lib/api'
-import { DataDir, GetCurrentComp, GetProfile, GetSettings, OpenDataDir, SaveSettings, UpdateResumeText, UploadResume, type comp, type settings } from '../../lib/backend'
+import { DataDir, GetCurrentComp, GetSettings, OpenDataDir, SaveSettings, type comp, type settings } from '../../lib/backend'
 import { blankPackage } from '../../lib/comp'
 import { notifyDataChanged } from '../../lib/events'
 import { readSessionValue, writeSessionValue } from '../../lib/prefs'
@@ -33,58 +33,6 @@ export default function SettingsPage() {
       <PageTitle title="Settings" subtitle="Stored only on this computer." />
       {settings ? <SettingsForm initial={settings} dataDir={dataDir ?? ''} /> : <p className="text-sm text-ink-2">Loading…</p>}
     </div>
-  )
-}
-
-function ResumeSection() {
-  const { data: profile } = useLoad(() => api(GetProfile()), [])
-  const [text, setText] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const value = text ?? profile?.resumeText ?? ''
-
-  const upload = async () => {
-    setBusy(true)
-    const p = await api(UploadResume())
-    setBusy(false)
-    if (!p) return
-    setText(null)
-    notifyDataChanged()
-    toast.success(`Read ${p.resumeFileName}. Check the text below.`)
-  }
-
-  const save = async () => {
-    if (await apiOk(UpdateResumeText(value))) {
-      setText(null)
-      notifyDataChanged()
-      toast.success('Resume text saved')
-    }
-  }
-
-  return (
-    <Section
-      title="Uploaded resume"
-      hint="Used by the AI features when no default resume is set above. Review the extracted text and fix anything that came out wrong. To edit it in the builder, import the same file on the Resumes page."
-    >
-      <div className="mb-3 flex items-center gap-3">
-        <button type="button" className="btn btn-ghost" onClick={upload} disabled={busy}>
-          {busy ? <LoaderCircle size={15} className="animate-spin" /> : null} {profile?.resumeFileName ? 'Replace resume' : 'Upload resume'}
-        </button>
-        <span className="font-mono text-xs text-ink-3">{profile?.resumeFileName || 'PDF, DOCX, TXT or Markdown'}</span>
-      </div>
-      <textarea
-        className="field min-h-72 font-mono text-[12px] leading-relaxed"
-        value={value}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Your resume text appears here after upload. You can also paste it."
-      />
-      {text !== null && text !== profile?.resumeText && (
-        <div className="mt-2 flex justify-end">
-          <button type="button" className="btn btn-primary py-1.5 text-xs" onClick={save}>
-            Save resume text
-          </button>
-        </div>
-      )}
-    </Section>
   )
 }
 
@@ -153,7 +101,6 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
         {section === 'profile' && (
           <>
             <DefaultResumeSection s={s} setS={setS} />
-            <ResumeSection />
           </>
         )}
         {section === 'ai' && <AIProvidersSection s={s} setS={setS} />}

@@ -98,7 +98,7 @@ type Settings struct {
 	MatchLocations  string   `json:"matchLocations"`
 	MatchSeniority  string   `json:"matchSeniority"` // a MatchSeniorityOptions value; "" = no target
 	MatchGoals      string   `json:"matchGoals"`     // free text: wants, must-haves, deal-breakers
-	// The resume AI features read when no other is chosen (a documents row id); "" = the uploaded resume text.
+	// The resume AI features read when no other is chosen (a documents row id); "" = none yet.
 	DefaultResumeID string `json:"defaultResumeId"`
 	// Who runs each AI task (see AITasks), keyed by task id.
 	AIFeatures map[string]AIChoice `json:"aiFeatures" ts_type:"Record<string, {provider: string, model: string, effort: string}>"`

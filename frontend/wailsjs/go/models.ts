@@ -1316,24 +1316,6 @@ export namespace app {
 	        this.onlyNew = source["onlyNew"];
 	    }
 	}
-	export class Profile {
-	    resumeFileName: string;
-	    resumePath: string;
-	    resumeText: string;
-	    updatedAt: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new Profile(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.resumeFileName = source["resumeFileName"];
-	        this.resumePath = source["resumePath"];
-	        this.resumeText = source["resumeText"];
-	        this.updatedAt = source["updatedAt"];
-	    }
-	}
 	
 	
 	export class SavedSearch {

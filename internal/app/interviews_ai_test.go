@@ -80,7 +80,8 @@ func TestPrepareInterviewNoKey(t *testing.T) {
 func TestPrepareInterview(t *testing.T) {
 	r := newTestRepo(t)
 	j := interviewJob(t, r)
-	r.SaveResume("cv.md", "", "# Jane\n- Go")
+	resume, _ := r.CreateDocument(DocumentResume, "CV", sampleData, "# Jane\n- Go")
+	r.LinkJobDocuments(j.ID, resume.ID, "")
 	var sentSetup map[string]any
 	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) {
 		var body map[string]any

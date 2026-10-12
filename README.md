@@ -47,7 +47,7 @@ A desktop job-search tracker: a dark "mission control" pipeline board, a detail 
   - Pick the interview type, length (10/25/45 min), interviewer style, voice and focus.
   - Live coaching cues (pace, filler words, answer timer, and a one-line AI tip after each answer) can be hidden for a realistic run.
   - Afterwards you get a scorecard (communication, structure, relevance, depth, confidence), per-question feedback with a stronger example answer, and three things to practice. The transcript and a recording are saved to the job; click a transcript line to replay it.
-  - Needs a Gemini API key (Settings → AI). Upload your resume in Settings → Resume.
+  - Needs a Gemini API key (Settings → AI providers). Questions use the job's resume, else your default resume.
 - **Screen-aware window**: opens sized to your monitor (or maximised on small screens) and remembers its size.
 
 ## Setup

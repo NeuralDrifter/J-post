@@ -188,11 +188,9 @@ func TestEmptyTrashOnlyTouchesThatKind(t *testing.T) {
 
 func TestResumeTextForFallsBackInOrder(t *testing.T) {
 	r := newTestRepo(t)
-	if err := r.SaveResume("cv.pdf", "", "Uploaded text"); err != nil {
-		t.Fatal(err)
-	}
 	chosen, _ := r.CreateDocument(DocumentResume, "Chosen", sampleData, "Chosen text")
 	def, _ := r.CreateDocument(DocumentResume, "Default", sampleData, "Default text")
+	blank, _ := r.CreateDocument(DocumentResume, "Blank", sampleData, "  ")
 	s := settings.Settings{DefaultResumeID: def.ID}
 
 	cases := []struct {
@@ -203,8 +201,8 @@ func TestResumeTextForFallsBackInOrder(t *testing.T) {
 	}{
 		{"explicit resume", s, chosen.ID, "Chosen text"},
 		{"default resume", s, "", "Default text"},
-		{"no default", settings.Settings{}, "", "Uploaded text"},
 		{"unknown explicit falls to default", s, "missing", "Default text"},
+		{"blank explicit falls to default", s, blank.ID, "Default text"},
 	}
 	for _, c := range cases {
 		got, err := r.resumeTextFor(c.settings, c.resumeID)
@@ -212,12 +210,22 @@ func TestResumeTextForFallsBackInOrder(t *testing.T) {
 			t.Errorf("%s: got %q, %v; want %q", c.name, got, err, c.want)
 		}
 	}
+}
 
+func TestResumeTextForNeedsAResume(t *testing.T) {
+	r := newTestRepo(t)
+	def, _ := r.CreateDocument(DocumentResume, "Default", sampleData, "Default text")
+	s := settings.Settings{DefaultResumeID: def.ID}
 	if err := r.TrashDocument(def.ID); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := r.resumeTextFor(s, ""); got != "Uploaded text" {
-		t.Errorf("trashed default: got %q, want the uploaded text", got)
+	for name, c := range map[string]settings.Settings{"no default": {}, "trashed default": s} {
+		if _, err := r.resumeTextFor(c, ""); !errors.Is(err, ErrNeedsResume) || !strings.HasPrefix(err.Error(), "needs-resume:") {
+			t.Errorf("%s: err = %v", name, err)
+		}
+		if text, err := r.optionalResumeText(c, ""); text != "" || err != nil {
+			t.Errorf("%s: optional = %q, %v", name, text, err)
+		}
 	}
 }
 
@@ -292,9 +300,6 @@ func TestTailorResumeForJob(t *testing.T) {
 
 func TestInterviewsReadTheJobsLinkedResume(t *testing.T) {
 	r := newTestRepo(t)
-	if err := r.SaveResume("cv.pdf", "", "Uploaded text"); err != nil {
-		t.Fatal(err)
-	}
 	job := mustCreateJob(t, r)
 	resume, _ := r.CreateDocument(DocumentResume, "Tailored", sampleData, "Tailored text")
 	if err := r.LinkJobDocuments(job.ID, resume.ID, ""); err != nil {

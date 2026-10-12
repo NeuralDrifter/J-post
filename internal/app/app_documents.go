@@ -50,7 +50,7 @@ func (a *App) DeleteDocumentForever(id string) error {
 
 func (a *App) EmptyTrash(kind string) error { return a.repo.EmptyTrash(kind) }
 
-// SetDefaultResume makes a resume the one AI features read; "" goes back to the uploaded resume.
+// SetDefaultResume makes a resume the one AI features read; "" leaves none.
 func (a *App) SetDefaultResume(id string) error {
 	s, err := a.settings.Load()
 	if err != nil {

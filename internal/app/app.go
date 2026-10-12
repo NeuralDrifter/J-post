@@ -493,45 +493,6 @@ func (a *App) MarketSources() DataSources {
 	return ds
 }
 
-// ---- AI: resume ----
-
-func (a *App) GetProfile() (Profile, error) {
-	return a.repo.GetProfile()
-}
-
-func (a *App) UpdateResumeText(text string) error {
-	return a.repo.UpdateResumeText(text)
-}
-
-// UploadResume picks a resume file, keeps a copy, and extracts its text locally
-// (nothing is uploaded). Returns nil if the dialog was cancelled.
-func (a *App) UploadResume() (*Profile, error) {
-	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:   "Choose your resume",
-		Filters: []runtime.FileFilter{{DisplayName: "Resume (*.pdf, *.docx, *.txt, *.md)", Pattern: "*.pdf;*.docx;*.txt;*.md"}},
-	})
-	if err != nil || path == "" {
-		return nil, err
-	}
-	dir := filepath.Join(a.dataDir, "resume")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, err
-	}
-	dest := filepath.Join(dir, filepath.Base(path))
-	if err := copyFile(path, dest); err != nil {
-		return nil, err
-	}
-	text, err := extractResumeText(dest)
-	if err != nil {
-		return nil, err
-	}
-	if err := a.repo.SaveResume(filepath.Base(dest), dest, text); err != nil {
-		return nil, err
-	}
-	p, err := a.repo.GetProfile()
-	return &p, err
-}
-
 // ---- AI: mock interviews ----
 
 func (a *App) PrepareInterview(jobID string, setup InterviewSetup) (LiveSession, error) {

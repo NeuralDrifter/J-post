@@ -34,6 +34,7 @@ import { defaultSourceIds, sourceLabel } from '../../lib/jobSources'
 import { readPref, readSessionValue, writePref, writeSessionValue } from '../../lib/prefs'
 import { toast } from '../../lib/toast'
 import { visiblePostings } from '../../lib/inbox'
+import { isNeedsResume, needsResumeText, requestNeedsResume } from '../../lib/needsResume'
 import { RESUME_KIND } from '../../lib/resumes/paths'
 import { useLoad } from '../../lib/useLoad'
 import { outdatedCount, shouldAutoScore, sortByMatch } from '../../lib/match'
@@ -116,13 +117,27 @@ export default function DiscoverPage() {
   const selected = useMemo(() => shown?.find((p) => p.id === selectedId), [shown, selectedId])
   const matchPosting = shown?.find((p) => p.id === matchFor && p.match)
 
-  const score = async (call: () => Promise<app.MatchRun>) => {
+  /** Scores postings; resolves to the run's error ('' when it went fine). */
+  const runScoring = async (call: () => Promise<app.MatchRun>) => {
     setStatusError('')
     setStatus({ phase: 'scoring', done: 0, total: 0 })
     const r = await api(call())
     setStatus(null)
     notifyDataChanged()
-    if (r?.error) setStatusError(r.error)
+    return r?.error ?? ''
+  }
+
+  // Asked for: a missing resume opens the dialog that fixes it.
+  const score = async (call: () => Promise<app.MatchRun>) => {
+    const error = await runScoring(call)
+    if (isNeedsResume(error)) requestNeedsResume()
+    else if (error) setStatusError(error)
+  }
+
+  // After a search: a missing resume is only mentioned, so every search doesn't open a dialog.
+  const autoScore = async () => {
+    const error = await runScoring(ScoreInbox)
+    if (error) setStatusError(isNeedsResume(error) ? needsResumeText(error) : error)
   }
 
   const { data: resumes } = useLoad(() => api(ListDocuments(RESUME_KIND, false)), [])
@@ -147,7 +162,7 @@ export default function DiscoverPage() {
     setRun(r)
     setTab('inbox')
     notifyDataChanged()
-    if (shouldAutoScore(appSettings)) await score(ScoreInbox)
+    if (shouldAutoScore(appSettings)) await autoScore()
   }
 
   const runSaved = (s: app.SavedSearch, call: SearchCall) => {

@@ -69,7 +69,7 @@ func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume matchRes
 		return run, nil
 	}
 	if strings.TrimSpace(resume.Text) == "" {
-		run.Error = "Add your resume on the Profile page to get match scores"
+		run.Error = ErrNeedsResume.Error()
 		return run, nil
 	}
 	choice := s.AIChoice(settings.TaskJobMatch)

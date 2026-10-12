@@ -7,9 +7,10 @@ import { FileText, FileUp, Mail, Plus, ScanText, Trash2, type LucideIcon } from 
 import { confirmThen } from '../../components/ConfirmDialog'
 import { PageTitle } from '../../components/PageTitle'
 import { api } from '../../lib/api'
-import { EmptyTrash, GetSettings, ListDocuments, ListJobSummaries, type app } from '../../lib/backend'
+import { EmptyTrash, GetSettings, ListDocuments, ListJobSummaries, SetDefaultResume, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
 import { openMenu } from '../../lib/menu'
+import { withReturn } from '../../lib/needsResume'
 import { libraryOrder } from '../../lib/resumes/library'
 import { documentPath, LETTER_KIND, RESUME_KIND } from '../../lib/resumes/paths'
 import { useLoad } from '../../lib/useLoad'
@@ -33,8 +34,10 @@ export default function ResumesPage() {
   const [params, setParams] = useSearchParams()
   const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'resumes') as Tab
   const [query, setQuery] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [importing, setImporting] = useState(false)
+  // ?new=resume and ?import=1 open a dialog straight away; ?return= is where to go back to afterwards.
+  const [creating, setCreating] = useState(params.get('new') === 'resume')
+  const [importing, setImporting] = useState(params.get('import') === '1')
+  const returnTo = params.get('return')
   const { data: docs } = useLoad(() => loadTab(tab), [tab])
   const { data: settings } = useLoad(() => api(GetSettings()), [])
   const { data: summaries } = useLoad(() => api(ListJobSummaries()), [])
@@ -42,11 +45,13 @@ export default function ResumesPage() {
   const defaultId = settings?.defaultResumeId ?? ''
   const shown = libraryOrder(docs ?? [], defaultId, query)
   const open = (doc: app.Document) => navigate(documentPath(doc))
-  const created = (doc: app.Document) => {
+  const created = async (doc: app.Document) => {
     setCreating(false)
     setImporting(false)
+    // The first resume made because a feature needed one becomes the default it was missing.
+    if (returnTo && doc.kind === RESUME_KIND && !defaultId) await api(SetDefaultResume(doc.id))
     notifyDataChanged()
-    open(doc)
+    navigate(returnTo ? withReturn(documentPath(doc), returnTo) : documentPath(doc))
   }
 
   return (

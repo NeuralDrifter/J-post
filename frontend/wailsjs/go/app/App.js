@@ -126,10 +126,6 @@ export function GetMockInterview(arg1) {
   return window['go']['app']['App']['GetMockInterview'](arg1);
 }
 
-export function GetProfile() {
-  return window['go']['app']['App']['GetProfile']();
-}
-
 export function GetSettings() {
   return window['go']['app']['App']['GetSettings']();
 }
@@ -420,14 +416,6 @@ export function UpdateJob(arg1) {
 
 export function UpdateJobNotes(arg1, arg2) {
   return window['go']['app']['App']['UpdateJobNotes'](arg1, arg2);
-}
-
-export function UpdateResumeText(arg1) {
-  return window['go']['app']['App']['UpdateResumeText'](arg1);
-}
-
-export function UploadResume() {
-  return window['go']['app']['App']['UploadResume']();
 }
 
 export function VoicePreview(arg1) {

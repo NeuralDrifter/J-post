@@ -3,6 +3,7 @@
 
 import { Outlet, useLocation } from 'react-router'
 import { ErrorBoundary } from './ErrorBoundary'
+import { NeedsResumeHost } from './NeedsResumeDialog'
 import { NavRail } from './NavRail'
 import { TopBar } from './TopBar'
 
@@ -23,6 +24,7 @@ export function AppShell() {
           </ErrorBoundary>
         </main>
       </div>
+      <NeedsResumeHost />
     </div>
   )
 }

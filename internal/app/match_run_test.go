@@ -158,7 +158,7 @@ func TestRunMatchSafeguards(t *testing.T) {
 		t.Fatalf("nothing to score: %+v", run)
 	}
 	run, _ = runMatch(context.Background(), r, matchSettings(5), matchResume{Text: "  \n\t "}, ps, func(int, int) {})
-	if run.Error != "Add your resume on the Profile page to get match scores" {
+	if run.Error != ErrNeedsResume.Error() {
 		t.Fatalf("blank resume: %+v", run)
 	}
 	noKey := matchSettings(5)

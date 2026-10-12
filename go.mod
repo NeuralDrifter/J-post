@@ -6,7 +6,6 @@ require (
 	github.com/anthropics/anthropic-sdk-go v1.79.0
 	github.com/google/jsonschema-go v0.4.3
 	github.com/gorilla/websocket v1.5.3
-	github.com/ledongthuc/pdf v0.0.0-20260907135840-6c8c28e0e8a0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/openai/openai-go/v3 v3.73.0
 	github.com/wailsapp/wails/v2 v2.12.0

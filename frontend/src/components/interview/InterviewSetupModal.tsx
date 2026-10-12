@@ -6,9 +6,11 @@ import { useNavigate } from 'react-router'
 import { LoaderCircle, Mic, TriangleAlert } from 'lucide-react'
 import { NO_PLAN_PROVIDER } from '../../generated/choices'
 import { api, errorMessage } from '../../lib/api'
-import { GetProfile, GetSettings, ListAIProviders, PrepareInterview, type app } from '../../lib/backend'
+import { GetSettings, ListAIProviders, ListDocuments, PrepareInterview, type app } from '../../lib/backend'
 import { formatDate } from '../../lib/format'
 import { holdSession } from '../../lib/interview'
+import { hasUsableResume, requestNeedsResume } from '../../lib/needsResume'
+import { RESUME_KIND } from '../../lib/resumes/paths'
 import { useInterviewOptions } from '../../lib/interviewOptions'
 import { useLoad } from '../../lib/useLoad'
 import { Field } from '../Field'
@@ -20,7 +22,7 @@ import { VoicePicker } from './VoicePicker'
 export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onClose: () => void; retry?: RetryInfo }) {
   const navigate = useNavigate()
   const { data: settings } = useLoad(() => api(GetSettings()), [])
-  const { data: profile } = useLoad(() => api(GetProfile()), [])
+  const { data: resumes } = useLoad(() => api(ListDocuments(RESUME_KIND, false)), [])
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
   const [setup, setSetup] = useState<app.InterviewSetup>(() => initialSetup(job, retry))
   const [starting, setStarting] = useState(false)
@@ -30,7 +32,7 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onC
   const options = useInterviewOptions()
 
   const noKey = settings && !settings.geminiKey
-  const noResume = profile && !profile.resumeText.trim()
+  const noResume = resumes && settings && !hasUsableResume(resumes, [job.resumeId, settings.defaultResumeId])
   const plannerLabel = (s: app.InterviewSetup) => {
     const id = s.planProvider || settings?.aiFeatures.interviewPlan.provider || ''
     return providers?.find((p) => p.id === id)?.label ?? id
@@ -173,7 +175,13 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onC
           {noResume && (
             <p className="flex items-start gap-2 rounded-xl border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-amber-200">
               <TriangleAlert size={14} className="mt-0.5 shrink-0" />
-              No resume yet, so questions will be generic. Upload one in Settings → Resume for questions about your real experience.
+              <span>
+                No resume yet, so questions will be generic.{' '}
+                <button type="button" className="underline hover:text-amber-100" onClick={() => requestNeedsResume({ jobResumeId: job.resumeId })}>
+                  Choose or create a resume
+                </button>{' '}
+                for questions about your real experience.
+              </span>
             </p>
           )}
           {failure && (

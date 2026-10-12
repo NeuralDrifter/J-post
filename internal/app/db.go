@@ -404,6 +404,8 @@ var migrations = []string{
 	// 15: a letter's sender details and design can follow its source resume (see letters.go).
 	`ALTER TABLE documents ADD COLUMN sender_linked INTEGER NOT NULL DEFAULT 0;
 	ALTER TABLE documents ADD COLUMN design_linked INTEGER NOT NULL DEFAULT 0;`,
+	// 16: the uploaded resume is gone; resumes live in documents.
+	`DROP TABLE profile;`,
 }
 
 func openDB(path string) (*sql.DB, error) {

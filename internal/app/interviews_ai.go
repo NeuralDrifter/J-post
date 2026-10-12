@@ -524,7 +524,7 @@ func (r *Repo) loadInterviewContext(s settings.Settings, jobID string) (intervie
 	if err != nil {
 		return interviewContext{}, err
 	}
-	resume, err := r.resumeTextFor(s, job.ResumeID)
+	resume, err := r.optionalResumeText(s, job.ResumeID)
 	if err != nil {
 		return interviewContext{}, err
 	}
@@ -622,7 +622,7 @@ func requestScorecard(ctx context.Context, r *Repo, s settings.Settings, choice 
 	if err != nil {
 		return card, "", err
 	}
-	resume, err := r.resumeTextFor(s, job.ResumeID)
+	resume, err := r.optionalResumeText(s, job.ResumeID)
 	if err != nil {
 		return card, "", err
 	}

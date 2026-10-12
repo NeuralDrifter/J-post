@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useParams } from 'react-router'
+import { useLocation, useParams } from 'react-router'
 import { Star } from 'lucide-react'
 import { syncResumeDates } from '@reactive-resume/schema/resume/dates'
 import { api, apiOk } from '../../lib/api'
+import { returnTarget } from '../../lib/needsResume'
 import { GetDocument, GetSettings, SaveDocument, type app } from '../../lib/backend'
 import { exportDocument, setDefaultResume, setDocumentLocked, type ExportFormat } from '../../lib/resumes/actions'
 import { resumeExportable } from '../../lib/resumes/stored'
@@ -129,6 +130,7 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const exportable = resumeExportable(doc.name, data)
   const exportAs = (format: ExportFormat) => exportDocument(exportable, format)
   const pageCount = useBuilderView((s) => s.rendered.pageCount)
+  const back = returnTarget(useLocation().search, BACK)
   const menu = useDocumentMenu({ doc, exportable, back: BACK.to, details: { template: data.metadata.template, pageCount, plainText: resumePlainText(data) } })
   useBuilderHotkeys({ undo: controls.undo, redo: controls.redo, exportPdf: () => void exportAs('pdf'), print: () => void menu.print(), zoomIn: () => setZoom(zoomIn), zoomOut: () => setZoom(zoomOut) })
 
@@ -139,7 +141,7 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
           <BuilderTopBar
             docId={doc.id}
             name={doc.name}
-            back={BACK}
+            back={back}
             controls={controls}
             exportItems={exportMenuItems(exportAs, 'Ctrl+S')}
             documentItems={menu.items}
