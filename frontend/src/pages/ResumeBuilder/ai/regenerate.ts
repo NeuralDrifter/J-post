@@ -8,6 +8,7 @@ import { improveAgain } from '../../../lib/resumes/ai/improve'
 import type { SectionReview } from '../../../lib/resumes/ai/review'
 import { parseTailorTerms, tailorMaterial } from '../../../lib/resumes/ai/tailor'
 import { SETTINGS_TASK } from '../../../lib/resumes/ai/tasks'
+import { writingReviewMaterial } from '../../../lib/resumes/ai/writingReview'
 import type { AIDocument } from './aiDocument'
 import type { RedoTarget } from './redoTargets'
 import { useAIReview } from './reviewStore'
@@ -22,6 +23,7 @@ export type Regenerator = (args: RegenerateArgs) => Pick<app.ResumeAIRequest, 'i
 export const REGENERATORS: Partial<Record<string, Regenerator>> = {
   [SETTINGS_TASK.improve]: ({ gen, passages, avoid }) => improveAgain(gen.context, passages, avoid),
   [SETTINGS_TASK.tailor]: ({ data, gen, passages, sectionId, avoid }) => tailorMaterial(data as ResumeData, passages, parseTailorTerms(gen.context), { section: sectionId, avoid }),
+  [SETTINGS_TASK.review]: ({ passages, sectionId, avoid }) => writingReviewMaterial(passages, { section: sectionId, avoid }),
 }
 
 export const sectionRunKey = (sectionId: string) => `section:${sectionId}`

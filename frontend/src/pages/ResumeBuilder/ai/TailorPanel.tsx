@@ -3,7 +3,6 @@
 
 import { useMemo, useState } from 'react'
 import { useLocation } from 'react-router'
-import { Loader2, Sparkles } from 'lucide-react'
 import { api } from '../../../lib/api'
 import { ListJobSummaries, type app } from '../../../lib/backend'
 import type { ResumeData } from '../../../lib/resumes/document'
@@ -16,7 +15,7 @@ import { useEditor } from '../editorContext'
 import { useReview } from './ReviewContext'
 import { useAIReview } from './reviewStore'
 import { latestTailorRun } from './sectionAIMenu'
-import { useTaskProvider } from './taskProvider'
+import { TaskRun, WaitingSections } from './TaskRun'
 
 const RUN_KEY = 'tailor'
 const PASTED = ''
@@ -53,7 +52,7 @@ export function TailorPanel({ doc }: { doc: app.Document }) {
       )}
       <TailorRun doc={doc} data={data} jobId={jobId} posting={posting} match={match} />
       <Coverage match={match} />
-      <TailoredSections />
+      <WaitingSections task={SETTINGS_TASK.tailor} />
     </div>
   )
 }
@@ -62,24 +61,21 @@ type RunProps = { doc: app.Document; data: ResumeData; jobId: string; posting: s
 
 function TailorRun({ doc, data, jobId, posting, match }: RunProps) {
   const { doc: aiDoc } = useReview<ResumeData>()
-  const provider = useTaskProvider(SETTINGS_TASK.tailor)
-  const running = useAIReview((s) => s.running[RUN_KEY] ?? false)
-  const error = useAIReview((s) => s.errors[RUN_KEY])
   const run = () => {
     if (!match) return
     const material = tailorMaterial(data, aiDoc.passages(data), termsOf(match))
     void useAIReview.getState().run(RUN_KEY, { task: SETTINGS_TASK.tailor, documentId: doc.id, sectionKey: '', jobId, posting: jobId ? '' : posting, ...material } as app.ResumeAIRequest)
   }
   return (
-    <div className="space-y-1.5">
-      <button type="button" className="btn btn-primary py-1 text-xs" disabled={!posting || !match || running || doc.locked || !!provider.unavailable} onClick={run}>
-        {running ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-        {running ? 'Tailoring…' : 'Tailor this resume'}
-      </button>
-      <p className="text-[11px] text-ink-3">Sends your resume's text, skills and the posting to {provider.label}. Every change waits for you to accept it.</p>
-      {provider.unavailable && <p className="text-[11px] text-warn">{provider.unavailable}</p>}
-      {error && <p className="text-xs text-red-300">{error}</p>}
-    </div>
+    <TaskRun
+      task={SETTINGS_TASK.tailor}
+      runKey={RUN_KEY}
+      label="Tailor this resume"
+      busyLabel="Tailoring…"
+      sends="your resume's text, skills and the posting"
+      disabled={!posting || !match || doc.locked}
+      onRun={run}
+    />
   )
 }
 
@@ -94,29 +90,5 @@ function Coverage({ match }: { match: JobMatchResult | null }) {
       Posting terms covered: {before !== null && <>{before}% before tailoring · </>}
       <span className="font-semibold text-ink">{now}% now</span>
     </p>
-  )
-}
-
-/** Sections whose tailored changes are waiting; picking one shows it in the content panel. */
-function TailoredSections() {
-  const { doc, reviews } = useReview<ResumeData>()
-  const data = useEditor((s) => s.data) as ResumeData
-  const waiting = reviews.filter((r) => r.shown.gen.task === SETTINGS_TASK.tailor && r.pending > 0)
-  if (waiting.length === 0) return null
-  return (
-    <section className="space-y-1.5">
-      <h3 className="label-mono">Changes to review</h3>
-      {waiting.map((r) => (
-        <button
-          key={r.sectionId}
-          type="button"
-          className="flex w-full items-center justify-between rounded-lg border border-line px-2.5 py-1.5 text-xs hover:bg-white/5"
-          onClick={() => document.querySelector(`[data-review="${CSS.escape(r.sectionId)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })}
-        >
-          {doc.sectionTitle(data, r.sectionId)}
-          <span className="text-ink-3">{r.pending}</span>
-        </button>
-      ))}
-    </section>
   )
 }

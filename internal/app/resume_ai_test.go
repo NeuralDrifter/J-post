@@ -201,13 +201,31 @@ func TestImproveAsksForOneRewrite(t *testing.T) {
 	}
 }
 
-func TestTailorOffersEveryResumeEdit(t *testing.T) {
-	items := tailorTask.schema["properties"].(map[string]any)["edits"].(map[string]any)["items"].(map[string]any)["anyOf"].([]any)
+// editKinds lists the kinds of edit a task's answer may hold, in schema order.
+func editKinds(task resumeAITask) string {
+	items := task.schema["properties"].(map[string]any)["edits"].(map[string]any)["items"].(map[string]any)
+	shapes := []any{items}
+	if anyOf, ok := items["anyOf"].([]any); ok {
+		shapes = anyOf
+	}
 	var kinds []string
-	for _, shape := range items {
+	for _, shape := range shapes {
 		kinds = append(kinds, shape.(map[string]any)["properties"].(map[string]any)["kind"].(map[string]any)["enum"].([]string)[0])
 	}
-	if strings.Join(kinds, ",") != "rewrite,addAfter,setHeadline,orderSkills,addSkill,hideItem" {
+	return strings.Join(kinds, ",")
+}
+
+func TestTailorOffersEveryResumeEdit(t *testing.T) {
+	if kinds := editKinds(tailorTask); kinds != "rewrite,addAfter,setHeadline,orderSkills,addSkill,hideItem" {
 		t.Fatalf("kinds = %v", kinds)
+	}
+}
+
+func TestWritingReviewOnlyRewrites(t *testing.T) {
+	if kinds := editKinds(reviewTask); kinds != "rewrite" {
+		t.Fatalf("kinds = %v", kinds)
+	}
+	if resumeAITasks[settings.TaskResumeReview].role != ai.RoleWriting {
+		t.Fatal("the writing review isn't registered as a writing task")
 	}
 }

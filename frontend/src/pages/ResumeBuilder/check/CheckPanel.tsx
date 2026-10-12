@@ -16,6 +16,7 @@ import { IssueCard } from './IssueCard'
 import { JobMatchTab } from './JobMatchTab'
 import { useCheck, type CheckResult } from './useCheck'
 import { useCheckActions } from './useCheckActions'
+import { WritingTab } from './WritingTab'
 
 /** Scores at or above this read cleanly. */
 const CLEAN_SCORE = 80
@@ -27,12 +28,13 @@ export function CheckPanel({ doc }: { doc: app.Document }) {
   const tabs: { value: CheckTab; label: string }[] = [
     { value: 'issues', label: `Issues · ${check.issues.length}` },
     { value: 'match', label: 'Job match' },
+    { value: 'writing', label: 'Writing' },
   ]
   return (
     <div className="space-y-3">
       <ScoreSummary report={check.report} />
-      <Segmented label="Check views" options={tabs} value={tab === 'match' ? 'match' : 'issues'} onChange={setTab} />
-      {tab === 'match' ? <JobMatchTab doc={doc} data={check.data} /> : <IssuesTab check={check} />}
+      <Segmented label="Check views" options={tabs} value={tab} onChange={setTab} />
+      {tab === 'match' ? <JobMatchTab doc={doc} data={check.data} /> : tab === 'writing' ? <WritingTab doc={doc} /> : <IssuesTab check={check} />}
     </div>
   )
 }
