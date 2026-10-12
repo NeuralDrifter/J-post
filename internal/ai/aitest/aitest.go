@@ -7,6 +7,7 @@ package aitest
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -40,7 +41,7 @@ func AnthropicReply(model, text, stopReason string) []byte {
 }
 
 // AnthropicSettings configures the Anthropic provider with a fake key.
-var AnthropicSettings = settings.Settings{AnthropicKey: "sk-ant-s3cret", AnthropicModel: "claude-opus-5-5", AnthropicGradingEffort: "high", AnthropicTipsEffort: "low"}
+var AnthropicSettings = settings.Settings{AnthropicKey: "sk-ant-s3cret", AnthropicModel: "claude-opus-5-5"}
 
 var (
 	fakeClaudeOnce sync.Once
@@ -95,4 +96,15 @@ func AssertEmptyDir(t *testing.T, dir string) {
 	if len(entries) != 0 {
 		t.Fatalf("temp files left behind in %s: %v", dir, entries)
 	}
+}
+
+// WithTask returns s with task run by provider (on its own model), leaving s's map untouched.
+func WithTask(s settings.Settings, task, provider string) settings.Settings {
+	features := maps.Clone(s.AIFeatures)
+	if features == nil {
+		features = map[string]settings.AIChoice{}
+	}
+	features[task] = settings.AIChoice{Provider: provider}
+	s.AIFeatures = features
+	return s
 }

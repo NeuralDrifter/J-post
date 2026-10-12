@@ -14,6 +14,7 @@ import { readSessionValue, writeSessionValue } from '../../lib/prefs'
 import { hasUnsavedChanges, SETTINGS_SECTIONS, sectionFromParam, type SettingsSectionId } from '../../lib/settingsNav'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
+import { AIFeaturesSection } from './AIFeaturesSection'
 import { AIProvidersSection } from './AIProvidersSection'
 import { CompensationSection } from './CompensationSection'
 import { DefaultResumeSection } from './DefaultResumeSection'
@@ -156,6 +157,7 @@ function SettingsForm({ initial, dataDir }: { initial: settings.Settings; dataDi
           </>
         )}
         {section === 'ai' && <AIProvidersSection s={s} setS={setS} />}
+        {section === 'features' && <AIFeaturesSection s={s} setS={setS} />}
         {section === 'matching' && <JobMatchingSection s={s} setS={setS} />}
         {section === 'search' && <JobSearchSection s={s} setS={setS} />}
         {section === 'pipeline' && (

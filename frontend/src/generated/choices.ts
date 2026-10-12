@@ -45,6 +45,27 @@ export const ANSWER_MODES = [
   { id: 'json_schema', label: 'json_schema — strict schema' },
 ] as const
 
+/** AI task groups, in the order Settings → AI features shows them. */
+export const AI_TASK_GROUPS = [
+  { id: 'interviews', label: 'Mock interviews' },
+  { id: 'matching', label: 'Job matching' },
+  { id: 'resumes', label: 'Resumes' },
+  { id: 'letters', label: 'Cover letters' },
+] as const
+
+/** Every AI task and its group; Settings.aiFeatures is keyed by these ids. */
+export const AI_TASKS = [
+  { id: 'interviewPlan', group: 'interviews', label: 'Question plan (before interviews)' },
+  { id: 'interviewTips', group: 'interviews', label: 'Coaching tips (during interviews)' },
+  { id: 'interviewGrading', group: 'interviews', label: 'Grading (scorecards)' },
+  { id: 'jobMatch', group: 'matching', label: 'Discover match scores' },
+  { id: 'resumeTailor', group: 'resumes', label: 'Tailor to a job' },
+  { id: 'resumeImprove', group: 'resumes', label: 'Improve a line' },
+  { id: 'resumeReview', group: 'resumes', label: 'Writing review' },
+  { id: 'resumeImport', group: 'resumes', label: 'Tidy an import' },
+  { id: 'letterDraft', group: 'letters', label: 'Draft a letter' },
+] as const
+
 /** The market-data area code for remote / the whole United States. */
 export const NATIONAL_AREA = 'US'
 

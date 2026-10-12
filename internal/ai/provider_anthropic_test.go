@@ -35,7 +35,7 @@ func anthropicReply(model, text, stopReason string) []byte {
 	return b
 }
 
-var anthropicSettings = settings.Settings{AnthropicKey: "sk-ant-s3cret", AnthropicModel: "claude-opus-5-5", AnthropicGradingEffort: "high", AnthropicTipsEffort: "low"}
+var anthropicSettings = settings.Settings{AnthropicKey: "sk-ant-s3cret", AnthropicModel: "claude-opus-5-5"}
 
 func TestAnthropicRequestShape(t *testing.T) {
 	var body map[string]any
@@ -67,14 +67,16 @@ func TestAnthropicRequestShape(t *testing.T) {
 	}
 }
 
-func TestAnthropicTipsUseTipsEffortAndSmallBudget(t *testing.T) {
+func TestAnthropicTipsUseTaskEffortAndSmallBudget(t *testing.T) {
 	var body map[string]any
 	fakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&body)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(anthropicReply("claude-opus-5-5", `{"nudge":"x","kind":"tip"}`, "end_turn"))
 	})
-	if _, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, testNudgeTask("q", "a")); err != nil {
+	task := testNudgeTask("q", "a")
+	task.Effort = "low"
+	if _, err := (anthropicProvider{}).run(context.Background(), anthropicSettings, task); err != nil {
 		t.Fatal(err)
 	}
 	if body["max_tokens"] != float64(1024) || body["output_config"].(map[string]any)["effort"] != "low" {
@@ -88,7 +90,7 @@ func TestAnthropicReturnsResultAndModel(t *testing.T) {
 		w.Write(anthropicReply("claude-opus-5-5", `{"nudge":"Lead with the result","kind":"tip"}`, "end_turn"))
 	})
 	var n testNudge
-	model, err := RunTask(context.Background(), anthropicSettings, settings.ProviderAnthropic, testNudgeTask("q", "a"), &n)
+	model, err := RunTask(context.Background(), anthropicSettings, settings.AIChoice{Provider: settings.ProviderAnthropic}, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "claude-opus-5-5" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -174,4 +176,25 @@ func fakeServer(t *testing.T, handler http.HandlerFunc) string {
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 	return srv.URL
+}
+
+// A run's choice carries its model and effort to the request, leaving the settings alone.
+func TestRunTaskAppliesChoiceModelAndEffort(t *testing.T) {
+	var body map[string]any
+	fakeAnthropic(t, func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&body)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(anthropicReply("claude-sonnet-5-5", `{"nudge":"x","kind":"tip"}`, "end_turn"))
+	})
+	var n testNudge
+	choice := settings.AIChoice{Provider: settings.ProviderAnthropic, Model: "claude-sonnet-5-5", Effort: "max"}
+	if _, err := RunTask(context.Background(), anthropicSettings, choice, testNudgeTask("q", "a"), &n); err != nil {
+		t.Fatal(err)
+	}
+	if body["model"] != "claude-sonnet-5-5" || body["output_config"].(map[string]any)["effort"] != "max" {
+		t.Fatalf("body = %v", body)
+	}
+	if anthropicSettings.AnthropicModel != "claude-opus-5-5" {
+		t.Fatal("the override leaked into the settings")
+	}
 }

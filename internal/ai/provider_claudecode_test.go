@@ -109,7 +109,7 @@ func TestClaudeCodeRunsAndReadsResult(t *testing.T) {
 	argsFile := filepath.Join(t.TempDir(), "args.json")
 	t.Setenv("FAKE_ARGS", argsFile)
 	var n testNudge
-	model, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	model, err := RunTask(context.Background(), s, settings.AIChoice{Provider: settings.ProviderClaudeCode}, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "From the fake" || model != "claude-opus-5-5" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -134,7 +134,7 @@ func TestClaudeCodeMCPConfigPointsAtThisExecutable(t *testing.T) {
 func TestClaudeCodeSurfacesErrorResult(t *testing.T) {
 	s, root := useFakeClaude(t, "error")
 	var n testNudge
-	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.AIChoice{Provider: settings.ProviderClaudeCode}, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Please run /login") {
 		t.Fatalf("err = %v", err)
 	}
@@ -144,7 +144,7 @@ func TestClaudeCodeSurfacesErrorResult(t *testing.T) {
 func TestClaudeCodeWithoutSubmitFails(t *testing.T) {
 	s, root := useFakeClaude(t, "nosubmit")
 	var n testNudge
-	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.AIChoice{Provider: settings.ProviderClaudeCode}, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "without") {
 		t.Fatalf("err = %v", err)
 	}
@@ -158,7 +158,7 @@ func TestClaudeCodeTimesOutAndCleansUp(t *testing.T) {
 	t.Cleanup(func() { claudeCodeTimeout[RoleTips] = old })
 	start := time.Now()
 	var n testNudge
-	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.AIChoice{Provider: settings.ProviderClaudeCode}, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 5*time.Second {
 		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
@@ -199,7 +199,7 @@ func TestClaudeCodeTimeoutKillsTheWholeProcessTree(t *testing.T) {
 	t.Cleanup(func() { claudeCodeTimeout[RoleTips] = old })
 	start := time.Now()
 	var n testNudge
-	_, err := RunTask(context.Background(), s, settings.ProviderClaudeCode, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), s, settings.AIChoice{Provider: settings.ProviderClaudeCode}, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "too long") || time.Since(start) > 6*time.Second {
 		t.Fatalf("a grandchild holding the output pipe must not keep the run alive: err = %v after %s", err, time.Since(start))
 	}

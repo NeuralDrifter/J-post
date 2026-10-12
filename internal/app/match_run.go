@@ -50,7 +50,7 @@ func (r *Repo) matchCandidates(want func(Posting) bool) ([]Posting, error) {
 	return out, nil
 }
 
-// runMatch scores postings with s.MatchProvider, s.MatchPerRequest per request,
+// runMatch scores postings with the job-match task's provider, s.MatchPerRequest per request,
 // one request after another, calling progress after each. It stops at the first
 // failed request: a bad key or a rate limit then costs one request, not one per
 // group. Problems the user can fix go in MatchRun.Error; the returned error is
@@ -72,7 +72,8 @@ func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume matchRes
 		run.Error = "Add your resume on the Profile page to get match scores"
 		return run, nil
 	}
-	if reason := providerUnavailable(s, s.MatchProvider); reason != "" {
+	choice := s.AIChoice(settings.TaskJobMatch)
+	if reason := providerUnavailable(s, choice.Provider); reason != "" {
 		run.Error = "Job matching: " + reason
 		return run, nil
 	}
@@ -80,7 +81,7 @@ func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume matchRes
 	done := 0
 	for group := range slices.Chunk(postings, s.MatchPerRequest) {
 		var ans matchAnswer
-		model, err := ai.RunTask(ctx, s, s.MatchProvider, matchTask(resume.Text, s, group), &ans)
+		model, err := ai.RunTask(ctx, s, choice, matchTask(resume.Text, s, group), &ans)
 		if err != nil {
 			run.Failed += len(group)
 			run.Error = "Scoring stopped: " + err.Error()
@@ -93,7 +94,7 @@ func runMatch(ctx context.Context, r *Repo, s settings.Settings, resume matchRes
 				run.Failed++
 				continue
 			}
-			m.Provider, m.Model, m.ResumeID = s.MatchProvider, model, resume.ID
+			m.Provider, m.Model, m.ResumeID = choice.Provider, model, resume.ID
 			if err := r.saveMatchScore(p.ID, m, fingerprint); err != nil {
 				return run, err
 			}

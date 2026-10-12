@@ -29,6 +29,8 @@ func TestRenderListsEveryValue(t *testing.T) {
 		"  { id: 'plain', label: 'plain — works with any server' },",
 		"export const NATIONAL_AREA = 'US'",
 		"export const NO_PLAN_PROVIDER = 'none'",
+		"  { id: 'resumes', label: 'Resumes' },",
+		"  { id: 'resumeTailor', group: 'resumes', label: 'Tailor to a job' },",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)

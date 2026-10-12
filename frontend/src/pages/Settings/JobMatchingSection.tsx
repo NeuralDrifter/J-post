@@ -13,10 +13,11 @@ import { Section } from './Section'
 
 type Props = { s: settings.Settings; setS: (s: settings.Settings) => void }
 
-/** Discover match scores: the switch, request size, and what "a good match" means to you. The provider is picked in AI providers. */
+/** Discover match scores: the switch, request size, and what "a good match" means to you. The provider is picked in AI features. */
 export function JobMatchingSection({ s, setS }: Props) {
   const { data: providers } = useLoad(() => api(ListAIProviders()), [])
-  const provider = providers?.find((p) => p.id === s.matchProvider)
+  const providerId = s.aiFeatures.jobMatch.provider
+  const provider = providers?.find((p) => p.id === providerId)
   const toggleMode = (id: string) =>
     setS({ ...s, matchWorkModes: s.matchWorkModes.includes(id) ? s.matchWorkModes.filter((m) => m !== id) : [...s.matchWorkModes, id] })
 
@@ -35,10 +36,10 @@ export function JobMatchingSection({ s, setS }: Props) {
           </span>
         </label>
         <p className="mt-3 text-xs text-ink-2">
-          Scored by <strong className="text-ink">{provider?.label ?? s.matchProvider}</strong>
+          Scored by <strong className="text-ink">{provider?.label ?? providerId}</strong>
           {provider?.unavailable && <span className="text-amber-300"> (setup needed: {provider.unavailable})</span>}.{' '}
-          <Link to={settingsLink('ai')} className="text-indigo-300 hover:underline">
-            Change it in AI providers
+          <Link to={settingsLink('features')} className="text-indigo-300 hover:underline">
+            Change it in AI features
           </Link>
         </p>
         <div className="mt-4 flex items-center gap-2 text-sm">

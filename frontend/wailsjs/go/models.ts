@@ -1774,6 +1774,22 @@ export namespace marketdata {
 
 export namespace settings {
 	
+	export class AIChoice {
+	    provider: string;
+	    model: string;
+	    effort: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIChoice(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	        this.effort = source["effort"];
+	    }
+	}
 	export class Settings {
 	    adzunaAppId: string;
 	    adzunaAppKey: string;
@@ -1787,13 +1803,8 @@ export namespace settings {
 	    museCategories: string[];
 	    geminiKey: string;
 	    geminiLiveModel: string;
-	    gradingProvider: string;
-	    tipsProvider: string;
-	    planProvider: string;
 	    anthropicKey: string;
 	    anthropicModel: string;
-	    anthropicGradingEffort: string;
-	    anthropicTipsEffort: string;
 	    claudeCodePath: string;
 	    claudeCodeModel: string;
 	    openaiKey: string;
@@ -1811,7 +1822,6 @@ export namespace settings {
 	    customAIMode: string;
 	    discoverCacheHours: number;
 	    matchEnabled: boolean;
-	    matchProvider: string;
 	    matchPerRequest: number;
 	    matchMinSalary: number;
 	    matchWorkModes: string[];
@@ -1819,6 +1829,7 @@ export namespace settings {
 	    matchSeniority: string;
 	    matchGoals: string;
 	    defaultResumeId: string;
+	    aiFeatures: Record<string, {provider: string, model: string, effort: string}>;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -1838,13 +1849,8 @@ export namespace settings {
 	        this.museCategories = source["museCategories"];
 	        this.geminiKey = source["geminiKey"];
 	        this.geminiLiveModel = source["geminiLiveModel"];
-	        this.gradingProvider = source["gradingProvider"];
-	        this.tipsProvider = source["tipsProvider"];
-	        this.planProvider = source["planProvider"];
 	        this.anthropicKey = source["anthropicKey"];
 	        this.anthropicModel = source["anthropicModel"];
-	        this.anthropicGradingEffort = source["anthropicGradingEffort"];
-	        this.anthropicTipsEffort = source["anthropicTipsEffort"];
 	        this.claudeCodePath = source["claudeCodePath"];
 	        this.claudeCodeModel = source["claudeCodeModel"];
 	        this.openaiKey = source["openaiKey"];
@@ -1862,7 +1868,6 @@ export namespace settings {
 	        this.customAIMode = source["customAIMode"];
 	        this.discoverCacheHours = source["discoverCacheHours"];
 	        this.matchEnabled = source["matchEnabled"];
-	        this.matchProvider = source["matchProvider"];
 	        this.matchPerRequest = source["matchPerRequest"];
 	        this.matchMinSalary = source["matchMinSalary"];
 	        this.matchWorkModes = source["matchWorkModes"];
@@ -1870,6 +1875,7 @@ export namespace settings {
 	        this.matchSeniority = source["matchSeniority"];
 	        this.matchGoals = source["matchGoals"];
 	        this.defaultResumeId = source["defaultResumeId"];
+	        this.aiFeatures = source["aiFeatures"];
 	    }
 	}
 

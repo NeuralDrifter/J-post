@@ -55,7 +55,7 @@ func runLive(t *testing.T, providerID string, s settings.Settings) {
 			if task.Name == "interviewPlan" {
 				out = &plan
 			}
-			model, err := ai.RunTask(ctx, s, providerID, task, out)
+			model, err := ai.RunTask(ctx, s, settings.AIChoice{Provider: providerID}, task, out)
 			if err != nil {
 				t.Errorf("%s run %d: %v", task.Name, run, err)
 				continue

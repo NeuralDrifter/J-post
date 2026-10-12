@@ -21,12 +21,14 @@ func TestSettingsDefaults(t *testing.T) {
 func TestSettingsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := NewSettingsStore(dir)
-	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", GradingProvider: ProviderGeminiLive, TipsProvider: ProviderGeminiLive, PlanProvider: ProviderAnthropic, AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", AnthropicGradingEffort: "max", AnthropicTipsEffort: "medium", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet",
+	want := Settings{AdzunaAppID: "id", AdzunaAppKey: "key", PythonPath: `C:\py\python.exe`, FollowUpDays: 10, FilingStatus: "married", HomeAreaCode: "19740", DefaultOccupation: "15-1252", DiscoverCacheHours: 24, USAJobsKey: "k", USAJobsEmail: "me@example.test", MuseCategories: []string{"Software Engineering"}, GeminiKey: "g", GeminiLiveModel: "m2", AnthropicKey: "a", AnthropicModel: "claude-sonnet-5-5", ClaudeCodePath: `C:\tools\claude.exe`, ClaudeCodeModel: "sonnet",
 		OpenAIKey: "ok", OpenAIModel: "om", DeepSeekKey: "dk", DeepSeekModel: "dm", OllamaURL: "http://box:11434/v1", OllamaModel: "lm",
 		LMStudioURL: "http://box:1234/v1", LMStudioKey: "lk", LMStudioModel: "sm",
 		CustomAIBaseURL: "http://c/v1", CustomAIKey: "ck", CustomAIModel: "cm", CustomAIMode: "json_object",
-		MatchEnabled: true, MatchProvider: ProviderAnthropic, MatchPerRequest: 10, MatchMinSalary: 100000,
+		MatchEnabled: true, MatchPerRequest: 10, MatchMinSalary: 100000,
 		MatchWorkModes: []string{"remote"}, MatchLocations: "Denver, CO", MatchSeniority: "staff", MatchGoals: "climate"}
+	ApplyDefaults(&want)
+	want.AIFeatures[TaskInterviewPlan] = AIChoice{Provider: ProviderAnthropic, Model: "claude-sonnet-5-5", Effort: "max"}
 	if err := store.Save(want); err != nil {
 		t.Fatal(err)
 	}
@@ -61,45 +63,57 @@ func TestSettingsRejectsHugeFollowUp(t *testing.T) {
 	}
 }
 
-func TestSettingsAIDefaults(t *testing.T) {
+func TestAIFeatureDefaults(t *testing.T) {
 	dir := t.TempDir()
-	// An older settings file without any of the AI provider fields.
 	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"followUpDays": 7, "geminiKey": "g"}`), 0o600)
 	s, err := NewSettingsStore(dir).Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.GradingProvider != ProviderGeminiLive || s.TipsProvider != ProviderGeminiLive || s.AnthropicModel != "claude-opus-5-5" ||
-		s.AnthropicGradingEffort != "high" || s.AnthropicTipsEffort != "low" || s.ClaudeCodePath != "" || s.ClaudeCodeModel != "" {
+	if len(s.AIFeatures) != len(AITasks) {
+		t.Fatalf("AIFeatures = %+v", s.AIFeatures)
+	}
+	for _, task := range AITasks {
+		if got := s.AIChoice(task.ID); got.Provider != ProviderGeminiLive || got.Model != "" || got.Effort != task.DefaultEffort {
+			t.Errorf("%s = %+v", task.ID, got)
+		}
+	}
+	if s.AIChoice(TaskInterviewTips).Effort != "low" || s.AIChoice(TaskResumeImprove).Effort != "low" || s.AIChoice(TaskResumeTailor).Effort != "high" {
+		t.Fatalf("efforts = %+v", s.AIFeatures)
+	}
+	if s.AnthropicModel != "claude-opus-5-5" || s.ClaudeCodePath != "" || s.ClaudeCodeModel != "" {
 		t.Fatalf("s = %+v", s)
+	}
+}
+
+// A task an older build knew but this one doesn't is dropped rather than failing the load.
+func TestAIFeaturesDropUnknownTasks(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"aiFeatures": {"retired": {"provider": "anthropic"}, "jobMatch": {"provider": "deepseek", "model": " dm "}}}`), 0o600)
+	s, err := NewSettingsStore(dir).Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.AIFeatures["retired"]; ok {
+		t.Fatal("unknown task kept")
+	}
+	if got := s.AIChoice(TaskJobMatch); got != (AIChoice{Provider: ProviderDeepSeek, Model: "dm", Effort: "high"}) {
+		t.Fatalf("jobMatch = %+v", got)
 	}
 }
 
 func TestSettingsRejectsBadAIValues(t *testing.T) {
 	store := NewSettingsStore(t.TempDir())
-	for name, s := range map[string]Settings{
-		"unknown grading provider": {GradingProvider: "skynet"},
-		"unknown tips provider":    {TipsProvider: "skynet"},
-		"unknown grading effort":   {AnthropicGradingEffort: "extreme"},
-		"unknown tips effort":      {AnthropicTipsEffort: "tiny"},
+	for name, c := range map[string]AIChoice{
+		"unknown provider": {Provider: "skynet"},
+		"unknown effort":   {Provider: ProviderAnthropic, Effort: "extreme"},
 	} {
-		if err := store.Save(s); err == nil {
+		err := store.Save(Settings{AIFeatures: map[string]AIChoice{TaskInterviewGrading: c}})
+		if err == nil {
 			t.Errorf("%s should be rejected", name)
 		}
 	}
-}
-
-func TestPlanProviderDefaultsToGeminiLive(t *testing.T) {
-	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"followUpDays": 7}`), 0o600)
-	s, err := NewSettingsStore(dir).Load()
-	if err != nil || s.PlanProvider != ProviderGeminiLive {
-		t.Fatalf("PlanProvider = %q, %v", s.PlanProvider, err)
-	}
-}
-
-func TestPlanProviderMustBeKnown(t *testing.T) {
-	err := NewSettingsStore(t.TempDir()).Save(Settings{PlanProvider: "nope"})
+	err := store.Save(Settings{AIFeatures: map[string]AIChoice{TaskInterviewPlan: {Provider: "nope"}}})
 	if err == nil || !strings.Contains(err.Error(), `unknown AI provider "nope"`) {
 		t.Fatalf("err = %v", err)
 	}
@@ -123,7 +137,7 @@ func TestSettingsRejectsUnknownCustomAIMode(t *testing.T) {
 
 // Choosing a provider that isn't set up yet is allowed; it shows "setup needed" until it is.
 func TestSettingsAllowsUnconfiguredProvider(t *testing.T) {
-	if err := NewSettingsStore(t.TempDir()).Save(Settings{GradingProvider: "deepseek"}); err != nil {
+	if err := NewSettingsStore(t.TempDir()).Save(Settings{AIFeatures: map[string]AIChoice{TaskInterviewGrading: {Provider: ProviderDeepSeek}}}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -141,7 +155,7 @@ func TestSettingsTrimsOpenAIFields(t *testing.T) {
 
 func TestMatchDefaults(t *testing.T) {
 	s, err := NewSettingsStore(t.TempDir()).Load()
-	if err != nil || s.MatchEnabled || s.MatchProvider != ProviderGeminiLive || s.MatchPerRequest != DefaultMatchPerRequest ||
+	if err != nil || s.MatchEnabled || s.MatchPerRequest != DefaultMatchPerRequest ||
 		s.MatchWorkModes == nil || len(s.MatchWorkModes) != 0 || s.MatchSeniority != "" || s.MatchMinSalary != 0 {
 		t.Fatalf("s = %+v, %v", s, err)
 	}
@@ -155,14 +169,13 @@ func TestMatchSettingsValidation(t *testing.T) {
 		"unknown work mode":    {MatchWorkModes: []string{"remote", "moon"}},
 		"unknown seniority":    {MatchSeniority: "wizard"},
 		"negative salary":      {MatchMinSalary: -1},
-		"unknown provider":     {MatchProvider: "nope"},
 	}
 	for name, s := range bad {
 		if err := store.Save(s); err == nil {
 			t.Errorf("%s: expected an error", name)
 		}
 	}
-	ok := Settings{MatchEnabled: true, MatchProvider: ProviderAnthropic, MatchPerRequest: 5, MatchMinSalary: 120000,
+	ok := Settings{MatchEnabled: true, MatchPerRequest: 5, MatchMinSalary: 120000,
 		MatchWorkModes: []string{"onsite", "remote"}, MatchLocations: "  Denver, CO ", MatchSeniority: "senior", MatchGoals: " no on-call "}
 	if err := store.Save(ok); err != nil {
 		t.Fatal(err)

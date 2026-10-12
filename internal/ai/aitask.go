@@ -22,6 +22,7 @@ const (
 	RoleTips
 	RolePlanning
 	RoleMatching // job match scores for Discover postings, many per request
+	RoleWriting  // resume and letter writing: tailoring, reviews, import tidying, drafts
 )
 
 // Task is one AI job with a structured answer.
@@ -31,6 +32,7 @@ type Task struct {
 	Input       string         // the material to work on
 	Schema      map[string]any // the result's shape, standard JSON Schema
 	Role        Role
+	Effort      string // set by RunTask from the task's AIChoice; Anthropic only
 }
 
 // aiResult is a provider's answer: the result JSON and the model that produced it.
@@ -80,13 +82,16 @@ func providerByID(id string) (aiProvider, bool) {
 	return nil, false
 }
 
-// RunTask runs t on the named provider and decodes the result into out. An
-// unconfigured provider fails with its setup reason before any call is made.
-func RunTask(ctx context.Context, s settings.Settings, providerID string, t Task, out any) (string, error) {
-	p, ok := providerByID(providerID)
+// RunTask runs t as choice says (provider, model, effort) and decodes the
+// result into out. An unconfigured provider fails with its setup reason before
+// any call is made. The choice's model applies to this run only.
+func RunTask(ctx context.Context, s settings.Settings, choice settings.AIChoice, t Task, out any) (string, error) {
+	p, ok := providerByID(choice.Provider)
 	if !ok {
-		return "", fmt.Errorf("unknown AI provider %q", providerID)
+		return "", fmt.Errorf("unknown AI provider %q", choice.Provider)
 	}
+	s = withModel(s, choice.Provider, choice.Model)
+	t.Effort = choice.Effort
 	if reason := p.unavailable(s); reason != "" {
 		return "", fmt.Errorf("%s: %s", p.label(), reason)
 	}
@@ -98,4 +103,30 @@ func RunTask(ctx context.Context, s settings.Settings, providerID string, t Task
 		return "", fmt.Errorf("%s's answer wasn't in the expected format: %v", p.label(), err)
 	}
 	return res.model, nil
+}
+
+// withModel returns s with model as the provider's model; an empty model
+// leaves the provider's own setting.
+func withModel(s settings.Settings, providerID, model string) settings.Settings {
+	if model == "" {
+		return s
+	}
+	if field := providerModelField(&s, providerID); field != nil {
+		*field = model
+	}
+	return s
+}
+
+func providerModelField(s *settings.Settings, providerID string) *string {
+	fields := map[string]*string{
+		settings.ProviderGeminiLive:       &s.GeminiLiveModel,
+		settings.ProviderAnthropic:        &s.AnthropicModel,
+		settings.ProviderClaudeCode:       &s.ClaudeCodeModel,
+		settings.ProviderOpenAI:           &s.OpenAIModel,
+		settings.ProviderDeepSeek:         &s.DeepSeekModel,
+		settings.ProviderOllama:           &s.OllamaModel,
+		settings.ProviderLMStudio:         &s.LMStudioModel,
+		settings.ProviderOpenAICompatible: &s.CustomAIModel,
+	}
+	return fields[providerID]
 }

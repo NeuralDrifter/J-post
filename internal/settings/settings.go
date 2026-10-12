@@ -25,8 +25,6 @@ const (
 	maxDiscoverCacheHours     = 168 // a week
 	defaultGeminiLiveModel    = "gemini-3.8-live"
 	defaultAnthropicModel     = "claude-opus-5-5"
-	defaultGradingEffort      = "high"
-	defaultTipsEffort         = "low"
 	DefaultOllamaURL          = "http://localhost:11434/v1"
 	DefaultLMStudioURL        = "http://localhost:1234/v1"
 	DefaultMatchPerRequest    = 25
@@ -34,7 +32,7 @@ const (
 	maxMatchPerRequest        = 50
 )
 
-// AI provider IDs, as stored in the *Provider settings.
+// AI provider IDs, as stored in AIChoice.Provider.
 const (
 	ProviderGeminiLive = "gemini-live"
 	ProviderAnthropic  = "anthropic"
@@ -70,15 +68,9 @@ type Settings struct {
 	// AI (Google Gemini).
 	GeminiKey       string `json:"geminiKey"`
 	GeminiLiveModel string `json:"geminiLiveModel"`
-	// Which AI provider grades interviews and gives coaching tips (an aiProvider id).
-	GradingProvider string `json:"gradingProvider"`
-	TipsProvider    string `json:"tipsProvider"`
-	PlanProvider    string `json:"planProvider"` // writes the question plan before a mock interview
 	// Anthropic API.
-	AnthropicKey           string `json:"anthropicKey"`
-	AnthropicModel         string `json:"anthropicModel"`
-	AnthropicGradingEffort string `json:"anthropicGradingEffort"`
-	AnthropicTipsEffort    string `json:"anthropicTipsEffort"`
+	AnthropicKey   string `json:"anthropicKey"`
+	AnthropicModel string `json:"anthropicModel"`
 	// Claude Code (headless). Empty path = find `claude` automatically; empty model = the plan's default.
 	ClaudeCodePath  string `json:"claudeCodePath"`
 	ClaudeCodeModel string `json:"claudeCodeModel"`
@@ -100,7 +92,6 @@ type Settings struct {
 	DiscoverCacheHours int `json:"discoverCacheHours"`
 	// Job matching: Discover postings get an AI match score (see internal/app/match.go).
 	MatchEnabled    bool     `json:"matchEnabled"`    // score new postings after each search
-	MatchProvider   string   `json:"matchProvider"`   // an AI provider ID
 	MatchPerRequest int      `json:"matchPerRequest"` // postings sent per request
 	MatchMinSalary  int64    `json:"matchMinSalary"`  // annual floor in dollars; 0 = none
 	MatchWorkModes  []string `json:"matchWorkModes"`  // WorkModes values; empty = no preference
@@ -109,6 +100,8 @@ type Settings struct {
 	MatchGoals      string   `json:"matchGoals"`     // free text: wants, must-haves, deal-breakers
 	// The resume AI features read when no other is chosen (a documents row id); "" = the uploaded resume text.
 	DefaultResumeID string `json:"defaultResumeId"`
+	// Who runs each AI task (see AITasks), keyed by task id.
+	AIFeatures map[string]AIChoice `json:"aiFeatures" ts_type:"Record<string, {provider: string, model: string, effort: string}>"`
 }
 
 // AnthropicEfforts are the effort levels the Anthropic API accepts.
@@ -188,12 +181,7 @@ func ApplyDefaults(s *Settings) {
 	if s.DiscoverCacheHours <= 0 {
 		s.DiscoverCacheHours = defaultDiscoverCacheHours
 	}
-	s.GradingProvider = cmp.Or(s.GradingProvider, ProviderGeminiLive)
-	s.TipsProvider = cmp.Or(s.TipsProvider, ProviderGeminiLive)
-	s.PlanProvider = cmp.Or(s.PlanProvider, ProviderGeminiLive)
 	s.AnthropicModel = cmp.Or(strings.TrimSpace(s.AnthropicModel), defaultAnthropicModel)
-	s.AnthropicGradingEffort = cmp.Or(s.AnthropicGradingEffort, defaultGradingEffort)
-	s.AnthropicTipsEffort = cmp.Or(s.AnthropicTipsEffort, defaultTipsEffort)
 	s.ClaudeCodePath = strings.TrimSpace(s.ClaudeCodePath)
 	s.ClaudeCodeModel = strings.TrimSpace(s.ClaudeCodeModel)
 	s.OpenAIModel = strings.TrimSpace(s.OpenAIModel)
@@ -205,7 +193,6 @@ func ApplyDefaults(s *Settings) {
 	s.CustomAIBaseURL = strings.TrimSpace(s.CustomAIBaseURL)
 	s.CustomAIModel = strings.TrimSpace(s.CustomAIModel)
 	s.CustomAIMode = cmp.Or(s.CustomAIMode, string(ModePlain))
-	s.MatchProvider = cmp.Or(s.MatchProvider, ProviderGeminiLive)
 	if s.MatchPerRequest <= 0 {
 		s.MatchPerRequest = DefaultMatchPerRequest
 	}
@@ -214,6 +201,7 @@ func ApplyDefaults(s *Settings) {
 	}
 	s.MatchLocations = strings.TrimSpace(s.MatchLocations)
 	s.MatchGoals = strings.TrimSpace(s.MatchGoals)
+	s.applyAIFeatureDefaults()
 }
 
 func NewSettingsStore(dir string) *SettingsStore {
@@ -274,17 +262,10 @@ func (s Settings) validate() error {
 	return s.validateMatchPreferences()
 }
 
-// validateAIChoices checks the provider picked for each AI job and the provider options.
+// validateAIChoices checks the choice for each AI task and the provider options.
 func (s Settings) validateAIChoices() error {
-	for _, id := range []string{s.GradingProvider, s.TipsProvider, s.PlanProvider, s.MatchProvider} {
-		if !slices.Contains(AIProviderIDs, id) {
-			return fmt.Errorf("unknown AI provider %q", id)
-		}
-	}
-	for _, effort := range []string{s.AnthropicGradingEffort, s.AnthropicTipsEffort} {
-		if !slices.Contains(AnthropicEfforts, effort) {
-			return fmt.Errorf("effort must be one of %s", strings.Join(AnthropicEfforts, ", "))
-		}
+	if err := s.validateAIFeatures(); err != nil {
+		return err
 	}
 	if !slices.Contains(answerModeNames(), s.CustomAIMode) {
 		return fmt.Errorf("answer mode must be one of %s", strings.Join(answerModeNames(), ", "))

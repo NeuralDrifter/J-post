@@ -32,7 +32,7 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onC
   const noKey = settings && !settings.geminiKey
   const noResume = profile && !profile.resumeText.trim()
   const plannerLabel = (s: app.InterviewSetup) => {
-    const id = s.planProvider || settings?.planProvider || ''
+    const id = s.planProvider || settings?.aiFeatures.interviewPlan.provider || ''
     return providers?.find((p) => p.id === id)?.label ?? id
   }
 
@@ -151,7 +151,7 @@ export function InterviewSetupModal({ job, onClose, retry }: { job: app.Job; onC
                   onChange={(e) => setSetup({ ...setup, planProvider: e.target.value })}
                   aria-label="Question plan provider"
                 >
-                  <option value="">Default ({providers?.find((p) => p.id === settings?.planProvider)?.label ?? 'from Settings'})</option>
+                  <option value="">Default ({providers?.find((p) => p.id === settings?.aiFeatures.interviewPlan.provider)?.label ?? 'from Settings'})</option>
                   {(providers ?? []).map((p) => (
                     <option key={p.id} value={p.id} disabled={!!p.unavailable}>
                       {p.unavailable ? `${p.label} — ${p.unavailable}` : p.label}

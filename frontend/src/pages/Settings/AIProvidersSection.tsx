@@ -4,9 +4,11 @@
 import { useState, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from 'react'
 import { ExternalLink, LoaderCircle } from 'lucide-react'
 import { Field } from '../../components/Field'
-import { ANSWER_MODES, ANTHROPIC_EFFORTS } from '../../generated/choices'
+import { Link } from 'react-router'
+import { ANSWER_MODES } from '../../generated/choices'
 import { api } from '../../lib/api'
 import { BrowserOpenURL, ListAIProviders, TestClaudeCode, type ai, type settings } from '../../lib/backend'
+import { settingsLink } from '../../lib/settingsNav'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
 import { ModelPicker, TestProviderButton } from './ModelPicker'
@@ -23,7 +25,7 @@ function bindText({ s, setS }: Props, key: TextKey) {
   return { value: s[key], onChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setS({ ...s, [key]: e.target.value }) }
 }
 
-/** Which provider does each AI job (interviews and job matching), and how each provider is set up. */
+/** How each AI provider is set up: keys, servers, models. Who runs which task is in AI features. */
 export function AIProvidersSection(props: Props) {
   const { s } = props
   // Readiness reflects saved settings; it refreshes after Save.
@@ -36,17 +38,6 @@ export function AIProvidersSection(props: Props) {
     setTesting(false)
     if (version) toast.success(`Claude Code is ready (${version})`)
   }
-
-  const providerSelect = (key: TextKey, label: string) => (
-    <select className="field" {...bindText(props, key)} aria-label={label}>
-      {(providers ?? []).map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.label}
-          {p.unavailable ? ' (setup needed)' : ''}
-        </option>
-      ))}
-    </select>
-  )
 
   // The setup fields of each provider, shown when it's picked in its group's
   // dropdown. A Record, so a new backend provider without setup here fails to compile.
@@ -73,12 +64,6 @@ export function AIProvidersSection(props: Props) {
         </Field>
         <Field label="Model" wide>
           <input className="field font-mono text-xs" {...bindText(props, 'anthropicModel')} />
-        </Field>
-        <Field label="Effort when grading">
-          <EffortSelect {...bindText(props, 'anthropicGradingEffort')} />
-        </Field>
-        <Field label="Effort for tips">
-          <EffortSelect {...bindText(props, 'anthropicTipsEffort')} />
         </Field>
         <LinkButton url="https://console.anthropic.com/settings/keys">Get an Anthropic API key</LinkButton>
       </ProviderBlock>
@@ -176,27 +161,13 @@ export function AIProvidersSection(props: Props) {
 
   return (
     <>
-      <Section title="AI providers" hint="Pick which provider does each AI job. Set each provider up below.">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Interview grading (mock interview scorecards)">{providerSelect('gradingProvider', 'Interview grading provider')}</Field>
-          <Field label="Coaching tips (during interviews)">{providerSelect('tipsProvider', 'Coaching tips provider')}</Field>
-          <Field label="Question plan (before interviews)">{providerSelect('planProvider', 'Question plan provider')}</Field>
-          <Field label="Job matching (Discover match scores)">{providerSelect('matchProvider', 'Job matching provider')}</Field>
-        </div>
-        <p className="mt-2 text-[11px] text-ink-3">
-          Recommended for tips: Gemini Live — it answers in about a second. Claude Code takes several seconds just to start. Any interview can also be
-          re-graded with another provider from its review page.
-        </p>
-        <p className="mt-1 text-[11px] text-ink-3">
-          Question plan: Gemini Live is fastest; Claude Code and the Anthropic API usually write deeper questions but take up to a minute.
-        </p>
-        <p className="mt-1 text-[11px] text-ink-3">
-          Job matching sends many postings per request, so a provider with a large context works best (Claude Code, the Anthropic API, OpenAI).
-        </p>
-        <p className="mt-1 text-[11px] text-ink-3">
-          OpenAI, DeepSeek, Ollama or LM Studio on your own PC, or any OpenAI-compatible service can also do any of these jobs. Set them up below.
-        </p>
-      </Section>
+      <p className="text-xs text-ink-2">
+        Connect the providers you want to use here. Pick which one runs each task in{' '}
+        <Link to={settingsLink('features')} className="text-indigo-300 hover:underline">
+          AI features
+        </Link>
+        .
+      </p>
 
       {PROVIDER_GROUPS.map((group) => (
         <ProviderGroupPicker key={group.id} group={group} providers={providers} initial={initialProvider(group, s)} renderSetup={(id) => setups[id]()} />
@@ -294,18 +265,6 @@ function SecretInput(props: InputHTMLAttributes<HTMLInputElement>) {
 
 function PrivacyNote({ children }: { children: ReactNode }) {
   return <p className="col-span-2 rounded-xl border border-warn/30 bg-warn/5 px-3 py-2 text-[11px] leading-relaxed text-amber-200/90">{children}</p>
-}
-
-function EffortSelect(select: { value: string; onChange: (e: ChangeEvent<HTMLSelectElement>) => void }) {
-  return (
-    <select className="field" {...select}>
-      {ANTHROPIC_EFFORTS.map((e) => (
-        <option key={e} value={e}>
-          {e}
-        </option>
-      ))}
-    </select>
-  )
 }
 
 function LinkButton({ url, children }: { url: string; children: ReactNode }) {

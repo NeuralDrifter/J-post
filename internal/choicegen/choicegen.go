@@ -71,10 +71,25 @@ func Render() string {
 		fmt.Fprintf(&b, "  { id: %s, label: %s },\n", tsString(c.ID), tsString(c.Label))
 	}
 	b.WriteString("] as const\n")
+	renderAITasks(&b)
 	for _, c := range constants() {
 		fmt.Fprintf(&b, "\n/** %s */\nexport const %s = %s\n", c.doc, c.name, tsString(c.value))
 	}
 	return b.String()
+}
+
+// renderAITasks writes the AI task registry: its groups in display order, then every task.
+func renderAITasks(b *strings.Builder) {
+	b.WriteString("\n/** AI task groups, in the order Settings → AI features shows them. */\nexport const AI_TASK_GROUPS = [\n")
+	for _, g := range settings.AITaskGroups {
+		fmt.Fprintf(b, "  { id: %s, label: %s },\n", tsString(g.ID), tsString(g.Label))
+	}
+	b.WriteString("] as const\n")
+	b.WriteString("\n/** Every AI task and its group; Settings.aiFeatures is keyed by these ids. */\nexport const AI_TASKS = [\n")
+	for _, t := range settings.AITasks {
+		fmt.Fprintf(b, "  { id: %s, group: %s, label: %s },\n", tsString(t.ID), tsString(t.Group), tsString(t.Label))
+	}
+	b.WriteString("] as const\n")
 }
 
 // tsString quotes s as a single-quoted TypeScript string, matching the frontend's style.

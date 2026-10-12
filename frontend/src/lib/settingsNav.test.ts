@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { hasUnsavedChanges, SETTINGS_SECTIONS, sectionFromParam, settingsLink } from './settingsNav'
 
 describe('settings sections', () => {
-  it('lists the menu in order, with job matching separate from AI providers', () => {
-    expect(SETTINGS_SECTIONS.map((s) => s.id)).toEqual(['profile', 'ai', 'matching', 'search', 'pipeline', 'compensation', 'data'])
+  it('lists the menu in order, with job matching separate from AI providers and features', () => {
+    expect(SETTINGS_SECTIONS.map((s) => s.id)).toEqual(['profile', 'ai', 'features', 'matching', 'search', 'pipeline', 'compensation', 'data'])
   })
   it('reads the section from the URL, defaulting to the profile', () => {
     expect(sectionFromParam('matching')).toBe('matching')

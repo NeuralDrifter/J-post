@@ -4,7 +4,6 @@
 package app
 
 import (
-	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -466,7 +465,7 @@ func prepareInterview(ctx context.Context, r *Repo, s settings.Settings, jobID s
 	}
 	job := ic.job
 	keptKey := ""
-	if provider := cmp.Or(setup.PlanProvider, s.PlanProvider); reused == nil && provider != PlanNone {
+	if provider := choiceFor(s, settings.TaskInterviewPlan, setup.PlanProvider).Provider; reused == nil && provider != PlanNone {
 		keptKey = keptPlanKey(jobID, provider, setup)
 		reused = r.kept.take(keptKey, r.now())
 	}
@@ -545,11 +544,12 @@ func planOf(rec *InterviewPlanRecord) *InterviewPlan {
 func nudgeAnswer(ctx context.Context, r *Repo, s settings.Settings, sessionID, question, answer string, answerAtMs int64) (Nudge, error) {
 	settings.ApplyDefaults(&s)
 	var n Nudge
-	model, err := ai.RunTask(ctx, s, s.TipsProvider, nudgeTask(question, answer), &n)
+	choice := s.AIChoice(settings.TaskInterviewTips)
+	model, err := ai.RunTask(ctx, s, choice, nudgeTask(question, answer), &n)
 	if err != nil {
 		return n, err
 	}
-	tip := InterviewTip{AnswerAtMs: answerAtMs, Kind: n.Kind, Text: n.Nudge, Provider: s.TipsProvider, Model: model}
+	tip := InterviewTip{AnswerAtMs: answerAtMs, Kind: n.Kind, Text: n.Nudge, Provider: choice.Provider, Model: model}
 	return n, r.saveTip(sessionID, tip)
 }
 
@@ -569,11 +569,12 @@ func scoreInterview(ctx context.Context, r *Repo, s settings.Settings, id string
 	if err := r.markScoring(id); err != nil {
 		return mi, err
 	}
-	card, model, err := requestScorecard(ctx, r, s, s.GradingProvider, mi)
+	choice := s.AIChoice(settings.TaskInterviewGrading)
+	card, model, err := requestScorecard(ctx, r, s, choice, mi)
 	if err != nil {
 		return r.failScoring(mi, err)
 	}
-	if err := r.markDone(id, s.GradingProvider, model, card); err != nil {
+	if err := r.markDone(id, choice.Provider, model, card); err != nil {
 		return mi, err
 	}
 	return r.GetMockInterview(id)
@@ -591,7 +592,7 @@ func regradeInterview(ctx context.Context, r *Repo, s settings.Settings, id, pro
 	if len(mi.Transcript) == 0 {
 		return mi, errors.New("nothing was said, so there's nothing to score")
 	}
-	card, model, err := requestScorecard(ctx, r, s, provider, mi)
+	card, model, err := requestScorecard(ctx, r, s, choiceFor(s, settings.TaskInterviewGrading, provider), mi)
 	if err != nil {
 		return mi, err
 	}
@@ -615,7 +616,7 @@ func (r *Repo) failScoring(mi MockInterview, cause error) (MockInterview, error)
 
 // requestScorecard asks a provider to review the session against the job and
 // resume; it also returns the model that graded it.
-func requestScorecard(ctx context.Context, r *Repo, s settings.Settings, provider string, mi MockInterview) (Scorecard, string, error) {
+func requestScorecard(ctx context.Context, r *Repo, s settings.Settings, choice settings.AIChoice, mi MockInterview) (Scorecard, string, error) {
 	var card Scorecard
 	job, err := r.GetJob(mi.JobID)
 	if err != nil {
@@ -625,7 +626,7 @@ func requestScorecard(ctx context.Context, r *Repo, s settings.Settings, provide
 	if err != nil {
 		return card, "", err
 	}
-	model, err := ai.RunTask(ctx, s, provider, scorecardTask(job, mi, resume), &card)
+	model, err := ai.RunTask(ctx, s, choice, scorecardTask(job, mi, resume), &card)
 	if err != nil {
 		return card, "", err
 	}

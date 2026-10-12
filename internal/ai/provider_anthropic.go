@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,13 +26,16 @@ import (
 // outputs (output_config.format), so the answer always matches the schema.
 type anthropicProvider struct{}
 
+// defaultAnthropicEffort is used when a task carries no effort (callers outside Settings).
+const defaultAnthropicEffort = "high"
+
 var (
 	anthropicBaseURL    = "" // "" = the SDK default; tests point it at a fake server
 	anthropicMaxRetries = 1  // one retry for transient errors; a long rate-limit wait is reported instead
-	anthropicMaxTokens  = map[Role]int64{RoleGrading: 16000, RoleTips: 1024, RolePlanning: 16000, RoleMatching: 16000}
+	anthropicMaxTokens  = map[Role]int64{RoleGrading: 16000, RoleTips: 1024, RolePlanning: 16000, RoleMatching: 16000, RoleWriting: 32000}
 	// anthropicTimeout bounds a whole run (retries included); the SDK's own
 	// per-attempt limit for large max_tokens is 10 minutes.
-	anthropicTimeout = map[Role]time.Duration{RoleGrading: 5 * time.Minute, RoleTips: 60 * time.Second, RolePlanning: 2 * time.Minute, RoleMatching: 5 * time.Minute}
+	anthropicTimeout = map[Role]time.Duration{RoleGrading: 5 * time.Minute, RoleTips: 60 * time.Second, RolePlanning: 2 * time.Minute, RoleMatching: 5 * time.Minute, RoleWriting: 5 * time.Minute}
 )
 
 func (anthropicProvider) id() string    { return settings.ProviderAnthropic }
@@ -53,10 +57,7 @@ func (anthropicProvider) run(ctx context.Context, s settings.Settings, t Task) (
 	timeout := anthropicTimeout[t.Role]
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	effort := s.AnthropicGradingEffort
-	if t.Role == RoleTips {
-		effort = s.AnthropicTipsEffort
-	}
+	effort := cmp.Or(t.Effort, defaultAnthropicEffort)
 	msg, err := client.Beta.Messages.New(ctx, anthropic.BetaMessageNewParams{
 		Model:     anthropic.Model(s.AnthropicModel),
 		MaxTokens: anthropicMaxTokens[t.Role],

@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"jobtrack/internal/ai"
+	"jobtrack/internal/ai/aitest"
 	"jobtrack/internal/settings"
 )
 
@@ -71,7 +72,8 @@ func TestMatchFingerprint(t *testing.T) {
 	same := s
 	same.MatchWorkModes = []string{"hybrid", "remote"}
 	same.MatchLocations = "  Denver "
-	same.MatchEnabled, same.MatchProvider, same.MatchPerRequest = true, settings.ProviderAnthropic, 40
+	same.MatchEnabled, same.MatchPerRequest = true, 40
+	same = aitest.WithTask(same, settings.TaskJobMatch, settings.ProviderAnthropic)
 	if matchFingerprint(" Jane Doe, Go\n", same) != base {
 		t.Fatal("order, whitespace, the switch, the provider and the request size must not change the fingerprint")
 	}

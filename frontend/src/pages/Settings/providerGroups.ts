@@ -37,6 +37,6 @@ export const PROVIDER_GROUPS: readonly ProviderGroup[] = [
 
 /** The provider a group's dropdown opens on: the first one a task uses, else the group's first. */
 export function initialProvider(group: ProviderGroup, s: settings.Settings): ProviderId {
-  const inUse: string[] = [s.gradingProvider, s.tipsProvider, s.planProvider, s.matchProvider]
+  const inUse = Object.values(s.aiFeatures).map((choice) => choice.provider)
   return group.providerIds.find((id) => inUse.includes(id)) ?? group.providerIds[0]
 }

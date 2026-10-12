@@ -4,7 +4,6 @@
 package app
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -159,19 +158,19 @@ func interviewPlanFor(ctx context.Context, s settings.Settings, job Job, resume 
 	if reused != nil {
 		return reused, nil
 	}
-	provider := cmp.Or(setup.PlanProvider, s.PlanProvider)
-	if provider == PlanNone {
+	choice := choiceFor(s, settings.TaskInterviewPlan, setup.PlanProvider)
+	if choice.Provider == PlanNone {
 		return nil, nil
 	}
 	var p InterviewPlan
-	model, err := ai.RunTask(ctx, s, provider, planTask(job, resume, setup), &p)
+	model, err := ai.RunTask(ctx, s, choice, planTask(job, resume, setup), &p)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't prepare the questions: %w", err)
 	}
 	if err := p.validate(setup.Minutes); err != nil {
 		return nil, fmt.Errorf("couldn't prepare the questions: %w", err)
 	}
-	return &InterviewPlanRecord{Provider: provider, Model: model, Plan: p}, nil
+	return &InterviewPlanRecord{Provider: choice.Provider, Model: model, Plan: p}, nil
 }
 
 // gradingSection is the plan for the grader, numbered by planIndex.

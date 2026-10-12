@@ -56,8 +56,8 @@ func matchReply(ids []string) []byte {
 
 func matchSettings(perRequest int) settings.Settings {
 	s := aitest.AnthropicSettings
-	s.MatchProvider, s.MatchPerRequest = settings.ProviderAnthropic, perRequest
-	return s
+	s.MatchPerRequest = perRequest
+	return aitest.WithTask(s, settings.TaskJobMatch, settings.ProviderAnthropic)
 }
 
 type progressLog struct{ calls []string }

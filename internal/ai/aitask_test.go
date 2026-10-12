@@ -44,11 +44,11 @@ func TestGeminiSchemaConversion(t *testing.T) {
 
 func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 	var n testNudge
-	if _, err := RunTask(context.Background(), settings.Settings{}, "nope", testNudgeTask("q", "a"), &n); err == nil {
+	if _, err := RunTask(context.Background(), settings.Settings{}, settings.AIChoice{Provider: "nope"}, testNudgeTask("q", "a"), &n); err == nil {
 		t.Fatal("unknown provider should fail")
 	}
 	gemini.SetTestEndpoints(t, "", "ws://127.0.0.1:1") // a dial here would fail with a connection error
-	_, err := RunTask(context.Background(), settings.Settings{}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
+	_, err := RunTask(context.Background(), settings.Settings{}, settings.AIChoice{Provider: settings.ProviderGeminiLive}, testNudgeTask("q", "a"), &n)
 	if err == nil || !strings.Contains(err.Error(), "Gemini API key") || strings.Contains(err.Error(), "reach") {
 		t.Fatalf("an unconfigured provider should fail with its setup reason before connecting: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestRunAITaskUnknownAndUnavailable(t *testing.T) {
 func TestRunAITaskReturnsModel(t *testing.T) {
 	geminitest.FakeLiveServer(t, geminitest.ReplyWithToolCall(t, map[string]any{"nudge": "Lead with the result", "kind": "tip"}, nil))
 	var n testNudge
-	model, err := RunTask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.ProviderGeminiLive, testNudgeTask("q", "a"), &n)
+	model, err := RunTask(context.Background(), settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}, settings.AIChoice{Provider: settings.ProviderGeminiLive}, testNudgeTask("q", "a"), &n)
 	if err != nil || n.Nudge != "Lead with the result" || model != "gemini-3.8-live" {
 		t.Fatalf("n = %+v, model = %q, err = %v", n, model, err)
 	}
@@ -106,5 +106,29 @@ func TestMatchingRoleLimits(t *testing.T) {
 		claudeCodeTimeout[RoleMatching] != 5*time.Minute {
 		t.Fatalf("anthropic %d/%v, openai %d/%v, claude code %v", anthropicMaxTokens[RoleMatching], anthropicTimeout[RoleMatching],
 			openAIMaxTokens[RoleMatching], openAITimeout[RoleMatching], claudeCodeTimeout[RoleMatching])
+	}
+}
+
+func TestWithModelSetsOnlyThatProvidersModel(t *testing.T) {
+	base := settings.Settings{AnthropicModel: "opus", OpenAIModel: ""}
+	for _, id := range settings.AIProviderIDs {
+		got := withModel(base, id, "picked")
+		if *providerModelField(&got, id) != "picked" {
+			t.Errorf("%s: model not set", id)
+		}
+		if id != settings.ProviderAnthropic && got.AnthropicModel != "opus" {
+			t.Errorf("%s: changed Anthropic's model", id)
+		}
+	}
+	if got := withModel(base, settings.ProviderAnthropic, ""); got.AnthropicModel != "opus" {
+		t.Fatalf("empty override changed the model: %q", got.AnthropicModel)
+	}
+}
+
+func TestEveryRoleHasLimits(t *testing.T) {
+	for _, role := range []Role{RoleGrading, RoleTips, RolePlanning, RoleMatching, RoleWriting} {
+		if anthropicMaxTokens[role] == 0 || anthropicTimeout[role] == 0 || openAIMaxTokens[role] == 0 || openAITimeout[role] == 0 || claudeCodeTimeout[role] == 0 {
+			t.Errorf("role %d is missing a token cap or timeout", role)
+		}
 	}
 }

@@ -386,7 +386,7 @@ func TestScoreInterviewUsesGradingProviderAndSavesCard(t *testing.T) {
 		w.Write(aitest.AnthropicReply("claude-opus-5-5", scorecardJSON(), "end_turn"))
 	})
 	s := aitest.AnthropicSettings
-	s.GradingProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewGrading, settings.ProviderAnthropic)
 	done, err := scoreInterview(context.Background(), r, s, mi.ID)
 	if err != nil || done.Status != MockDone || len(done.Scorecards) != 1 {
 		t.Fatalf("done = %+v, err = %v", done, err)

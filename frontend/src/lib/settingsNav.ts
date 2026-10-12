@@ -7,6 +7,7 @@
 export const SETTINGS_SECTIONS = [
   { id: 'profile', label: 'Profile & resume' },
   { id: 'ai', label: 'AI providers' },
+  { id: 'features', label: 'AI features' },
   { id: 'matching', label: 'Job matching' },
   { id: 'search', label: 'Job search' },
   { id: 'pipeline', label: 'Pipeline' },

@@ -6,8 +6,8 @@ import { AI_PROVIDER_IDS } from '../../generated/choices'
 import type { settings } from '../../lib/backend'
 import { initialProvider, PROVIDER_GROUPS } from './providerGroups'
 
-const tasks = (ids: Partial<Record<'gradingProvider' | 'tipsProvider' | 'planProvider' | 'matchProvider', string>>) =>
-  ({ gradingProvider: 'gemini-live', tipsProvider: 'gemini-live', planProvider: 'gemini-live', matchProvider: 'gemini-live', ...ids }) as settings.Settings
+const tasks = (providers: Record<string, string>) =>
+  ({ aiFeatures: Object.fromEntries(Object.entries({ interviewGrading: 'gemini-live', ...providers }).map(([task, provider]) => [task, { provider }])) }) as unknown as settings.Settings
 
 describe('PROVIDER_GROUPS', () => {
   it('puts every backend provider in exactly one group', () => {
@@ -27,7 +27,7 @@ describe('initialProvider', () => {
   const [remote, harness, local] = PROVIDER_GROUPS
 
   it('opens on the first provider in the group (in dropdown order) that a task uses', () => {
-    const s = tasks({ gradingProvider: 'deepseek', tipsProvider: 'claude-code', planProvider: 'lmstudio', matchProvider: 'anthropic' })
+    const s = tasks({ interviewGrading: 'deepseek', interviewTips: 'claude-code', interviewPlan: 'lmstudio', jobMatch: 'anthropic' })
     expect(initialProvider(remote, s)).toBe('anthropic') // before deepseek in the dropdown
     expect(initialProvider(local, s)).toBe('lmstudio')
   })

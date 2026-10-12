@@ -112,7 +112,7 @@ func TestPlanThroughGeminiLive(t *testing.T) {
 	})
 	var p InterviewPlan
 	s := settings.Settings{GeminiKey: "k", GeminiLiveModel: "gemini-3.8-live"}
-	if _, err := ai.RunTask(context.Background(), s, settings.ProviderGeminiLive, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := ai.RunTask(context.Background(), s, settings.AIChoice{Provider: settings.ProviderGeminiLive}, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
 }
@@ -125,10 +125,10 @@ func TestPlanThroughAnthropic(t *testing.T) {
 		w.Write(aitest.AnthropicReply("claude-opus-5-5", samplePlanJSON(5), "end_turn"))
 	})
 	var p InterviewPlan
-	if _, err := ai.RunTask(context.Background(), aitest.AnthropicSettings, settings.ProviderAnthropic, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := ai.RunTask(context.Background(), aitest.AnthropicSettings, settings.AIChoice{Provider: settings.ProviderAnthropic}, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
-	if body["output_config"].(map[string]any)["effort"] != aitest.AnthropicSettings.AnthropicGradingEffort || body["max_tokens"] != float64(16000) {
+	if body["output_config"].(map[string]any)["effort"] != "high" || body["max_tokens"] != float64(16000) {
 		t.Fatalf("planning should use grading effort and budget: %v", body)
 	}
 }
@@ -136,7 +136,7 @@ func TestPlanThroughAnthropic(t *testing.T) {
 func TestPlanThroughClaudeCode(t *testing.T) {
 	s, root := aitest.UseFakeClaude(t, "plan")
 	var p InterviewPlan
-	if _, err := ai.RunTask(context.Background(), s, settings.ProviderClaudeCode, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
+	if _, err := ai.RunTask(context.Background(), s, settings.AIChoice{Provider: settings.ProviderClaudeCode}, planTask(planJob, "cv", planSetup), &p); err != nil || p.validate(25) != nil {
 		t.Fatalf("p = %+v, err = %v", p, err)
 	}
 	aitest.AssertEmptyDir(t, root)
@@ -241,7 +241,7 @@ func TestPrepareInterviewMakesPlanWithSettingProvider(t *testing.T) {
 	noLivePlanning(t)
 	anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	if err != nil {
 		t.Fatal(err)
@@ -262,7 +262,7 @@ func TestPrepareInterviewPlanProviderOverride(t *testing.T) {
 	noLivePlanning(t)
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderGeminiLive
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderGeminiLive)
 	setup := testSetup
 	setup.PlanProvider = settings.ProviderAnthropic
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, setup); err != nil || *calls != 1 {
@@ -276,7 +276,7 @@ func TestPrepareInterviewPlanFailureCreatesNothing(t *testing.T) {
 	briefs := tokenServer(t)
 	anthropicPlanner(t, http.StatusInternalServerError, "")
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
 		t.Fatal("expected the planning error")
 	}
@@ -291,7 +291,7 @@ func TestPrepareInterviewInvalidPlanFails(t *testing.T) {
 	tokenServer(t)
 	anthropicPlanner(t, http.StatusOK, samplePlanJSON(1))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	_, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	if err == nil || !strings.Contains(err.Error(), "expected about 5") {
 		t.Fatalf("err = %v", err)
@@ -307,7 +307,7 @@ func TestPrepareInterviewTokenFailureCreatesNothing(t *testing.T) {
 	geminitest.WithServer(t, func(w http.ResponseWriter, req *http.Request) { w.WriteHeader(http.StatusBadRequest) })
 	anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
 		t.Fatal("expected the token error")
 	}
@@ -323,7 +323,7 @@ func TestPrepareInterviewWithoutPlan(t *testing.T) {
 	noLivePlanning(t)
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	setup := testSetup
 	setup.PlanProvider = PlanNone
 	live, err := prepareInterview(context.Background(), r, s, j.ID, setup)
@@ -341,7 +341,7 @@ func TestPrepareInterviewWithoutPlan(t *testing.T) {
 func plannedOriginal(t *testing.T, r *Repo, j Job) MockInterview {
 	t.Helper()
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	live, err := prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	if err != nil {
 		t.Fatal(err)
@@ -360,7 +360,7 @@ func TestRetryReusesPlanAndOriginalShape(t *testing.T) {
 	setNow(r, 2026, time.October, 2, 12)
 	retry := InterviewSetup{RetryOf: original.ID, Kind: "technical", Minutes: 45, Persona: "friendly", Voice: "Puck", PlanProvider: settings.ProviderGeminiLive}
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	live, err := prepareInterview(context.Background(), r, s, j.ID, retry)
 	if err != nil || *calls != 1 {
 		t.Fatalf("err = %v, planning calls = %d (want only the original's)", err, *calls)
@@ -489,7 +489,7 @@ func TestTryAgainAfterTokenFailureReusesThePlan(t *testing.T) {
 	})
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	if _, err := prepareInterview(context.Background(), r, s, j.ID, testSetup); err == nil {
 		t.Fatal("expected the token error")
 	}
@@ -520,7 +520,7 @@ func TestKeptPlanOnlyMatchesTheSameSetup(t *testing.T) {
 	})
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	tokenFails = false
 	other := testSetup
@@ -543,7 +543,7 @@ func TestKeptPlanExpires(t *testing.T) {
 	})
 	calls := anthropicPlanner(t, http.StatusOK, samplePlanJSON(5))
 	s := planSettings()
-	s.PlanProvider = settings.ProviderAnthropic
+	s = aitest.WithTask(s, settings.TaskInterviewPlan, settings.ProviderAnthropic)
 	prepareInterview(context.Background(), r, s, j.ID, testSetup)
 	tokenFails = false
 	setNow(r, 2026, time.October, 1, 13) // an hour later
