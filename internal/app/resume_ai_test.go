@@ -163,3 +163,40 @@ func TestCommitAIVersion(t *testing.T) {
 		t.Fatalf("history = %+v", list)
 	}
 }
+
+// Every resume task in the registry answers in the shared edits shape, with a role and an instruction.
+func TestResumeAITasksAreComplete(t *testing.T) {
+	for id, task := range resumeAITasks {
+		if task.instruction == "" || task.schema["required"] == nil {
+			t.Errorf("%s is incomplete", id)
+		}
+		if _, ok := settingsTask(id); !ok {
+			t.Errorf("%s is not a settings task", id)
+		}
+	}
+}
+
+func settingsTask(id string) (settings.AITask, bool) {
+	for _, task := range settings.AITasks {
+		if task.ID == id {
+			return task, true
+		}
+	}
+	return settings.AITask{}, false
+}
+
+func TestImproveAsksForOneRewrite(t *testing.T) {
+	r := newTestRepo(t)
+	doc, _ := r.CreateDocument(DocumentResume, "CV", sampleData, "Ada")
+	bodies := fakeEdits(t, `{"edits":[{"kind":"rewrite","passageId":"p_1","text":"Led five engineers","why":"stronger verb","addsFacts":false}]}`)
+	s := aitest.WithTask(aitest.AnthropicSettings, settings.TaskResumeImprove, settings.ProviderAnthropic)
+	req := ResumeAIRequest{Task: settings.TaskResumeImprove, DocumentID: doc.ID, SectionKey: "experience", Input: `{"action":"verb","line":{"id":"p_1","text":"Was in charge of five engineers"}}`}
+	g, err := runResumeAI(context.Background(), r, s, req)
+	if err != nil || !strings.Contains(g.Edits, "Led five engineers") {
+		t.Fatalf("g = %+v, %v", g, err)
+	}
+	body := (*bodies)[0]
+	if body["max_tokens"] != float64(1024) || !strings.Contains(body["system"].([]any)[0].(map[string]any)["text"].(string), "Return exactly one edit") {
+		t.Fatalf("body = %v", body)
+	}
+}

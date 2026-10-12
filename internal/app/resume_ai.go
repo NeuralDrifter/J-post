@@ -26,7 +26,9 @@ type resumeAITask struct {
 }
 
 // resumeAITasks holds every resume AI task by its settings task id.
-var resumeAITasks = map[string]resumeAITask{}
+var resumeAITasks = map[string]resumeAITask{
+	settings.TaskResumeImprove: improveTask,
+}
 
 // ResumeAIRequest is one run of a resume AI task.
 type ResumeAIRequest struct {

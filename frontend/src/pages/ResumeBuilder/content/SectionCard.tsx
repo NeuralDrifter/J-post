@@ -16,6 +16,8 @@ import { RichTextField } from './RichTextField'
 import { SECTION_ICONS } from './sectionIcons'
 import { sectionMenu } from './sectionMenu'
 
+const SUMMARY_FIELD = { sectionId: 'summary', field: 'content' }
+
 type Props = {
   section: WriteSection
   open: boolean
@@ -71,7 +73,7 @@ export function SectionCard({ section, open, onToggle, previous, next, onOpenEnt
         }
       >
         {section.kind === 'summary' ? (
-          <RichTextField label="Summary" html={data.summary.content} onChange={(html) => update((d) => void (d.summary.content = html))} minHeight="min-h-36" />
+          <RichTextField label="Summary" html={data.summary.content} onChange={(html) => update((d) => void (d.summary.content = html))} minHeight="min-h-36" ai={SUMMARY_FIELD} />
         ) : (
           <>
             <EntryList section={section} onOpen={(entryId) => onOpenEntry(section.id, entryId)} />

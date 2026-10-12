@@ -29,7 +29,8 @@ function isEditable(el: Element | null): el is HTMLInputElement | HTMLTextAreaEl
   return (el as HTMLElement).isContentEditable
 }
 
-function editMenu(el: HTMLElement): MenuEntry[] {
+/** Cut, Copy, Paste and Select all for a text field. */
+export function editMenu(el: HTMLElement): MenuEntry[] {
   const hasSelection = (() => {
     if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
       try {

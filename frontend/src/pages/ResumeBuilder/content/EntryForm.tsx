@@ -15,29 +15,34 @@ import { RichTextField } from './RichTextField'
 
 type Values = Record<string, unknown>
 
+/** Where an entry (or one of its roles) sits, so its rich-text fields can be improved by AI. */
+export type EntryPlace = { sectionId: string; itemId: string; roleId?: string }
+
+type FormProps = { fields: FieldSpec[]; values: Values; onChange: (key: string, value: unknown) => void; place?: EntryPlace }
+
 /** The form for one entry, built from its field set; each change reports the changed property. */
-export function EntryForm({ fields, values, onChange }: { fields: FieldSpec[]; values: Values; onChange: (key: string, value: unknown) => void }) {
+export function EntryForm({ fields, values, onChange, place }: FormProps) {
   const page = useResume().metadata.page
   const dateSettings = { locale: page.locale, format: page.dateFormat }
   return (
     <div className="grid grid-cols-2 gap-4">
       {fields.map((field) => (
-        <FieldControl key={field.key} field={field} value={values[field.key]} dateSettings={dateSettings} onChange={(value) => onChange(field.key, value)} />
+        <FieldControl key={field.key} field={field} value={values[field.key]} dateSettings={dateSettings} onChange={(value) => onChange(field.key, value)} place={place} />
       ))}
     </div>
   )
 }
 
-type ControlProps = { field: FieldSpec; value: unknown; dateSettings: DateSettings; onChange: (value: unknown) => void }
+type ControlProps = { field: FieldSpec; value: unknown; dateSettings: DateSettings; onChange: (value: unknown) => void; place?: EntryPlace }
 
-function FieldControl({ field, value, dateSettings, onChange }: ControlProps) {
+function FieldControl({ field, value, dateSettings, onChange, place }: ControlProps) {
   switch (field.kind) {
     case 'text':
       return <TextInput label={field.label} value={String(value ?? '')} placeholder={field.placeholder} wide={field.wide} onChange={onChange} />
     case 'rich':
       return (
         <div className="col-span-2">
-          <RichTextField label={field.label} html={String(value ?? '')} onChange={onChange} />
+          <RichTextField label={field.label} html={String(value ?? '')} onChange={onChange} ai={place && { ...place, field: field.key }} />
         </div>
       )
     case 'keywords':
@@ -55,7 +60,7 @@ function FieldControl({ field, value, dateSettings, onChange }: ControlProps) {
         </Field>
       )
     case 'roles':
-      return <RolesField roles={(value as RoleItem[] | undefined) ?? []} onChange={onChange} />
+      return <RolesField roles={(value as RoleItem[] | undefined) ?? []} onChange={onChange} place={place} />
   }
 }
 
@@ -66,7 +71,7 @@ const ROLE_FIELDS: FieldSpec[] = [
 ]
 
 /** Roles held at one company, to show progression; each has its own position, dates and description. */
-function RolesField({ roles, onChange }: { roles: RoleItem[]; onChange: (roles: RoleItem[]) => void }) {
+function RolesField({ roles, onChange, place }: { roles: RoleItem[]; onChange: (roles: RoleItem[]) => void; place?: EntryPlace }) {
   const update = (index: number, key: string, value: unknown) => onChange(roles.map((role, i) => (i === index ? { ...role, [key]: value } : role)))
   const add = () => onChange([...roles, { id: generateId(), position: '', period: '', dates: { ...EMPTY_RESUME_DATES }, description: '' }])
   return (
@@ -86,7 +91,7 @@ function RolesField({ roles, onChange }: { roles: RoleItem[]; onChange: (roles: 
               <Trash2 size={13} />
             </IconButton>
           </div>
-          <EntryForm fields={ROLE_FIELDS} values={role as unknown as Values} onChange={(key, value) => update(index, key, value)} />
+          <EntryForm fields={ROLE_FIELDS} values={role as unknown as Values} onChange={(key, value) => update(index, key, value)} place={place && { ...place, roleId: role.id }} />
         </div>
       ))}
     </div>

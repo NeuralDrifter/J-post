@@ -9,6 +9,7 @@ import type { Draft } from 'immer'
 import { additionAfter, applyTo, getStateIn, replaceBlockText, type Passage, type Proposal } from '@reactive-resume/resume/proposals'
 import type { app } from '../../backend'
 import type { EditOf } from './edits'
+import { fieldKeyOf } from './improve'
 import { markChange } from './pageMarks'
 
 export type ChangeStatus = 'pending' | 'accepted' | 'rejected' | 'stale'
@@ -21,6 +22,8 @@ export type Change<T> = {
   generationId: string
   /** The section it belongs to: a section id, "basics", or the letter's body. */
   sectionId: string
+  /** The rich-text field it changes (see fieldKeyOf); text changes only. */
+  fieldKey?: string
   /** Where it lands, for people: "Experience · Acme · bullet 2". */
   location: string
   /** What it reads as before and after, as plain text for the word diff. */
@@ -78,6 +81,7 @@ export function textChange<T>(doc: T, gen: app.AIGeneration, index: number, edit
     key,
     generationId: gen.id,
     sectionId: passage.target.sectionId,
+    fieldKey: fieldKeyOf(passage.target),
     location: edit.kind === 'rewrite' ? passage.location : `${passage.location} · new line after it`,
     before: edit.kind === 'rewrite' ? passage.text : '',
     after: text,

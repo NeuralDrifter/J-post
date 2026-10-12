@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { useMemo } from 'react'
+import type { Passage } from '@reactive-resume/resume/proposals'
 import { useStore, type StoreApi } from 'zustand'
 import { apiOk } from '../../../lib/api'
 import { CommitAIVersion, type app } from '../../../lib/backend'
@@ -21,6 +22,8 @@ export type AIDocument<T> = {
   serialize: (data: T) => string
   plainText: (data: T) => string
   sectionTitle: (data: T, sectionId: string) => string
+  /** Every passage an edit can name, as it is now. */
+  passages: (data: T) => Passage[]
 }
 
 /** Every section's suggestions, worked out against the document as it is now. */

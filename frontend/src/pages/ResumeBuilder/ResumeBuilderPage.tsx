@@ -13,7 +13,7 @@ import { resumeExportable } from '../../lib/resumes/stored'
 import { newEditingSession } from '../../lib/resumes/versions'
 import { parseStoredResume, resumePlainText, serializeResume, type ResumeData } from '../../lib/resumes/document'
 import { useLoad } from '../../lib/useLoad'
-import { compileResumeGeneration, sectionTitle } from '../../lib/resumes/ai/resumeChanges'
+import { compileResumeGeneration, resumePassages, sectionTitle } from '../../lib/resumes/ai/resumeChanges'
 import type { AIDocument } from './ai/aiDocument'
 import { ReviewBar } from './ai/ReviewBar'
 import { AIReviewProvider } from './ai/ReviewContext'
@@ -100,7 +100,7 @@ function Workspace({ initial, ...props }: EditorProps & { initial: ResumeData })
   // What the builder shows (selection, Check's state) belongs to this visit only.
   useEffect(() => () => useBuilderView.getState().reset(), [])
   const aiDoc = useMemo<AIDocument<ResumeData>>(
-    () => ({ docId: doc.id, editor: store, compile: compileResumeGeneration, serialize: serializeResume, plainText: resumePlainText, sectionTitle }),
+    () => ({ docId: doc.id, editor: store, compile: compileResumeGeneration, serialize: serializeResume, plainText: resumePlainText, sectionTitle, passages: resumePassages }),
     [doc.id, store],
   )
   return (

@@ -1,11 +1,13 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react'
 import { Bold, Italic, Link2, List, ListOrdered, RemoveFormatting, Underline, type LucideIcon } from 'lucide-react'
 import { hasUnsupportedTableMarkup, richTextExtensions } from '@reactive-resume/web/components/input/rich-text-extensions'
+import type { ProposalTarget } from '@reactive-resume/resume/proposals'
 import { promptDialog } from '../../../components/ConfirmDialog'
+import { FieldChanges, ImproveButton } from '../ai/ImproveTools'
 
 type Mark = { label: string; icon: LucideIcon; isActive?: (e: Editor) => boolean; run: (e: Editor) => void }
 
@@ -31,9 +33,10 @@ async function editLink(editor: Editor) {
 /**
  * Rich text, stored as HTML as Reactive Resume stores it. It uses Reactive Resume's own extensions, so
  * imported formatting (alignment, colour, highlights, indents) survives editing, and Markdown shortcuts
- * work as you type ("- " starts a list, "**bold**").
+ * work as you type ("- " starts a list, "**bold**"). With `ai` (where the field lives in the document), a line
+ * can be improved from its right-click menu or the ✨ button, and the suggestion shows under the field.
  */
-export function RichTextField({ label, html, onChange, minHeight = 'min-h-28' }: { label: string; html: string; onChange: (html: string) => void; minHeight?: string }) {
+export function RichTextField({ label, html, onChange, minHeight = 'min-h-28', ai }: { label: string; html: string; onChange: (html: string) => void; minHeight?: string; ai?: ProposalTarget }) {
   // Tables the editor can't change safely are kept exactly as they are, read-only.
   const readOnlyTable = useMemo(() => hasUnsupportedTableMarkup(html), [html])
   const [focused, setFocused] = useState(false)
@@ -66,14 +69,15 @@ export function RichTextField({ label, html, onChange, minHeight = 'min-h-28' }:
           The original table formatting is kept. This text is read-only because it can't be edited safely.
         </p>
       ) : (
-        editor && <Toolbar editor={editor} />
+        editor && <Toolbar editor={editor} extra={ai && <ImproveButton editor={editor} target={ai} />} />
       )}
       <EditorContent editor={editor} />
+      {ai && <FieldChanges target={ai} />}
     </div>
   )
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, extra }: { editor: Editor; extra?: ReactNode }) {
   const active = useEditorState({ editor, selector: ({ editor: e }) => MARKS.map((mark) => mark.isActive?.(e) ?? false) })
   return (
     <div className="flex gap-0.5" role="toolbar" aria-label="Formatting">
@@ -92,6 +96,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           <mark.icon size={14} />
         </button>
       ))}
+      {extra}
     </div>
   )
 }

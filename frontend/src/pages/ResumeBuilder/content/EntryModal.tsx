@@ -26,7 +26,7 @@ export function EntryModal({ sectionId, entryId, sectionTitle, onClose }: { sect
   return (
     <Modal title={sectionTitle} onClose={onClose} width="max-w-2xl">
       <ReadOnly when={locked}>
-        <EntryForm fields={FIELD_SETS[section.type]} values={entry as unknown as Record<string, unknown>} onChange={setField} />
+        <EntryForm fields={FIELD_SETS[section.type]} values={entry as unknown as Record<string, unknown>} onChange={setField} place={{ sectionId: section.id, itemId: entry.id }} />
       </ReadOnly>
       <div className="mt-6 flex justify-end">
         <button type="button" className="btn btn-primary" onClick={onClose}>
