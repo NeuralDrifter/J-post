@@ -57,6 +57,12 @@ func GeminiSchema(schema map[string]any) map[string]any {
 			v = props
 		case "items":
 			v = GeminiSchema(v.(map[string]any))
+		case "anyOf":
+			options := []any{}
+			for _, o := range v.([]any) {
+				options = append(options, GeminiSchema(o.(map[string]any)))
+			}
+			v = options
 		}
 		out[k] = v
 	}

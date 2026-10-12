@@ -10,6 +10,7 @@ import { openMenu } from '../../../lib/menu'
 import { useResume, useUpdate } from '../editorContext'
 import { Collapsible } from '../ui/controls'
 import { IconGrid } from '../ui/IconPicker'
+import { SectionChanges } from '../ai/SectionChanges'
 import { EntryList } from './EntryList'
 import { RichTextField } from './RichTextField'
 import { SECTION_ICONS } from './sectionIcons'
@@ -80,6 +81,7 @@ export function SectionCard({ section, open, onToggle, previous, next, onOpenEnt
           </>
         )}
       </Collapsible>
+      <SectionChanges sectionId={section.id} />
       {pickingIcon && (
         <Modal title={`Icon for ${title}`} onClose={() => setPickingIcon(false)} width="max-w-sm">
           <IconGrid value={settings.icon} onChange={setIcon} noneValue="none" noneLabel="No icon" />

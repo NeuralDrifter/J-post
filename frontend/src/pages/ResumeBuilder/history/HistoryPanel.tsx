@@ -13,9 +13,13 @@ import { openMenu } from '../../../lib/menu'
 import { isNamedVersion, versionDetail, versionTitle } from '../../../lib/resumes/versions'
 import { toast } from '../../../lib/toast'
 import { useLoad } from '../../../lib/useLoad'
+import { VersionChanges } from './VersionChanges'
+
+/** The version listed just before this one (older), if any. */
+const olderThan = (versions: readonly app.DocumentVersion[], id: string) => versions[versions.findIndex((v) => v.id === id) + 1]
 
 /** A version shown on the page instead of the document as it is now. */
-export type PreviewedVersion = { id: string; title: string; data: string }
+export type PreviewedVersion = { id: string; title: string; data: string; plainText: string }
 
 type Props = {
   docId: string
@@ -24,16 +28,18 @@ type Props = {
   /** Saves pending edits, so a named version holds what's on screen. */
   flush: () => Promise<void>
   onRestore: (version: PreviewedVersion) => void
+  /** The document's text as it is now, for comparing a version with it. */
+  nowText: () => string
 }
 
-export function HistoryPanel({ docId, previewed, onPreview, flush, onRestore }: Props) {
+export function HistoryPanel({ docId, previewed, onPreview, flush, onRestore, nowText }: Props) {
   const [revision, setRevision] = useState(0)
   const refresh = () => setRevision((n) => n + 1)
   const { data: versions, loading } = useLoad(() => api(ListDocumentVersions(docId)), [docId, revision])
 
   const show = async (version: app.DocumentVersion) => {
     const full = await api(GetDocumentVersion(version.id))
-    if (full) onPreview({ id: full.id, title: versionTitle(full), data: full.data })
+    if (full) onPreview({ id: full.id, title: versionTitle(full), data: full.data, plainText: full.plainText })
   }
 
   return (
@@ -52,6 +58,7 @@ export function HistoryPanel({ docId, previewed, onPreview, flush, onRestore }: 
               Back to now
             </button>
           </div>
+          <VersionChanges key={previewed.id} previewed={previewed} older={olderThan(versions ?? [], previewed.id)} nowText={nowText} />
         </div>
       )}
       <ol aria-label="Versions" className="space-y-0.5">

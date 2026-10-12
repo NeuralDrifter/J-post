@@ -10,6 +10,8 @@ export function ChangeStatus(arg1:string,arg2:string,arg3:string,arg4:string):Pr
 
 export function ClearDismissed(arg1:number):Promise<number>;
 
+export function CommitAIVersion(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<app.DocumentVersion>;
+
 export function CreateDocument(arg1:string,arg2:string,arg3:string,arg4:string):Promise<app.Document>;
 
 export function CreateJob(arg1:app.Job):Promise<app.Job>;
@@ -75,6 +77,8 @@ export function GetStartupError():Promise<string>;
 export function InboxCounts():Promise<app.InboxCounts>;
 
 export function LinkJobDocuments(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function ListAIGenerations(arg1:string):Promise<Array<app.AIGeneration>>;
 
 export function ListAIModels(arg1:string,arg2:settings.Settings):Promise<Array<string>>;
 
@@ -158,6 +162,8 @@ export function RestoreDocumentVersion(arg1:string,arg2:string):Promise<app.Docu
 
 export function RestorePosting(arg1:string):Promise<void>;
 
+export function RunResumeAI(arg1:app.ResumeAIRequest):Promise<app.AIGeneration>;
+
 export function RunSearch(arg1:app.SearchQuery):Promise<app.SearchRun>;
 
 export function SaveAtsReport(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -191,6 +197,8 @@ export function ScorePostingWith(arg1:string,arg2:string):Promise<app.MatchRun>;
 export function SearchAreas(arg1:string):Promise<Array<marketdata.Option>>;
 
 export function SearchOccupations(arg1:string):Promise<Array<marketdata.Option>>;
+
+export function SetAIGenerationDecisions(arg1:string,arg2:string):Promise<void>;
 
 export function SetDefaultResume(arg1:string):Promise<void>;
 

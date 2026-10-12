@@ -81,7 +81,7 @@ func (o openAIProvider) unavailable(s settings.Settings) string {
 var (
 	openAIBaseURLOverride = "" // tests point every preset at a fake server
 	openAIMaxRetries      = 1  // one SDK retry for transient errors
-	openAIMaxTokens       = map[Role]int64{RoleGrading: 16000, RoleTips: 1024, RolePlanning: 16000, RoleMatching: 16000, RoleWriting: 32000}
+	openAIMaxTokens       = map[Role]int64{RoleGrading: 16000, RoleTips: 1024, RolePlanning: 16000, RoleMatching: 16000, RoleWriting: 16000}
 	openAITimeout         = map[Role]time.Duration{RoleGrading: 5 * time.Minute, RoleTips: 60 * time.Second, RolePlanning: 2 * time.Minute, RoleMatching: 5 * time.Minute, RoleWriting: 5 * time.Minute}
 )
 

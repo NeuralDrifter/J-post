@@ -18,6 +18,8 @@ const (
 	VersionNamed         = "named"
 	VersionBeforeRestore = "before-restore"
 	VersionRestored      = "restored"
+	VersionBeforeAI      = "before-ai" // the document just before an AI run's first accepted change
+	VersionAI            = "ai"        // changes accepted from an AI run, named like a commit message
 )
 
 const (
@@ -86,6 +88,23 @@ func (r *Repo) NameDocumentVersion(documentID, name string) (DocumentVersion, er
 	}
 	v := DocumentVersion{ID: newID(), DocumentID: doc.ID, Kind: VersionNamed, Name: name, CreatedAt: ts(r.now())}
 	return v, insertVersion(r.db, v, doc.Data, doc.PlainText, "")
+}
+
+// CommitAIVersion keeps a snapshot the builder took around accepting AI
+// changes: the document just before (before-ai) or with them (ai, named for
+// what changed). Both are kept until the document is deleted.
+func (r *Repo) CommitAIVersion(documentID, kind, name, data, plainText string) (DocumentVersion, error) {
+	if kind != VersionAI && kind != VersionBeforeAI {
+		return DocumentVersion{}, fmt.Errorf("unknown AI version kind %q", kind)
+	}
+	if err := validateDocumentData(data); err != nil {
+		return DocumentVersion{}, err
+	}
+	if err := r.checkEditable(documentID); err != nil {
+		return DocumentVersion{}, err
+	}
+	v := DocumentVersion{ID: newID(), DocumentID: documentID, Kind: kind, Name: strings.TrimSpace(name), CreatedAt: ts(r.now())}
+	return v, insertVersion(r.db, v, data, plainText, "")
 }
 
 // RenameDocumentVersion renames a named version; other kinds have no name to change.

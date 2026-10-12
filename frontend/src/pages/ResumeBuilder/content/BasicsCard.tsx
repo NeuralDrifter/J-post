@@ -8,6 +8,8 @@ import { IconButton } from '../../../components/IconButton'
 import { useResume, useUpdate } from '../editorContext'
 import { Fold } from '../ui/controls'
 import { IconPicker } from '../ui/IconPicker'
+import { BASICS_SECTION } from '../../../lib/resumes/ai/resumeChanges'
+import { SectionChanges } from '../ai/SectionChanges'
 import { TextInput } from './fields'
 
 type TextKey = 'name' | 'headline' | 'email' | 'phone' | 'location'
@@ -31,6 +33,7 @@ export function BasicsCard() {
       <Fold title="Basics" icon={<IdCard size={15} className="shrink-0 text-indigo-300" />} defaultOpen>
         <BasicsForm basics={basics} edit={(mutate) => update((d) => mutate(d.basics))} />
       </Fold>
+      <SectionChanges sectionId={BASICS_SECTION} />
     </div>
   )
 }

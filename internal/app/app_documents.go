@@ -142,3 +142,26 @@ func (a *App) SetDocumentLocked(id string, locked bool) error {
 func (a *App) SetLetterSource(letterID, resumeID string, senderLinked, designLinked bool) error {
 	return a.repo.SetLetterSource(letterID, resumeID, senderLinked, designLinked)
 }
+
+// ---- AI on resumes and letters (see resume_ai.go) ----
+
+// RunResumeAI runs a resume or letter AI task and keeps its suggestions with the document.
+func (a *App) RunResumeAI(req ResumeAIRequest) (AIGeneration, error) {
+	s, err := a.settings.Load()
+	if err != nil {
+		return AIGeneration{}, err
+	}
+	return runResumeAI(a.lifetimeContext(), a.repo, s, req)
+}
+
+func (a *App) ListAIGenerations(documentID string) ([]AIGeneration, error) {
+	return a.repo.ListAIGenerations(documentID)
+}
+
+func (a *App) SetAIGenerationDecisions(id, decisions string) error {
+	return a.repo.SetAIGenerationDecisions(id, decisions)
+}
+
+func (a *App) CommitAIVersion(documentID, kind, name, data, plainText string) (DocumentVersion, error) {
+	return a.repo.CommitAIVersion(documentID, kind, name, data, plainText)
+}

@@ -406,6 +406,22 @@ var migrations = []string{
 	ALTER TABLE documents ADD COLUMN design_linked INTEGER NOT NULL DEFAULT 0;`,
 	// 16: the uploaded resume is gone; resumes live in documents.
 	`DROP TABLE profile;`,
+	// 17: each document's AI runs and what was accepted from them (see ai_generations.go).
+	`CREATE TABLE ai_generations (
+		id TEXT PRIMARY KEY,
+		document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+		task TEXT NOT NULL,
+		section_key TEXT NOT NULL DEFAULT '',
+		job_id TEXT NOT NULL DEFAULT '',
+		posting TEXT NOT NULL DEFAULT '',
+		context TEXT NOT NULL DEFAULT '',
+		provider TEXT NOT NULL,
+		model TEXT NOT NULL DEFAULT '',
+		edits TEXT NOT NULL,
+		decisions TEXT NOT NULL DEFAULT '{}',
+		created_at TEXT NOT NULL
+	);
+	CREATE INDEX idx_ai_generations_doc ON ai_generations(document_id, created_at);`,
 }
 
 func openDB(path string) (*sql.DB, error) {

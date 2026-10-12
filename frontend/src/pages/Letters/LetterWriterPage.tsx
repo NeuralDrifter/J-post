@@ -88,7 +88,7 @@ function Workspace({ initial, ...props }: EditorProps & { initial: LetterData })
 function LetterEditor({ doc, store, reopened, onRestored }: EditorProps & { store: StoreApi<EditorState<LetterData>> }) {
   const [zoom, setZoom] = useState<Zoom>('fit')
   const [rightPanel, setRightPanel] = useState<RightPanel>(reopened ? 'history' : 'design')
-  const history = useVersionHistory(doc.id, store, onRestored)
+  const history = useVersionHistory(doc.id, store, letterPlainText, onRestored)
   const previewed = usePreviewedLetter(rightPanel === 'history' ? history.previewed : null)
   const locked = doc.locked
   const panels: Record<RightPanel, ReactNode> = {

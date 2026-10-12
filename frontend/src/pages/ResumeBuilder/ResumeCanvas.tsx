@@ -6,6 +6,7 @@ import type { ResumeData } from '../../lib/resumes/document'
 import { CheckPageLayer, PageViewToggle } from './check/CheckPageLayer'
 import { ParserView } from './check/ParserView'
 import { FitChip } from './design/FitChip'
+import { useMarkedChanges } from './ai/PageMarks'
 import { VersionBanner } from './history/VersionBanner'
 import { useResume } from './editorContext'
 import { PreviewCanvas, type RenderedPreview } from './PreviewCanvas'
@@ -21,7 +22,7 @@ import type { Zoom } from './zoom'
 export type ResumeVersion = { title: string; data: ResumeData }
 
 export function ResumeCanvas({ zoom, checking, version }: { zoom: Zoom; checking: boolean; version?: ResumeVersion }) {
-  const live = useWithPreviewedTemplate(useResume())
+  const live = useWithPreviewedTemplate(useMarkedChanges(useResume()))
   const pageMap = useBuilderView((s) => s.rendered.pageMap)
   const pageView = useBuilderView((s) => s.pageView)
   const onRendered = useCallback(({ pdf, pageMap, pageCount }: RenderedPreview) => useBuilderView.getState().setRendered({ file: pdf, pageMap, pageCount }), [])

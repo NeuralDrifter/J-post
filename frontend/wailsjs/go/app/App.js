@@ -10,6 +10,10 @@ export function ClearDismissed(arg1) {
   return window['go']['app']['App']['ClearDismissed'](arg1);
 }
 
+export function CommitAIVersion(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['CommitAIVersion'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function CreateDocument(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['CreateDocument'](arg1, arg2, arg3, arg4);
 }
@@ -140,6 +144,10 @@ export function InboxCounts() {
 
 export function LinkJobDocuments(arg1, arg2, arg3) {
   return window['go']['app']['App']['LinkJobDocuments'](arg1, arg2, arg3);
+}
+
+export function ListAIGenerations(arg1) {
+  return window['go']['app']['App']['ListAIGenerations'](arg1);
 }
 
 export function ListAIModels(arg1, arg2) {
@@ -306,6 +314,10 @@ export function RestorePosting(arg1) {
   return window['go']['app']['App']['RestorePosting'](arg1);
 }
 
+export function RunResumeAI(arg1) {
+  return window['go']['app']['App']['RunResumeAI'](arg1);
+}
+
 export function RunSearch(arg1) {
   return window['go']['app']['App']['RunSearch'](arg1);
 }
@@ -372,6 +384,10 @@ export function SearchAreas(arg1) {
 
 export function SearchOccupations(arg1) {
   return window['go']['app']['App']['SearchOccupations'](arg1);
+}
+
+export function SetAIGenerationDecisions(arg1, arg2) {
+  return window['go']['app']['App']['SetAIGenerationDecisions'](arg1, arg2);
 }
 
 export function SetDefaultResume(arg1) {

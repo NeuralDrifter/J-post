@@ -132,3 +132,13 @@ func TestEveryRoleHasLimits(t *testing.T) {
 		}
 	}
 }
+
+func TestGeminiSchemaConvertsAnyOf(t *testing.T) {
+	in := map[string]any{"anyOf": []any{
+		map[string]any{"type": "object", "properties": map[string]any{"a": map[string]any{"type": "string"}}, "additionalProperties": false},
+	}}
+	got := GeminiSchema(in)["anyOf"].([]any)[0].(map[string]any)
+	if got["type"] != "OBJECT" || got["additionalProperties"] != nil || got["properties"].(map[string]any)["a"].(map[string]any)["type"] != "STRING" {
+		t.Fatalf("got %v", got)
+	}
+}

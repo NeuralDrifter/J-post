@@ -14,12 +14,15 @@ describe('version labels', () => {
     expect(versionTitle({ kind: 'auto', name: '' })).toBe('Editing session')
     expect(versionTitle({ kind: 'before-restore', name: '' })).toBe('Before restore')
     expect(versionTitle({ kind: 'mystery', name: '' })).toBe('Version')
+    expect(versionTitle({ kind: 'before-ai', name: '' })).toBe('Before AI edit')
+    expect(versionTitle({ kind: 'ai', name: 'Tailored Summary · claude-opus-5-5' })).toBe('Tailored Summary · claude-opus-5-5')
   })
 
   it('says how a version was saved', () => {
     expect(versionDetail('auto')).toBe('autosaved')
     expect(versionDetail('named')).toBe('named')
     expect(versionDetail('created')).toBe('saved')
+    expect(versionDetail('ai')).toBe('AI')
   })
 
   it('lets only named versions be edited', () => {

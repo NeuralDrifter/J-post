@@ -14,7 +14,7 @@ import type { PreviewedVersion } from './HistoryPanel'
  * restoring one. A restore saves pending edits first, then hands the restored document to
  * `onRestored`, which reopens the editor on it.
  */
-export function useVersionHistory<T>(docId: string, store: StoreApi<EditorState<T>>, onRestored: (doc: app.Document) => void) {
+export function useVersionHistory<T>(docId: string, store: StoreApi<EditorState<T>>, plainText: (data: T) => string, onRestored: (doc: app.Document) => void) {
   const [previewed, setPreviewed] = useState<PreviewedVersion | null>(null)
   const flush = () => store.getState().saveNow()
 
@@ -27,5 +27,12 @@ export function useVersionHistory<T>(docId: string, store: StoreApi<EditorState<
     onRestored(restored)
   }
 
-  return { docId, previewed, onPreview: setPreviewed, flush, onRestore: (version: PreviewedVersion) => void restore(version) }
+  return {
+    docId,
+    previewed,
+    onPreview: setPreviewed,
+    flush,
+    onRestore: (version: PreviewedVersion) => void restore(version),
+    nowText: () => plainText(store.getState().data),
+  }
 }

@@ -8,17 +8,20 @@ const TITLES: Record<string, string> = {
   auto: 'Editing session',
   'before-restore': 'Before restore',
   restored: 'Restored a version',
+  'before-ai': 'Before AI edit',
 }
 
 /** A version's title: its name for a named version, else what made it. */
 export function versionTitle(version: { kind: string; name: string }): string {
   if (version.kind === 'named') return version.name || 'Named version'
+  if (version.kind === 'ai') return version.name || 'AI edit'
   return TITLES[version.kind] ?? 'Version'
 }
 
 /** How the version came about, shown beside when. */
 export function versionDetail(kind: string): string {
   if (kind === 'named') return 'named'
+  if (kind === 'ai' || kind === 'before-ai') return 'AI'
   return kind === 'auto' || kind === 'before-restore' ? 'autosaved' : 'saved'
 }
 

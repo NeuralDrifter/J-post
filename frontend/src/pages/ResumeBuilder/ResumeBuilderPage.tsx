@@ -13,6 +13,10 @@ import { resumeExportable } from '../../lib/resumes/stored'
 import { newEditingSession } from '../../lib/resumes/versions'
 import { parseStoredResume, resumePlainText, serializeResume, type ResumeData } from '../../lib/resumes/document'
 import { useLoad } from '../../lib/useLoad'
+import { compileResumeGeneration, sectionTitle } from '../../lib/resumes/ai/resumeChanges'
+import type { AIDocument } from './ai/aiDocument'
+import { ReviewBar } from './ai/ReviewBar'
+import { AIReviewProvider } from './ai/ReviewContext'
 import { BuilderTopBar, useEditorControls } from './BuilderTopBar'
 import { CheckPanel } from './check/CheckPanel'
 import { useDocumentMenu } from './DocumentMenu'
@@ -95,9 +99,15 @@ function Workspace({ initial, ...props }: EditorProps & { initial: ResumeData })
   }, [store, doc.locked])
   // What the builder shows (selection, Check's state) belongs to this visit only.
   useEffect(() => () => useBuilderView.getState().reset(), [])
+  const aiDoc = useMemo<AIDocument<ResumeData>>(
+    () => ({ docId: doc.id, editor: store, compile: compileResumeGeneration, serialize: serializeResume, plainText: resumePlainText, sectionTitle }),
+    [doc.id, store],
+  )
   return (
     <EditorContext value={store}>
-      <ResumeEditor {...props} />
+      <AIReviewProvider doc={aiDoc}>
+        <ResumeEditor {...props} />
+      </AIReviewProvider>
     </EditorContext>
   )
 }
@@ -109,7 +119,7 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const update = useEditor((s) => s.update)
   const store = useEditorStore()
   const controls = useEditorControls(store)
-  const history = useVersionHistory(doc.id, store, onRestored)
+  const history = useVersionHistory(doc.id, store, resumePlainText, onRestored)
   const previewed = usePreviewedResume(rightPanel === 'history' ? history.previewed : null)
   const locked = doc.locked
   const panels: Record<RightPanel, ReactNode> = {
@@ -147,7 +157,12 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
             documentItems={menu.items}
             locked={locked}
             onUnlock={() => void setDocumentLocked(doc, false)}
-            actions={<DefaultResumeButton docId={doc.id} isDefault={isDefault} />}
+            actions={
+              <>
+                <ReviewBar />
+                <DefaultResumeButton docId={doc.id} isDefault={isDefault} />
+              </>
+            }
             zoom={zoom}
             onZoom={setZoom}
             onTogglePanel={togglePanel}

@@ -35,6 +35,40 @@ export namespace ai {
 
 export namespace app {
 	
+	export class AIGeneration {
+	    id: string;
+	    documentId: string;
+	    task: string;
+	    sectionKey: string;
+	    jobId: string;
+	    posting: string;
+	    context: string;
+	    provider: string;
+	    model: string;
+	    edits: string;
+	    decisions: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIGeneration(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.documentId = source["documentId"];
+	        this.task = source["task"];
+	        this.sectionKey = source["sectionKey"];
+	        this.jobId = source["jobId"];
+	        this.posting = source["posting"];
+	        this.context = source["context"];
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	        this.edits = source["edits"];
+	        this.decisions = source["decisions"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class AtsReport {
 	    jobId: string;
 	    report: string;
@@ -1317,6 +1351,34 @@ export namespace app {
 	    }
 	}
 	
+	export class ResumeAIRequest {
+	    task: string;
+	    documentId: string;
+	    sectionKey: string;
+	    jobId: string;
+	    posting: string;
+	    input: string;
+	    context: string;
+	    provider: string;
+	    model: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ResumeAIRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.task = source["task"];
+	        this.documentId = source["documentId"];
+	        this.sectionKey = source["sectionKey"];
+	        this.jobId = source["jobId"];
+	        this.posting = source["posting"];
+	        this.input = source["input"];
+	        this.context = source["context"];
+	        this.provider = source["provider"];
+	        this.model = source["model"];
+	    }
+	}
 	
 	export class SavedSearch {
 	    id: string;
