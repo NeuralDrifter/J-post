@@ -8,6 +8,7 @@ import { Panel } from '../../components/Panel'
 import { api, apiOk } from '../../lib/api'
 import { GetDocument, GetSettings, LinkJobDocuments, ListDocuments, RestoreDocument, TailorResumeForJob, type app } from '../../lib/backend'
 import { notifyDataChanged } from '../../lib/events'
+import { requestNeedsResume } from '../../lib/needsResume'
 import { documentPath, LETTER_KIND, RESUME_KIND } from '../../lib/resumes/paths'
 import { toast } from '../../lib/toast'
 import { useLoad } from '../../lib/useLoad'
@@ -81,20 +82,20 @@ async function restore(id: string) {
   if (await apiOk(RestoreDocument(id))) notifyDataChanged()
 }
 
-/** Copies the linked resume (or the default) for this job, links the copy and opens it to adjust. */
+/** Copies the linked resume (or the default) for this job, links the copy and opens it on Tailor with this job chosen. */
 function TailorButton({ job }: { job: app.Job }) {
   const navigate = useNavigate()
   const tailor = async () => {
     const sourceId = job.resumeId || (await api(GetSettings()))?.defaultResumeId
     if (!sourceId) {
-      toast.info('Choose a resume for this job (or set a default resume) to tailor a copy of it.')
+      requestNeedsResume()
       return
     }
     const copy = await api(TailorResumeForJob(job.id, sourceId))
     if (!copy) return
     notifyDataChanged()
     toast.success(`Made "${copy.name}" for this job`)
-    navigate(documentPath(copy))
+    navigate(`${documentPath(copy)}?panel=tailor&job=${encodeURIComponent(job.id)}`)
   }
   return (
     <IconButton label="Tailor a copy for this job" onClick={tailor}>

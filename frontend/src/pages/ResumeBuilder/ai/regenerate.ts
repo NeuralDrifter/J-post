@@ -3,8 +3,10 @@
 
 import type { Passage } from '@reactive-resume/resume/proposals'
 import type { app } from '../../../lib/backend'
+import type { ResumeData } from '../../../lib/resumes/document'
 import { improveAgain } from '../../../lib/resumes/ai/improve'
 import type { SectionReview } from '../../../lib/resumes/ai/review'
+import { parseTailorTerms, tailorMaterial } from '../../../lib/resumes/ai/tailor'
 import { SETTINGS_TASK } from '../../../lib/resumes/ai/tasks'
 import type { AIDocument } from './aiDocument'
 import type { RedoTarget } from './redoTargets'
@@ -19,6 +21,7 @@ export type Regenerator = (args: RegenerateArgs) => Pick<app.ResumeAIRequest, 'i
 /** Tasks that can redo one section, by task id. Each feature adds its own. */
 export const REGENERATORS: Partial<Record<string, Regenerator>> = {
   [SETTINGS_TASK.improve]: ({ gen, passages, avoid }) => improveAgain(gen.context, passages, avoid),
+  [SETTINGS_TASK.tailor]: ({ data, gen, passages, sectionId, avoid }) => tailorMaterial(data as ResumeData, passages, parseTailorTerms(gen.context), { section: sectionId, avoid }),
 }
 
 export const sectionRunKey = (sectionId: string) => `section:${sectionId}`

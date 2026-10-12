@@ -200,3 +200,14 @@ func TestImproveAsksForOneRewrite(t *testing.T) {
 		t.Fatalf("body = %v", body)
 	}
 }
+
+func TestTailorOffersEveryResumeEdit(t *testing.T) {
+	items := tailorTask.schema["properties"].(map[string]any)["edits"].(map[string]any)["items"].(map[string]any)["anyOf"].([]any)
+	var kinds []string
+	for _, shape := range items {
+		kinds = append(kinds, shape.(map[string]any)["properties"].(map[string]any)["kind"].(map[string]any)["enum"].([]string)[0])
+	}
+	if strings.Join(kinds, ",") != "rewrite,addAfter,setHeadline,orderSkills,addSkill,hideItem" {
+		t.Fatalf("kinds = %v", kinds)
+	}
+}

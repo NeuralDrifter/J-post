@@ -16,6 +16,7 @@ import { useLoad } from '../../lib/useLoad'
 import { compileResumeGeneration, resumePassages, sectionTitle } from '../../lib/resumes/ai/resumeChanges'
 import type { AIDocument } from './ai/aiDocument'
 import { ReviewBar } from './ai/ReviewBar'
+import { TailorPanel } from './ai/TailorPanel'
 import { AIReviewProvider } from './ai/ReviewContext'
 import { BuilderTopBar, useEditorControls } from './BuilderTopBar'
 import { CheckPanel } from './check/CheckPanel'
@@ -40,13 +41,16 @@ import { zoomIn, zoomOut, type Zoom } from './zoom'
 
 const BACK = { to: '/resumes', label: 'Resumes' }
 
-type RightPanel = 'design' | 'check' | 'history'
+type RightPanel = 'design' | 'tailor' | 'check' | 'history'
 
 const RIGHT_PANELS: { value: RightPanel; label: string }[] = [
   { value: 'design', label: 'Design' },
+  { value: 'tailor', label: 'Tailor' },
   { value: 'check', label: 'Check' },
   { value: 'history', label: 'History' },
 ]
+
+const isRightPanel = (value: string | null): value is RightPanel => RIGHT_PANELS.some((p) => p.value === value)
 
 /** /resumes/:id — remounted per resume so no editing state leaks between them. */
 export default function ResumeBuilderPage() {
@@ -114,7 +118,13 @@ function Workspace({ initial, ...props }: EditorProps & { initial: ResumeData })
 
 function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const [zoom, setZoom] = useState<Zoom>('fit')
+  const search = useLocation().search
   const [rightPanel, setRightPanel] = useState<RightPanel>(reopened ? 'history' : 'design')
+  // ?panel=tailor (from a job page or a section's menu) opens that panel.
+  const askedPanel = new URLSearchParams(search).get('panel')
+  useEffect(() => {
+    if (isRightPanel(askedPanel)) setRightPanel(askedPanel)
+  }, [askedPanel])
   const data = useEditor((s) => s.data)
   const update = useEditor((s) => s.update)
   const store = useEditorStore()
@@ -124,6 +134,7 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const locked = doc.locked
   const panels: Record<RightPanel, ReactNode> = {
     design: <ReadOnly when={locked}><ResumeDesignPanel /></ReadOnly>,
+    tailor: <TailorPanel doc={doc} />,
     check: <ReadOnly when={locked}><CheckPanel doc={doc} /></ReadOnly>,
     history: <HistoryPanel {...history} />,
   }
@@ -140,7 +151,7 @@ function ResumeEditor({ doc, isDefault, reopened, onRestored }: EditorProps) {
   const exportable = resumeExportable(doc.name, data)
   const exportAs = (format: ExportFormat) => exportDocument(exportable, format)
   const pageCount = useBuilderView((s) => s.rendered.pageCount)
-  const back = returnTarget(useLocation().search, BACK)
+  const back = returnTarget(search, BACK)
   const menu = useDocumentMenu({ doc, exportable, back: BACK.to, details: { template: data.metadata.template, pageCount, plainText: resumePlainText(data) } })
   useBuilderHotkeys({ undo: controls.undo, redo: controls.redo, exportPdf: () => void exportAs('pdf'), print: () => void menu.print(), zoomIn: () => setZoom(zoomIn), zoomOut: () => setZoom(zoomOut) })
 

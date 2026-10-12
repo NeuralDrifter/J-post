@@ -10,6 +10,7 @@ import { openMenu } from '../../../lib/menu'
 import { useResume, useUpdate } from '../editorContext'
 import { Collapsible } from '../ui/controls'
 import { IconGrid } from '../ui/IconPicker'
+import { useSectionAIMenu } from '../ai/sectionAIMenu'
 import { SectionChanges } from '../ai/SectionChanges'
 import { EntryList } from './EntryList'
 import { RichTextField } from './RichTextField'
@@ -32,6 +33,7 @@ export function SectionCard({ section, open, onToggle, previous, next, onOpenEnt
   const data = useResume()
   const update = useUpdate()
   const [pickingIcon, setPickingIcon] = useState(false)
+  const aiMenu = useSectionAIMenu(section.id)
   const settings = getSectionObject(data, section)
   if (!settings) return null
   const title = getResumeSectionTitle(data, section.id)
@@ -44,7 +46,11 @@ export function SectionCard({ section, open, onToggle, previous, next, onOpenEnt
     onOpenEntry(section.id, entry.id)
   }
   const showMenu = (e: React.MouseEvent) =>
-    openMenu(e, sectionMenu({ section, settings, title, previous, next, update, onEntryAdded: (id) => onOpenEntry(section.id, id), onPickIcon: () => setPickingIcon(true) }))
+    openMenu(e, [
+      ...aiMenu,
+      'separator',
+      ...sectionMenu({ section, settings, title, previous, next, update, onEntryAdded: (id) => onOpenEntry(section.id, id), onPickIcon: () => setPickingIcon(true) }),
+    ])
   const setIcon = (icon: string) => {
     update((d) => {
       const target = getSectionObject(d, section)

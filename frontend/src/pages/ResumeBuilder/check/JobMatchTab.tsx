@@ -49,7 +49,7 @@ export function JobMatchTab({ doc, data }: { doc: app.Document; data: ResumeData
 }
 
 /** The match, once the matcher has loaded; it loads only when there's a posting. */
-function useJobMatch(posting: string, data: ResumeData): JobMatchResult | null {
+export function useJobMatch(posting: string, data: ResumeData): JobMatchResult | null {
   const [matcher, setMatcher] = useState<Matcher | null>(null)
   useEffect(() => {
     if (posting && !matcher) loadMatcher().then(setMatcher, () => toast.error("The posting couldn't be read."))
