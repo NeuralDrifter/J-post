@@ -12,7 +12,7 @@ import type { SemanticCssColorToken } from '@reactive-resume/web/features/resume
 import { createSemanticCssEditorExtensions, type SemanticCssColorSelection } from '@reactive-resume/web/features/resume/stylesheet/editor-extensions'
 import type { SemanticCssEditorMetadata } from '@reactive-resume/web/features/resume/stylesheet/protocol'
 
-// The editor in Job Track's colours (index.css @theme tokens).
+// The editor in J-POST's colours (index.css @theme tokens).
 const theme = EditorView.theme(
   {
     '&': { backgroundColor: 'rgb(0 0 0 / 0.3)', color: 'var(--color-ink)', borderRadius: '0.5rem', border: '1px solid var(--color-line)', fontSize: '12px', height: '100%' },

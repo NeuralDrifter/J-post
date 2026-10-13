@@ -26,10 +26,10 @@ var skipDirs = map[string]bool{
 	"reference": true, "__pycache__": true, "__fixtures__": true,
 }
 
-// Every source file Job Track wrote starts with its copyright and license notice.
+// Every source file J-POST wrote starts with its copyright and license notice.
 func TestSourceFilesCarryCopyright(t *testing.T) {
 	missing := filesLackingHeader(t, ".", vendoredRoot, copyrightLine, mitLicenseLine)
-	reportMissing(t, missing, "Job Track's copyright notice")
+	reportMissing(t, missing, "J-POST's copyright notice")
 }
 
 // Every vendored Reactive Resume file credits its origin and author.

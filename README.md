@@ -1,6 +1,6 @@
-# Job Track
+# J-POST
 
-A desktop job-search tracker: a dark "mission control" pipeline board, a detail page per application, and a Discover page that searches several job boards at once. Built with [Wails](https://wails.io) (Go backend + React/TypeScript frontend). Everything is stored locally.
+J-POST (Job Prep, Optimization, Search, Tracker) is a desktop job-search tracker: a dark "mission control" pipeline board, a detail page per application, and a Discover page that searches several job boards at once. Built with [Wails](https://wails.io) (Go backend + React/TypeScript frontend). Everything is stored locally.
 
 ## Features
 
@@ -69,7 +69,7 @@ python -m venv venv
 
 Discover looks for Python in this order:
 1. The path set in **Settings**.
-2. `venv\Scripts\python.exe` next to `Job_Track.exe`.
+2. `venv\Scripts\python.exe` next to `J-POST.exe`.
 3. `venv\Scripts\python.exe` in the current folder.
 
 The **Test** button in Settings shows which one it found.
@@ -82,7 +82,7 @@ Adzuna is optional. Get free keys at [developer.adzuna.com](https://developer.ad
 wails dev                      # live-reloading app (also served at http://localhost:34115)
 go test ./...                  # backend tests
 cd frontend; npm test          # frontend tests
-wails build                    # produces build\bin\Job_Track.exe
+wails build                    # produces build\bin\J-POST.exe
 bash tools/verify.sh           # everything above except the build, in one go
 ```
 
@@ -151,7 +151,7 @@ Set `JOBTRACK_DATA_DIR` to use a different folder, which is useful for testing w
 
 ## License
 
-Job Track is released under the [MIT License](LICENSE). Copyright (c) 2026 Michael P. Burgus ([NeuralDrifter](https://github.com/NeuralDrifter)).
+J-POST is released under the [MIT License](LICENSE). Copyright (c) 2026 Michael P. Burgus ([NeuralDrifter](https://github.com/NeuralDrifter)).
 
 Every source file starts with that copyright line and `SPDX-License-Identifier: MIT`; `go test ./...` checks it, so add both to new files. Third-party libraries, fonts, data and the Wails template files in `build/` keep their own licenses.
 

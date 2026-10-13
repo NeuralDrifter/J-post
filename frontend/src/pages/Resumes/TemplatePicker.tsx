@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-// Reactive Resume's template gallery in Job Track's style: filters, and cards
+// Reactive Resume's template gallery in J-POST's style: filters, and cards
 // drawn from the author's own content where there is some.
 import { useState, type KeyboardEvent } from 'react'
 import { Check } from 'lucide-react'

@@ -24,7 +24,7 @@ func Run(dataDir string, assets fs.FS, fontList []byte) error {
 	// The window starts hidden at a conservative size; domReady resizes it to
 	// fit the actual screen before showing it.
 	return wails.Run(&options.App{
-		Title:            "Job Track",
+		Title:            "J-POST",
 		Width:            1440,
 		Height:           900,
 		StartHidden:      true,

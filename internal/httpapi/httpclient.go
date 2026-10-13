@@ -23,7 +23,7 @@ import (
 // Request.Send, so the rule "never put a request URL in an error" lives here.
 var (
 	apiTimeout   = 30 * time.Second
-	apiUserAgent = "JobTrack/1.0 (personal job tracker)"
+	apiUserAgent = "J-POST/1.0 (personal job tracker)"
 )
 
 const maxResponseBytes = 32 << 20

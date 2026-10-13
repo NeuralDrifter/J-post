@@ -4,7 +4,7 @@
 /** Hand-written credits shown under the generated library list. */
 export type Credit = { name: string; detail: string; license?: string; url: string }
 
-/** Tools that helped build Job Track. AI coding help is credited here by model name, not in commits. */
+/** Tools that helped build J-POST. AI coding help is credited here by model name, not in commits. */
 export const BUILT_WITH: Credit[] = [
   {
     name: 'Claude Opus 5.5 (Anthropic)',
@@ -50,7 +50,7 @@ export const DATA: Credit[] = [
   },
 ]
 
-/** Services Job Track connects to with your own accounts and keys. */
+/** Services J-POST connects to with your own accounts and keys. */
 export const SERVICES: Credit[] = [
   { name: 'Adzuna', detail: 'Job search API.', url: 'https://developer.adzuna.com/' },
   { name: 'USAJobs', detail: 'Federal job search API.', url: 'https://developer.usajobs.gov/' },
@@ -71,7 +71,7 @@ export const SERVICES: Credit[] = [
   { name: 'LM Studio', detail: 'Local models on your own computer.', url: 'https://lmstudio.ai/' },
 ]
 
-/** Projects whose ideas or research shaped Job Track, without their code being copied. */
+/** Projects whose ideas or research shaped J-POST, without their code being copied. */
 export const THANKS: Credit[] = [
   {
     name: 'ATS Screener',

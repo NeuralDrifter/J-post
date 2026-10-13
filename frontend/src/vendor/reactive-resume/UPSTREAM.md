@@ -5,8 +5,8 @@ Upstream: https://github.com/reactive-resume/reactive-resume
 Commit: b3d8266c5e8f6d8ed8401baa64ceefd912281e7e (2026-10-06)
 License: MIT, Copyright (c) 2026 Amruth Pillai (see LICENSE in this folder)
 
-Job Track's resume builder, templates, exporters, importers and ATS checker are
-built on this code. Job Track's own screens are new code. Where a screen follows a
+J-POST's resume builder, templates, exporters, importers and ATS checker are
+built on this code. J-POST's own screens are new code. Where a screen follows a
 Reactive Resume screen's behaviour, its header says so.
 
 ## What was taken
@@ -31,7 +31,7 @@ the aliases in `frontend/vite.config.ts` and `paths` in `frontend/tsconfig.json`
 | `web/features/ats-checker/run-ats-check.ts` | `apps/web` | Runs the ATS analysis on a PDF, optionally against a job description |
 | `web/features/ats-checker/messages.ts` | `apps/web` | The ATS findings, categories and severities in words |
 | `web/features/resume/editor/check/issues.ts` | `apps/web` | The builder's live Check issues, with their fixes |
-| `web/features/resume/editor/store.ts` | `apps/web` | The editor's view state (selection, Check, the last render, template preview); the document itself is in Job Track's own store |
+| `web/features/resume/editor/store.ts` | `apps/web` | The editor's view state (selection, Check, the last render, template preview); the document itself is in J-POST's own store |
 | `web/features/resume/stylesheet/{color-tokens,targets}.ts` | `apps/web` | Custom CSS colour swatches, and the CSS selector for a block clicked on the page |
 | `web/features/letters/length.ts` | `apps/web` | A letter's length in words, and whether it's in the usual range |
 | `web/components/typography/get-next-weights.ts` | `apps/web` | Which font weights to keep when the family changes |
@@ -39,7 +39,7 @@ the aliases in `frontend/vite.config.ts` and `paths` in `frontend/tsconfig.json`
 | `web/components/input/{rich-text-extensions,paragraph-indent,rich-input-whitespace}.ts` | `apps/web` | The rich-text editor's extensions, so formatting from imports survives editing |
 | `web/templates/*.jpg` | `apps/web/public/templates/jpg` | Template preview images |
 
-Upstream writes its messages with Lingui's `t` macro. Job Track is English-only, so
+Upstream writes its messages with Lingui's `t` macro. J-POST is English-only, so
 `@lingui/core/macro` resolves to `frontend/src/vendor/linguiMacro.ts`, which reads each
 message as written (`@lingui/core`, used by upstream's tests, resolves to a no-op
 `linguiCore.ts`); `@reactive-resume/ui/components/icon`, a type-only import, resolves to
@@ -47,7 +47,7 @@ message as written (`@lingui/core`, used by upstream's tests, resolves to a no-o
 
 Not taken: `ai`, `api`, `auth`, `db`, `email`, `env`, `mcp`, `dsh-plugin`, `ui`,
 `config`, `apps/server`, and the rest of `apps/web`, which is a behavioural reference
-only: Job Track's screens are its own. The `web/` files above (and their tests) are
+only: J-POST's screens are its own. The `web/` files above (and their tests) are
 UI-free logic, kept at their upstream paths.
 
 ## Left out
@@ -72,8 +72,8 @@ Each changed file also carries `// Modified by Michael P. Burgus, 2026.`
 
 | File | Change | Why |
 |---|---|---|
-| `resume/stylesheet/values.ts` | `border` shorthand expansion returns `[string, string]` tuples instead of `as const` | TypeScript 5.9 (Job Track) infers a readonly tuple there that upstream's TypeScript 7 accepts |
-| `pdf/forme/fonts.ts` | Font files are fetched from `/rr-fonts?src=<url>` instead of the URL itself | Job Track's Go side (`internal/resumes`) downloads each listed font once and serves it offline afterwards |
+| `resume/stylesheet/values.ts` | `border` shorthand expansion returns `[string, string]` tuples instead of `as const` | TypeScript 5.9 (J-POST) infers a readonly tuple there that upstream's TypeScript 7 accepts |
+| `pdf/forme/fonts.ts` | Font files are fetched from `/rr-fonts?src=<url>` instead of the URL itself | J-POST's Go side (`internal/resumes`) downloads each listed font once and serves it offline afterwards |
 | `web/features/ats-checker/extract-client.ts` | The pdf.js worker URL comes from a `?url` import | Vite doesn't resolve `new URL('pdfjs-dist/…', import.meta.url)`; the import gives the same worker the preview uses |
 
 ## Re-syncing

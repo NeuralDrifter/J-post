@@ -5,7 +5,7 @@ import type { PdfFontRequest } from "../hooks/use-register-fonts";
 import type { FormeFont } from "@formepdf/react";
 import { prepareFontBytes } from "./font-bytes";
 
-// Job Track: fonts come through the app's own cache (internal/resumes), which
+// J-POST: fonts come through the app's own cache (internal/resumes), which
 // downloads each listed file once and serves it offline afterwards.
 const viaAppCache = (src: string) => `/rr-fonts?src=${encodeURIComponent(src)}`;
 

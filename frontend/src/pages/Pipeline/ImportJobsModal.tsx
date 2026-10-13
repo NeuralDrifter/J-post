@@ -13,7 +13,7 @@ import { toast } from '../../lib/toast'
 
 const FIELDS = Object.keys(CSV_FIELD_LABELS) as CsvField[]
 
-/** Adds jobs from a CSV file (Job Track's own export, or another tracker's), with each column matched to a field. */
+/** Adds jobs from a CSV file (J-POST's own export, or another tracker's), with each column matched to a field. */
 export function ImportJobsModal({ existing, onClose }: { existing: app.Job[]; onClose: () => void }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [table, setTable] = useState<string[][] | null>(null)
@@ -50,7 +50,7 @@ export function ImportJobsModal({ existing, onClose }: { existing: app.Job[]; on
   return (
     <Modal title="Import jobs from CSV" onClose={onClose} width="max-w-2xl">
       <div className="space-y-4">
-        <p className="text-sm text-ink-2">A spreadsheet with a row per job: Job Track's own export, or one from another tracker. Each job needs a company and a position.</p>
+        <p className="text-sm text-ink-2">A spreadsheet with a row per job: J-POST's own export, or one from another tracker. Each job needs a company and a position.</p>
         <button type="button" className="btn btn-ghost" onClick={() => fileInput.current?.click()}>
           <FileUp size={14} /> {table ? 'Choose another file' : 'Choose a .csv file'}
         </button>

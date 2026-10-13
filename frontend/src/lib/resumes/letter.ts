@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-// A cover letter as Job Track stores it: Reactive Resume's cover-letter document,
+// A cover letter as J-POST stores it: Reactive Resume's cover-letter document,
 // drawn by composing it into a one-section resume on the letter's own design.
 import type { ResumeRenderOptions } from '@reactive-resume/pdf/context'
 import { composeCoverLetter, copyCoverLetterStyle, createCoverLetterResumeData, type LetterWords } from '@reactive-resume/resume/cover-letter'
@@ -23,7 +23,7 @@ const LETTER_SECTION_NAME = 'Cover letter'
 
 const LETTER_DATE_FORMAT = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 
-/** The words structured letters are written with (Job Track is English-only). */
+/** The words structured letters are written with (J-POST is English-only). */
 export const LETTER_WORDS: LetterWords = {
   greeting: (name) => `Dear ${name},`,
   teamGreeting: 'Dear hiring team,',

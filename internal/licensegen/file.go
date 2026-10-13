@@ -16,19 +16,19 @@ var ShippedBuildTools = []string{"tailwindcss", "vite"}
 
 // File is the generated licenses.json the frontend imports.
 type File struct {
-	App      Entry   `json:"app"`      // Job Track's own license
+	App      Entry   `json:"app"`      // J-POST's own license
 	Vendored []Entry `json:"vendored"` // third-party source copied into the repo
 	Go       []Entry `json:"go"`
 	Npm      []Entry `json:"npm"`
 }
 
-// CollectApp reads Job Track's own LICENSE at the repository root.
+// CollectApp reads J-POST's own LICENSE at the repository root.
 func CollectApp(repoRoot string) (Entry, error) {
 	text, ok := FindLicenseText(repoRoot)
 	if !ok {
 		return Entry{}, errors.New("no LICENSE file at the repository root")
 	}
-	return Entry{Name: "Job Track", License: DetectLicense(text), URL: "https://github.com/NeuralDrifter", Text: text}, nil
+	return Entry{Name: "J-POST", License: DetectLicense(text), URL: "https://github.com/NeuralDrifter", Text: text}, nil
 }
 
 // Write saves f with every list sorted (and present, even when empty) as indented JSON.

@@ -21,7 +21,7 @@ Branch: `feature/reactive-resume-parity` (off `main`). Items 1–16 of the 18-it
 - Searches, best matches first: pages (Pipeline, Discover, Resumes, Offers, Interviews, Insights, Settings), jobs (by company and position), resumes and letters (by name).
 - Actions: new application, new resume, new letter, import resume, import jobs from CSV, export pipeline CSV, open the ATS checker.
 - Keyboard: arrows to move, Enter to run, results grouped by kind, recent picks first when the box is empty.
-- In Job Track's look (the existing glass dialog style), not Reactive Resume's.
+- In J-POST's look (the existing glass dialog style), not Reactive Resume's.
 - Tests: the search and ranking as plain logic, and that the shortcut doesn't fire while typing in a text box that uses Ctrl+K itself.
 
 ## Finishing
@@ -31,4 +31,4 @@ Branch: `feature/reactive-resume-parity` (off `main`). Items 1–16 of the 18-it
 - Then a whole-branch review, fast-forward `main`, and delete the branch.
 - Clean-up for the user: the throwaway "ZZ Check test" resume made during early browser checks is still in their library; they can move it to Trash.
 
-Out of scope, as agreed: login/accounts, homepage, public share links, the AI assistant (the coming LLM phase), theme/language settings, next-step hints (Job Track has its own).
+Out of scope, as agreed: login/accounts, homepage, public share links, the AI assistant (the coming LLM phase), theme/language settings, next-step hints (J-POST has its own).

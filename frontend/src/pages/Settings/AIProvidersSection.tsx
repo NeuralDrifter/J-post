@@ -138,7 +138,7 @@ export function AIProvidersSection(props: Props) {
       <OpenAIStyleBlock
         {...props}
         providerId="openai-compatible"
-        note="Any other service that speaks OpenAI's format. Not tested by Job Track; use Test to check it."
+        note="Any other service that speaks OpenAI's format. Not tested by J-POST; use Test to check it."
         serverKey="customAIBaseURL"
         serverPlaceholder="https://example.com/v1"
         secret={{ key: 'customAIKey', label: 'API key (if needed)' }}

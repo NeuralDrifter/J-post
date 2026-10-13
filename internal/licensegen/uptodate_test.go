@@ -15,14 +15,14 @@ const generatedFile = "../../frontend/src/generated/licenses.json"
 func TestWriteRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "out", "licenses.json")
 	goEntries := []Entry{{Name: "b", Version: "v1"}, {Name: "a", Version: "v2"}}
-	if err := Write(path, File{App: Entry{Name: "Job Track"}, Go: goEntries}); err != nil {
+	if err := Write(path, File{App: Entry{Name: "J-POST"}, Go: goEntries}); err != nil {
 		t.Fatal(err)
 	}
 	f, err := Read(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(f.Go) != 2 || f.Go[0].Name != "a" || f.Npm == nil || f.Vendored == nil || f.App.Name != "Job Track" {
+	if len(f.Go) != 2 || f.Go[0].Name != "a" || f.Npm == nil || f.Vendored == nil || f.App.Name != "J-POST" {
 		t.Fatalf("file = %+v", f)
 	}
 }
@@ -59,7 +59,7 @@ func TestLicensesUpToDate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if committed.App != app {
-		t.Error("Job Track's own license changed — run go generate ./...")
+		t.Error("J-POST's own license changed — run go generate ./...")
 	}
 	vendoredNow, err := CollectVendored("../../" + VendorRoot)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestCollectApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if app.Name != "Job Track" || app.License != "MIT" || app.URL != "https://github.com/NeuralDrifter" ||
+	if app.Name != "J-POST" || app.License != "MIT" || app.URL != "https://github.com/NeuralDrifter" ||
 		!strings.Contains(app.Text, "Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)") {
 		t.Fatalf("app = %+v", app)
 	}

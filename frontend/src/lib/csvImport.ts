@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-// Jobs read from a CSV file: Job Track's own export, or a spreadsheet from
+// Jobs read from a CSV file: J-POST's own export, or a spreadsheet from
 // another tracker. Follows Reactive Resume's application import
 // (apps/web/src/features/applications/csv.ts, MIT): its parser, header
-// matching and formula-guard handling, on Job Track's fields and stages.
+// matching and formula-guard handling, on J-POST's fields and stages.
 import type { app } from './backend'
 import { CLOSE_REASON_LABEL, parseSalaryInput, STATUS_LABEL, WORK_MODE_LABEL } from './format'
 import { emptyDraft, jobFromDraft } from './jobDraft'
@@ -106,7 +106,7 @@ export function autoMapHeaders(headers: readonly string[]): (CsvField | null)[] 
   })
 }
 
-/** Stage words from Job Track and other trackers. */
+/** Stage words from J-POST and other trackers. */
 const STAGE_WORDS: Record<string, string> = {
   ...invert(STATUS_LABEL),
   saved: 'interested', wishlist: 'interested', bookmarked: 'interested', 'to apply': 'interested',
@@ -126,7 +126,7 @@ function invert(labels: Record<string, string>): Record<string, string> {
 const REASON_WORDS = invert(CLOSE_REASON_LABEL)
 const WORK_MODE_WORDS: Record<string, string> = { ...invert(WORK_MODE_LABEL), 'on site': 'onsite', 'in office': 'onsite', office: 'onsite' }
 
-/** Undoes the apostrophe Job Track's export puts before cells a spreadsheet would run as formulas. */
+/** Undoes the apostrophe J-POST's export puts before cells a spreadsheet would run as formulas. */
 function stripFormulaGuard(value: string): string {
   return value.startsWith("'") && /^[=+\-@\t\r]/.test(value.slice(1)) ? value.slice(1) : value
 }

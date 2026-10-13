@@ -80,7 +80,7 @@ function eventLines(event: CalendarEvent, now: Date): string[] {
 
 /** Events as a calendar file any calendar app can import. */
 export function buildCalendar(events: CalendarEvent[], now = new Date()): string {
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Job Track//Interviews//EN', 'CALSCALE:GREGORIAN', ...events.flatMap((e) => eventLines(e, now)), 'END:VCALENDAR']
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//J-POST//Interviews//EN', 'CALSCALE:GREGORIAN', ...events.flatMap((e) => eventLines(e, now)), 'END:VCALENDAR']
   return `${lines.flatMap(fold).join('\r\n')}\r\n`
 }
 
@@ -103,7 +103,7 @@ function interviewEvent(iv: app.Interview, job: { company: string; position: str
 /** Saves every job's interviews as one calendar file. */
 export function exportAllInterviews(interviews: app.ScheduledInterview[], kindLabel: (kind: string) => string): Promise<boolean> {
   const ics = buildCalendar(interviews.map((iv) => interviewEvent(iv, iv, kindLabel)))
-  return saveExport('Job Track interviews.ics', new Blob([ics], { type: 'text/calendar' }))
+  return saveExport('J-POST interviews.ics', new Blob([ics], { type: 'text/calendar' }))
 }
 
 const DEFAULT_INTERVIEW_MINUTES = 60
@@ -125,7 +125,7 @@ export function exportFileName(name: string, extension: string): string {
 
 /** Saves jobs as a CSV file. */
 export function exportJobsCsv(jobs: app.Job[]): Promise<boolean> {
-  return saveExport('Job Track pipeline.csv', new Blob([jobsToCsv(jobs)], { type: 'text/csv' }))
+  return saveExport('J-POST pipeline.csv', new Blob([jobsToCsv(jobs)], { type: 'text/csv' }))
 }
 
 /** Asks where to save content and writes it there; true once saved. */

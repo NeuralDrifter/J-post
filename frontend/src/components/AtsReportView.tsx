@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-// An ATS report in Job Track's style. What it shows follows Reactive Resume's
+// An ATS report in J-POST's style. What it shows follows Reactive Resume's
 // report (apps/web/src/features/ats-checker/report, MIT); the words come from
 // its messages.ts.
 import type { ReactNode } from 'react'

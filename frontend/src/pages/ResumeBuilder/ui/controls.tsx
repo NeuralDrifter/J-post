@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-// Small form controls for the builder's panels, in Job Track's style.
+// Small form controls for the builder's panels, in J-POST's style.
 import { useId, useState, type ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 

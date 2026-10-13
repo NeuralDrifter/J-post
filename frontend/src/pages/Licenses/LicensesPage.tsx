@@ -14,7 +14,7 @@ import { filterLicenses, type LicenseEntry } from './filter'
 const GROUPS = { vendored: 'Included source', npm: 'App interface', go: 'App core' } as const
 type Group = keyof typeof GROUPS
 
-/** Everything Job Track is built on or draws from, with each license's full text. */
+/** Everything J-POST is built on or draws from, with each license's full text. */
 export default function LicensesPage() {
   const [group, setGroup] = useState<Group>('vendored')
   const [query, setQuery] = useState('')
@@ -25,11 +25,11 @@ export default function LicensesPage() {
       <Link to="/settings" className="flex w-fit items-center gap-1 text-xs text-ink-3 hover:text-ink">
         <ArrowLeft size={13} /> Settings
       </Link>
-      <PageTitle title="Open-source licenses" subtitle="The libraries, data and services Job Track is built on, and the projects that shaped it." />
+      <PageTitle title="Open-source licenses" subtitle="The libraries, data and services J-POST is built on, and the projects that shaped it." />
 
-      <Panel title="Job Track" action={<OpenLink url={licenses.app.url} />}>
+      <Panel title="J-POST" action={<OpenLink url={licenses.app.url} />}>
         <p className="mb-2 text-xs text-ink-2">
-          Job Track is open source under the {licenses.app.license} license. Third-party source code, libraries, fonts and data below keep their own licenses.
+          J-POST is open source under the {licenses.app.license} license. Third-party source code, libraries, fonts and data below keep their own licenses.
         </p>
         <pre className="max-h-80 overflow-auto rounded-xl bg-black/30 p-3 text-[11px] leading-relaxed whitespace-pre-wrap text-ink-2">{licenses.app.text}</pre>
       </Panel>

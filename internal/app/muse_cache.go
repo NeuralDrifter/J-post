@@ -15,7 +15,7 @@ import (
 	"jobtrack/internal/textproc"
 )
 
-// The Muse API has no keyword search, so Job Track keeps a local copy of the
+// The Muse API has no keyword search, so J-POST keeps a local copy of the
 // slices the user cares about (category × location), refreshed at most daily,
 // and searches that copy.
 

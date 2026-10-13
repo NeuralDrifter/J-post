@@ -4,7 +4,7 @@
 // How the job search is going: how far applications get, how many hear back
 // and how fast, whether tailored resumes do better, the weekly pace and where
 // jobs come from. Follows Reactive Resume's application insights
-// (apps/web/src/features/applications/insights.ts, MIT), on Job Track's stages.
+// (apps/web/src/features/applications/insights.ts, MIT), on J-POST's stages.
 
 export type InsightJob = { id: string; status: string; closeReason: string; source: string; resumeId: string; dateApplied: string; createdAt: string }
 export type InsightEvent = { jobId: string; toStatus: string; closeReason: string; at: string }

@@ -3,7 +3,7 @@
 
 // Check: how reliably software reads the resume, live as it's edited, and
 // how it covers a job posting. What it shows follows Reactive Resume's Check
-// panel (MIT); the screens are Job Track's.
+// panel (MIT); the screens are J-POST's.
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLocation } from 'react-router'
 import { ChevronDown, CircleAlert, CircleCheck, Zap } from 'lucide-react'

@@ -34,7 +34,7 @@ export function FilesPanel({ jobId }: { jobId: string }) {
   const remove = async (f: app.Attachment) => {
     const options = {
       title: 'Remove file?',
-      message: `Remove ${f.label}? The copy stored by Job Track is deleted; your original file is not touched.`,
+      message: `Remove ${f.label}? The copy stored by J-POST is deleted; your original file is not touched.`,
       confirmLabel: 'Remove',
     }
     if (await confirmThen(options, () => DeleteAttachment(f.id))) notifyDataChanged()

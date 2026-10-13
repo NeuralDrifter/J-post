@@ -4,11 +4,11 @@
 #
 # Copies Reactive Resume's engine packages into frontend/src/vendor/reactive-resume,
 # drops the server-only files listed in vendor_reactive_resume.exclude, puts the
-# attribution header on every source file, then applies Job Track's local changes
+# attribution header on every source file, then applies J-POST's local changes
 # from vendor_reactive_resume.patch (see UPSTREAM.md for what each one is for).
 #
 # Usage: bash tools/vendor_reactive_resume.sh <reactive-resume checkout>
-# VENDOR_PRISTINE=1 leaves out Job Track's changes (to regenerate the patch).
+# VENDOR_PRISTINE=1 leaves out J-POST's changes (to regenerate the patch).
 set -euo pipefail
 
 upstream=$(cd "$1" && pwd)

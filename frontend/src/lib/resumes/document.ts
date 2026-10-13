@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael P. Burgus (https://github.com/NeuralDrifter)
 // SPDX-License-Identifier: MIT
 
-// A resume as Job Track stores it: Reactive Resume's JSON, checked against its
+// A resume as J-POST stores it: Reactive Resume's JSON, checked against its
 // schema on the way in and out, plus the plain text the AI features read.
 import { buildMarkdown } from '@reactive-resume/resume/markdown'
 import { parseResumeData, type ResumeData } from '@reactive-resume/schema/resume/data'

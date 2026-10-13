@@ -26,7 +26,7 @@ export function NavRail() {
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-linear-to-br from-accent to-info font-mono text-xs font-bold text-white shadow-lg shadow-accent/30">
           JT
         </div>
-        <span className={fullBleed ? 'hidden' : 'hidden text-lg font-bold tracking-tight min-[1100px]:inline'}>Job Track</span>
+        <span className={fullBleed ? 'hidden' : 'hidden text-lg font-bold tracking-tight min-[1100px]:inline'}>J-POST</span>
       </div>
       {ITEMS.map(({ to, label, icon: Icon, end, also }) => (
         <NavLink

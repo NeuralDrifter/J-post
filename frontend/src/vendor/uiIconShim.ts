@@ -2,5 +2,5 @@
 // SPDX-License-Identifier: MIT
 
 // Vendored Reactive Resume logic names Material Symbols icons for its own UI.
-// Job Track draws its own icons (lucide), so the name is just a string here.
+// J-POST draws its own icons (lucide), so the name is just a string here.
 export type IconName = string

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // Command licenses regenerates frontend/src/generated/licenses.json from the
-// Go modules compiled into Job Track, the frontend's production packages and
+// Go modules compiled into J-POST, the frontend's production packages and
 // the third-party source vendored into the frontend.
 // Run it from the repository root: go generate ./...
 package main

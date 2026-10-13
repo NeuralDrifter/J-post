@@ -26,7 +26,7 @@ describe('parsing CSV', () => {
 })
 
 describe('importing jobs', () => {
-  it('reads Job Track’s own export back', () => {
+  it('reads J-POST’s own export back', () => {
     const original: app.Job = {
       ...jobFromDraft({ ...emptyDraft(), company: 'Acme', position: 'Staff Engineer', status: 'closed' }),
       status: 'closed',
